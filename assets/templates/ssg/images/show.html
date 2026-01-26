@@ -1,0 +1,54 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>{{ .Image.FileName }}</h1>
+        <div>
+            <a href="/ssg/sites/{{ .Site.ID }}/images/{{ .Image.ID }}/edit" class="btn">Edit</a>
+            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/images/{{ .Image.ID }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this image?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <div class="image-display">
+        <img src="{{ .Image.FilePath }}" alt="{{ .Image.AltText }}" style="max-width: 100%; height: auto;">
+    </div>
+
+    <dl class="detail-list">
+        <dt>File Name</dt>
+        <dd>{{ .Image.FileName }}</dd>
+
+        <dt>File Path</dt>
+        <dd><code>{{ .Image.FilePath }}</code></dd>
+
+        {{ if .Image.Title }}
+        <dt>Title</dt>
+        <dd>{{ .Image.Title }}</dd>
+        {{ end }}
+
+        {{ if .Image.AltText }}
+        <dt>Alt Text</dt>
+        <dd>{{ .Image.AltText }}</dd>
+        {{ end }}
+
+        {{ if and .Image.Width .Image.Height }}
+        <dt>Dimensions</dt>
+        <dd>{{ .Image.Width }} x {{ .Image.Height }} px</dd>
+        {{ end }}
+
+        <dt>Created</dt>
+        <dd>{{ .Image.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Image.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}/images">&larr; Back to Images</a>
+    </p>
+</div>
+{{ end }}

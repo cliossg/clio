@@ -1,0 +1,86 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Edit Content</h1>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}">
+        <div class="form-group">
+            <label for="heading">Title</label>
+            <input type="text" id="heading" name="heading" value="{{ .Content.Heading }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="section_id">Section</label>
+            <select id="section_id" name="section_id">
+                <option value="">-- No Section --</option>
+                {{ range .Sections }}
+                <option value="{{ .ID }}" {{ if eq .ID $.Content.SectionID }}selected{{ end }}>{{ .Name }}</option>
+                {{ end }}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="kind">Kind</label>
+                <select id="kind" name="kind">
+                    <option value="post" {{ if eq .Content.Kind "post" }}selected{{ end }}>Post</option>
+                    <option value="page" {{ if eq .Content.Kind "page" }}selected{{ end }}>Page</option>
+                    <option value="series" {{ if eq .Content.Kind "series" }}selected{{ end }}>Series</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="series">Series Name</label>
+                <input type="text" id="series" name="series" value="{{ .Content.Series }}">
+            </div>
+
+            <div class="form-group">
+                <label for="series_order">Series Order</label>
+                <input type="number" id="series_order" name="series_order" value="{{ .Content.SeriesOrder }}" min="0">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="summary">Summary</label>
+            <textarea id="summary" name="summary" rows="2">{{ .Content.Summary }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="body">Body (Markdown)</label>
+            <textarea id="body" name="body" rows="15">{{ .Content.Body }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" value="{{ range $i, $t := .Content.Tags }}{{ if $i }}, {{ end }}{{ $t.Name }}{{ end }}" placeholder="Comma-separated tags">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="draft" {{ if .Content.Draft }}checked{{ end }}> Draft
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="featured" {{ if .Content.Featured }}checked{{ end }}> Featured
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="published_at">Publish Date</label>
+            <input type="datetime-local" id="published_at" name="published_at" {{ if .Content.PublishedAt }}value="{{ .Content.PublishedAt.Format "2006-01-02T15:04" }}"{{ end }}>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Content</button>
+            <a href="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

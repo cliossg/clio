@@ -1,0 +1,47 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>Sections</h1>
+        <a href="/ssg/sites/{{ .Site.ID }}/sections/new" class="btn">New Section</a>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    {{ if .Success }}
+    <div class="alert alert-success">{{ .Success }}</div>
+    {{ end }}
+
+    {{ if .Sections }}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Path</th>
+                <th>Layout</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Sections }}
+            <tr>
+                <td><a href="/ssg/sites/{{ $.Site.ID }}/sections/{{ .ID }}">{{ .Name }}</a></td>
+                <td><code>{{ .Path }}</code></td>
+                <td>{{ if .LayoutName }}{{ .LayoutName }}{{ else }}<em>None</em>{{ end }}</td>
+                <td>
+                    <a href="/ssg/sites/{{ $.Site.ID }}/sections/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No sections yet. <a href="/ssg/sites/{{ .Site.ID }}/sections/new">Create your first section</a>.</p>
+    {{ end }}
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+    </p>
+</div>
+{{ end }}

@@ -1,0 +1,30 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Sites</h1>
+    <p><a href="/ssg/sites/new" class="btn">New Site</a></p>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Mode</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Sites }}
+            <tr>
+                <td><a href="/ssg/sites/{{ .ID }}">{{ .Name }}</a></td>
+                <td>{{ .Slug }}</td>
+                <td>{{ .Mode }}</td>
+                <td>{{ if .Active }}Yes{{ else }}No{{ end }}</td>
+                <td>
+                    <a href="/ssg/sites/{{ .ID }}/edit" class="btn">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

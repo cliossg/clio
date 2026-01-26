@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .IsIndex}}{{if .Params.site_title}}{{.Params.site_title}}{{else}}Index{{end}}{{else}}{{.Content.Heading}}{{end}}</title>
+    <link rel="stylesheet" href="{{.AssetPath}}static/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="site-nav">
+            <div class="container">
+                <a class="site-logo" href="/">{{if .Params.site_title}}{{.Params.site_title}}{{else}}{{.Site.Name}}{{end}}</a>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    {{range .Menu}}
+                    <a href="/{{.Path}}/">{{.Name}}</a>
+                    {{end}}
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="site-main">
+        <div class="container">
+            {{if .IsIndex}}
+                {{template "index" .}}
+            {{else}}
+                {{template "content" .}}
+            {{end}}
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; {{.Site.Name}}. Generated with Clio.</p>
+        </div>
+    </footer>
+</body>
+</html>

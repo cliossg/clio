@@ -1,0 +1,44 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>{{ .Layout.Name }}</h1>
+        <div>
+            <a href="/ssg/sites/{{ .Site.ID }}/layouts/{{ .Layout.ID }}/edit" class="btn">Edit</a>
+            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/layouts/{{ .Layout.ID }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this layout?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <dl class="detail-list">
+        <dt>Name</dt>
+        <dd>{{ .Layout.Name }}</dd>
+
+        {{ if .Layout.Description }}
+        <dt>Description</dt>
+        <dd>{{ .Layout.Description }}</dd>
+        {{ end }}
+
+        <dt>Created</dt>
+        <dd>{{ .Layout.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Layout.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+    {{ if .Layout.Code }}
+    <div class="content-body">
+        <h3>Layout Code</h3>
+        <pre class="code-block">{{ .Layout.Code }}</pre>
+    </div>
+    {{ end }}
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}/layouts">&larr; Back to Layouts</a>
+    </p>
+</div>
+{{ end }}

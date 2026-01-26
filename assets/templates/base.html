@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }} - Clio</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    {{ if not .HideNav }}
+    <nav>
+        <a href="/ssg/sites">Sites</a>
+        {{ if .Site }}
+        <a href="/ssg/sites/{{ .Site.ID }}/sections">Sections</a>
+        <a href="/ssg/sites/{{ .Site.ID }}/contents">Contents</a>
+        <a href="/ssg/sites/{{ .Site.ID }}/layouts">Layouts</a>
+        <a href="/ssg/sites/{{ .Site.ID }}/tags">Tags</a>
+        <a href="/ssg/sites/{{ .Site.ID }}/params">Params</a>
+        <a href="/ssg/sites/{{ .Site.ID }}/images">Images</a>
+        {{ end }}
+        <form action="/logout" method="POST" style="display: inline; float: right;">
+            <button type="submit" class="btn" style="background: transparent; padding: 0;">Logout</button>
+        </form>
+    </nav>
+    {{ end }}
+    <div class="{{ if .AuthPage }}auth-container{{ else }}container{{ end }}">
+        {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
+        {{ if .Success }}<div class="success">{{ .Success }}</div>{{ end }}
+        {{ template "content" . }}
+    </div>
+</body>
+</html>

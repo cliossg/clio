@@ -1,0 +1,40 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>Images</h1>
+        <a href="/ssg/sites/{{ .Site.ID }}/images/new" class="btn">Upload Image</a>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    {{ if .Success }}
+    <div class="alert alert-success">{{ .Success }}</div>
+    {{ end }}
+
+    {{ if .Images }}
+    <div class="image-grid">
+        {{ range .Images }}
+        <div class="image-card">
+            <a href="/ssg/sites/{{ $.Site.ID }}/images/{{ .ID }}">
+                <div class="image-preview">
+                    <img src="{{ .FilePath }}" alt="{{ .AltText }}" onerror="this.parentElement.innerHTML='<span>No Preview</span>'">
+                </div>
+                <div class="image-info">
+                    <strong>{{ .FileName }}</strong>
+                    {{ if .Title }}<small>{{ .Title }}</small>{{ end }}
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+    {{ else }}
+    <p class="empty-state">No images yet. <a href="/ssg/sites/{{ .Site.ID }}/images/new">Upload your first image</a>.</p>
+    {{ end }}
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+    </p>
+</div>
+{{ end }}

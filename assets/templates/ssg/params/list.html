@@ -1,0 +1,47 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>Parameters</h1>
+        <a href="/ssg/sites/{{ .Site.ID }}/params/new" class="btn">New Parameter</a>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    {{ if .Success }}
+    <div class="alert alert-success">{{ .Success }}</div>
+    {{ end }}
+
+    {{ if .Params }}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+                <th>System</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Params }}
+            <tr>
+                <td><a href="/ssg/sites/{{ $.Site.ID }}/params/{{ .ID }}">{{ .Name }}</a></td>
+                <td><code>{{ if gt (len .Value) 50 }}{{ slice .Value 0 50 }}...{{ else }}{{ .Value }}{{ end }}</code></td>
+                <td>{{ if .System }}<span class="badge">System</span>{{ else }}-{{ end }}</td>
+                <td>
+                    <a href="/ssg/sites/{{ $.Site.ID }}/params/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No parameters yet. <a href="/ssg/sites/{{ .Site.ID }}/params/new">Create your first parameter</a>.</p>
+    {{ end }}
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+    </p>
+</div>
+{{ end }}

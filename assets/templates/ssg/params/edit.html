@@ -1,0 +1,42 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Edit Parameter</h1>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .Param.Name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="2">{{ .Param.Description }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="value">Value</label>
+            <textarea id="value" name="value" rows="3">{{ .Param.Value }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="ref_key">Reference Key</label>
+            <input type="text" id="ref_key" name="ref_key" value="{{ .Param.RefKey }}">
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="system" {{ if .Param.System }}checked{{ end }}> System Parameter
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Parameter</button>
+            <a href="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

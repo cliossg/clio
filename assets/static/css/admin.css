@@ -1,0 +1,199 @@
+/* Clio Admin - Greek-inspired palette */
+
+:root {
+    --navy-deep: #284177;
+    --blue-intense: #006BBD;
+    --blue-light: #83CEEC;
+    --white-warm: #EDE8E4;
+    --stone-beige: #C2AFA8;
+    --white-warm-dark: #ddd5cf;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--white-warm);
+    color: var(--navy-deep);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Navigation */
+nav {
+    background: var(--navy-deep);
+    color: white;
+    padding: 10px 20px;
+}
+
+nav a {
+    color: var(--blue-light);
+    text-decoration: none;
+    margin-right: 15px;
+}
+
+nav a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(40, 65, 119, 0.1);
+    border: 1px solid var(--stone-beige);
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--blue-intense);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.5;
+    vertical-align: middle;
+}
+
+.btn:hover {
+    background: var(--navy-deep);
+}
+
+.btn-secondary {
+    background: var(--stone-beige);
+    color: var(--navy-deep);
+}
+
+.btn-secondary:hover {
+    background: #b09f97;
+}
+
+.btn-danger {
+    background: #c44536;
+}
+
+.btn-danger:hover {
+    background: #a33a2d;
+}
+
+.actions {
+    margin-top: 15px;
+}
+
+.actions .btn {
+    margin-right: 8px;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--navy-deep);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--stone-beige);
+    border-radius: 4px;
+    background: white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--blue-intense);
+    box-shadow: 0 0 0 2px rgba(0, 107, 189, 0.2);
+}
+
+.form-group textarea {
+    min-height: 150px;
+}
+
+/* Messages */
+.error {
+    color: #c44536;
+    margin-bottom: 15px;
+}
+
+.success {
+    color: #2d6a4f;
+    margin-bottom: 15px;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--stone-beige);
+}
+
+th {
+    background: var(--white-warm-dark);
+    color: var(--navy-deep);
+}
+
+/* Links */
+a {
+    color: var(--blue-intense);
+}
+
+a:hover {
+    color: var(--navy-deep);
+}
+
+/* Auth container */
+.auth-container {
+    max-width: 360px;
+    margin: 80px auto;
+    padding: 0 20px;
+}
+
+.auth-container .card {
+    padding: 30px;
+}
+
+.auth-container h1 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+    text-align: center;
+    color: var(--navy-deep);
+}
+
+.auth-container .btn {
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* Typography */
+h1, h2, h3 {
+    color: var(--navy-deep);
+}

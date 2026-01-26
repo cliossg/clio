@@ -1,0 +1,42 @@
+{{define "index"}}
+<div class="index-page">
+    <h1 class="page-title">
+        {{if .Params.site_title}}{{.Params.site_title}}{{else}}Latest Posts{{end}}
+    </h1>
+
+    {{if .Contents}}
+    <div class="content-list">
+        {{range .Contents}}
+        <article class="content-card">
+            <h2 class="content-title">
+                <a href="{{.URL}}">{{.Heading}}</a>
+            </h2>
+            {{if .Summary}}
+            <p class="content-summary">{{.Summary}}</p>
+            {{end}}
+            <div class="content-meta">
+                {{if .PublishedAt}}
+                <time datetime="{{.PublishedAt.Format "2006-01-02"}}">
+                    {{.PublishedAt.Format "Jan 02, 2006"}}
+                </time>
+                {{end}}
+                {{if .Tags}}
+                <span class="content-tags">
+                    {{range .Tags}}
+                    <span class="tag">{{.Name}}</span>
+                    {{end}}
+                </span>
+                {{end}}
+            </div>
+        </article>
+        {{end}}
+    </div>
+
+    {{if .IsPaginated}}
+    {{template "pagination" .}}
+    {{end}}
+    {{else}}
+    <p class="empty-state">No content yet.</p>
+    {{end}}
+</div>
+{{end}}

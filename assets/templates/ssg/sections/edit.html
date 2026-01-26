@@ -1,0 +1,42 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Edit Section</h1>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .Section.Name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="2">{{ .Section.Description }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="path">URL Path</label>
+            <input type="text" id="path" name="path" value="{{ .Section.Path }}">
+            <small>The URL path for this section. Leave empty for root.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="layout_id">Layout</label>
+            <select id="layout_id" name="layout_id">
+                <option value="">-- No Layout --</option>
+                {{ range .Layouts }}
+                <option value="{{ .ID }}" {{ if eq .ID $.Section.LayoutID }}selected{{ end }}>{{ .Name }}</option>
+                {{ end }}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Section</button>
+            <a href="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

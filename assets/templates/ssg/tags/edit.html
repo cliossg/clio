@@ -1,0 +1,21 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Edit Tag</h1>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .Tag.Name }}" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Tag</button>
+            <a href="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

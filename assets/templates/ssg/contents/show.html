@@ -1,0 +1,71 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>{{ .Content.Heading }}</h1>
+        <div>
+            <a href="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}/edit" class="btn">Edit</a>
+            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this content?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <div class="content-meta">
+        {{ if .Content.Draft }}<span class="badge badge-warning">Draft</span>{{ else }}<span class="badge badge-success">Published</span>{{ end }}
+        {{ if .Content.Featured }}<span class="badge badge-info">Featured</span>{{ end }}
+        <span class="badge">{{ .Content.Kind }}</span>
+    </div>
+
+    <dl class="detail-list">
+        {{ if .Content.SectionName }}
+        <dt>Section</dt>
+        <dd>{{ .Content.SectionName }}</dd>
+        {{ end }}
+
+        {{ if .Content.Summary }}
+        <dt>Summary</dt>
+        <dd>{{ .Content.Summary }}</dd>
+        {{ end }}
+
+        {{ if .Content.Series }}
+        <dt>Series</dt>
+        <dd>{{ .Content.Series }} (#{{ .Content.SeriesOrder }})</dd>
+        {{ end }}
+
+        {{ if .Content.Tags }}
+        <dt>Tags</dt>
+        <dd>
+            {{ range .Content.Tags }}
+            <span class="tag">{{ .Name }}</span>
+            {{ end }}
+        </dd>
+        {{ end }}
+
+        {{ if .Content.PublishedAt }}
+        <dt>Published</dt>
+        <dd>{{ .Content.PublishedAt.Format "Jan 02, 2006 15:04" }}</dd>
+        {{ end }}
+
+        <dt>Created</dt>
+        <dd>{{ .Content.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Content.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+    {{ if .Content.Body }}
+    <div class="content-body">
+        <h3>Content Body</h3>
+        <pre class="code-block">{{ .Content.Body }}</pre>
+    </div>
+    {{ end }}
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}/contents">&larr; Back to Contents</a>
+    </p>
+</div>
+{{ end }}

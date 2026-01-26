@@ -1,0 +1,32 @@
+{{ define "content" }}
+<div class="card">
+    <h1>New Layout</h1>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/layouts">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required placeholder="e.g., Default, Sidebar, Full Width">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="2" placeholder="Brief description of this layout"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="code">Layout Code (HTML/Template)</label>
+            <textarea id="code" name="code" rows="15" placeholder="Enter HTML template code..."></textarea>
+            <small>Use Go template syntax. Available variables: .Content, .Site, .Section</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Layout</button>
+            <a href="/ssg/sites/{{ .Site.ID }}/layouts" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

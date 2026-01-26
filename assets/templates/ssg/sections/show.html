@@ -1,0 +1,45 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>{{ .Section.Name }}</h1>
+        <div>
+            <a href="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}/edit" class="btn">Edit</a>
+            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this section?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <dl class="detail-list">
+        <dt>Name</dt>
+        <dd>{{ .Section.Name }}</dd>
+
+        <dt>Path</dt>
+        <dd><code>{{ if .Section.Path }}{{ .Section.Path }}{{ else }}/{{ end }}</code></dd>
+
+        {{ if .Section.Description }}
+        <dt>Description</dt>
+        <dd>{{ .Section.Description }}</dd>
+        {{ end }}
+
+        {{ if .Section.LayoutName }}
+        <dt>Layout</dt>
+        <dd>{{ .Section.LayoutName }}</dd>
+        {{ end }}
+
+        <dt>Created</dt>
+        <dd>{{ .Section.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Section.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}/sections">&larr; Back to Sections</a>
+    </p>
+</div>
+{{ end }}

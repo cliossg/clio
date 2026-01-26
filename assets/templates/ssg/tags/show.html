@@ -1,0 +1,35 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>{{ .Tag.Name }}</h1>
+        <div>
+            <a href="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}/edit" class="btn">Edit</a>
+            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}/delete" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this tag?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Error }}
+    <div class="alert alert-error">{{ .Error }}</div>
+    {{ end }}
+
+    <dl class="detail-list">
+        <dt>Name</dt>
+        <dd>{{ .Tag.Name }}</dd>
+
+        <dt>Slug</dt>
+        <dd><code>{{ .Tag.Slug }}</code></dd>
+
+        <dt>Created</dt>
+        <dd>{{ .Tag.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Tag.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+    <p class="nav-links">
+        <a href="/ssg/sites/{{ .Site.ID }}/tags">&larr; Back to Tags</a>
+    </p>
+</div>
+{{ end }}

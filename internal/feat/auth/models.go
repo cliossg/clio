@@ -1,0 +1,91 @@
+package auth
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// User represents a user in the system.
+type User struct {
+	ID           uuid.UUID
+	ShortID      string
+	Email        string
+	PasswordHash string
+	Name         string
+	Status       string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// NewUser creates a new user with the given email and password.
+func NewUser(email, password, name string) (*User, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	return &User{
+		ID:           uuid.New(),
+		ShortID:      uuid.New().String()[:8],
+		Email:        email,
+		PasswordHash: string(hash),
+		Name:         name,
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}, nil
+}
+
+// CheckPassword verifies if the provided password matches the stored hash.
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+	return err == nil
+}
+
+// UpdatePassword updates the user's password hash.
+func (u *User) UpdatePassword(password string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.PasswordHash = string(hash)
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
+// IsActive returns true if the user status is "active".
+func (u *User) IsActive() bool {
+	return u.Status == "active"
+}
+
+// Session represents a user session.
+type Session struct {
+	ID        string
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+// NewSession creates a new session for the given user ID with the specified TTL.
+func NewSession(userID uuid.UUID, ttl time.Duration) *Session {
+	now := time.Now()
+	return &Session{
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		ExpiresAt: now.Add(ttl),
+		CreatedAt: now,
+	}
+}
+
+// IsExpired returns true if the session has expired.
+func (s *Session) IsExpired() bool {
+	return time.Now().After(s.ExpiresAt)
+}
+
+// IsValid returns true if the session is not expired.
+func (s *Session) IsValid() bool {
+	return !s.IsExpired()
+}

@@ -1,0 +1,34 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Edit {{ .Site.Name }}</h1>
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .Site.Name }}" required>
+        </div>
+        <div class="form-group">
+            <label for="slug">Slug</label>
+            <input type="text" id="slug" name="slug" value="{{ .Site.Slug }}" required>
+        </div>
+        <div class="form-group">
+            <label for="mode">Mode</label>
+            <select id="mode" name="mode">
+                <option value="blog" {{ if eq .Site.Mode "blog" }}selected{{ end }}>Blog</option>
+                <option value="structured" {{ if eq .Site.Mode "structured" }}selected{{ end }}>Structured</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label style="display: inline-flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="active" {{ if .Site.Active }}checked{{ end }} style="width: auto;"> Active
+            </label>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn">Save</button>
+            <a href="/ssg/sites" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/delete" onsubmit="return confirm('Delete this site?')" style="margin-top: 30px;">
+        <button type="submit" class="btn btn-danger">Delete Site</button>
+    </form>
+</div>
+{{ end }}
