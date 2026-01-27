@@ -83,6 +83,10 @@ type Service interface {
 	LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error
 	UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error
 	UnlinkHeaderImageFromContent(ctx context.Context, contentID uuid.UUID) error
+	GetSectionImagesWithDetails(ctx context.Context, sectionID uuid.UUID) ([]*SectionImageWithDetails, error)
+	GetSectionImageDetails(ctx context.Context, sectionImageID uuid.UUID) (*SectionImageDetails, error)
+	LinkImageToSection(ctx context.Context, sectionID, imageID uuid.UUID, isHeader bool) error
+	UnlinkImageFromSection(ctx context.Context, sectionImageID uuid.UUID) error
 	UpdateImage(ctx context.Context, image *Image) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error
 
@@ -1032,7 +1036,6 @@ func (s *service) UnlinkImageFromContent(ctx context.Context, contentImageID uui
 func (s *service) UnlinkHeaderImageFromContent(ctx context.Context, contentID uuid.UUID) error {
 	s.ensureQueries()
 
-	// Get all content images to find the header
 	images, err := s.GetContentImagesWithDetails(ctx, contentID)
 	if err != nil {
 		return fmt.Errorf("cannot get content images: %w", err)
@@ -1045,6 +1048,89 @@ func (s *service) UnlinkHeaderImageFromContent(ctx context.Context, contentID uu
 			}
 			break
 		}
+	}
+
+	return nil
+}
+
+func (s *service) GetSectionImagesWithDetails(ctx context.Context, sectionID uuid.UUID) ([]*SectionImageWithDetails, error) {
+	s.ensureQueries()
+
+	rows, err := s.queries.GetSectionImagesWithDetails(ctx, sectionID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get section images: %w", err)
+	}
+
+	images := make([]*SectionImageWithDetails, len(rows))
+	for i, row := range rows {
+		images[i] = &SectionImageWithDetails{
+			SectionImageID: uuid.MustParse(row.SectionImageID),
+			SectionID:      uuid.MustParse(row.SectionID),
+			IsHeader:       row.IsHeader.Int64 == 1,
+			IsFeatured:     row.IsFeatured.Int64 == 1,
+			OrderNum:       int(row.OrderNum.Int64),
+			ID:             uuid.MustParse(row.ID),
+			SiteID:         uuid.MustParse(row.SiteID),
+			ShortID:        row.ShortID.String,
+			FileName:       row.FileName,
+			FilePath:       row.FilePath,
+			AltText:        row.AltText.String,
+			Title:          row.Title.String,
+			Width:          int(row.Width.Int64),
+			Height:         int(row.Height.Int64),
+			CreatedAt:      row.CreatedAt.Time,
+			UpdatedAt:      row.UpdatedAt.Time,
+		}
+	}
+
+	return images, nil
+}
+
+func (s *service) GetSectionImageDetails(ctx context.Context, sectionImageID uuid.UUID) (*SectionImageDetails, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetSectionImageWithDetails(ctx, sectionImageID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get section image details: %w", err)
+	}
+
+	return &SectionImageDetails{
+		SectionImageID: uuid.MustParse(row.SectionImageID),
+		ImageID:        uuid.MustParse(row.ImageID),
+		FilePath:       row.FilePath,
+	}, nil
+}
+
+func (s *service) LinkImageToSection(ctx context.Context, sectionID, imageID uuid.UUID, isHeader bool) error {
+	s.ensureQueries()
+
+	isHeaderInt := int64(0)
+	if isHeader {
+		isHeaderInt = 1
+	}
+
+	params := sqlc.CreateSectionImageParams{
+		ID:         uuid.New().String(),
+		SectionID:  sectionID.String(),
+		ImageID:    imageID.String(),
+		IsHeader:   sql.NullInt64{Int64: isHeaderInt, Valid: true},
+		IsFeatured: sql.NullInt64{Int64: 0, Valid: true},
+		OrderNum:   sql.NullInt64{Int64: 0, Valid: true},
+		CreatedAt:  sql.NullTime{Time: time.Now(), Valid: true},
+	}
+
+	if err := s.queries.CreateSectionImage(ctx, params); err != nil {
+		return fmt.Errorf("cannot link image to section: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) UnlinkImageFromSection(ctx context.Context, sectionImageID uuid.UUID) error {
+	s.ensureQueries()
+
+	if err := s.queries.DeleteSectionImage(ctx, sectionImageID.String()); err != nil {
+		return fmt.Errorf("cannot unlink image from section: %w", err)
 	}
 
 	return nil

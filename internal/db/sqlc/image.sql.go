@@ -574,6 +574,45 @@ func (q *Queries) GetImagesBySiteID(ctx context.Context, siteID string) ([]Image
 	return items, nil
 }
 
+const getSectionImageWithDetails = `-- name: GetSectionImageWithDetails :one
+SELECT
+    si.id as section_image_id,
+    si.section_id,
+    si.image_id,
+    si.is_header,
+    i.id,
+    i.site_id,
+    i.file_path
+FROM section_images si
+JOIN image i ON si.image_id = i.id
+WHERE si.id = ?
+`
+
+type GetSectionImageWithDetailsRow struct {
+	SectionImageID string        `json:"section_image_id"`
+	SectionID      string        `json:"section_id"`
+	ImageID        string        `json:"image_id"`
+	IsHeader       sql.NullInt64 `json:"is_header"`
+	ID             string        `json:"id"`
+	SiteID         string        `json:"site_id"`
+	FilePath       string        `json:"file_path"`
+}
+
+func (q *Queries) GetSectionImageWithDetails(ctx context.Context, id string) (GetSectionImageWithDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getSectionImageWithDetails, id)
+	var i GetSectionImageWithDetailsRow
+	err := row.Scan(
+		&i.SectionImageID,
+		&i.SectionID,
+		&i.ImageID,
+		&i.IsHeader,
+		&i.ID,
+		&i.SiteID,
+		&i.FilePath,
+	)
+	return i, err
+}
+
 const getSectionImagesBySectionID = `-- name: GetSectionImagesBySectionID :many
 SELECT id, section_id, image_id, is_header, is_featured, order_num, created_at FROM section_images WHERE section_id = ? ORDER BY order_num
 `
@@ -595,6 +634,89 @@ func (q *Queries) GetSectionImagesBySectionID(ctx context.Context, sectionID str
 			&i.IsFeatured,
 			&i.OrderNum,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSectionImagesWithDetails = `-- name: GetSectionImagesWithDetails :many
+SELECT
+    si.id as section_image_id,
+    si.section_id,
+    si.is_header,
+    si.is_featured,
+    si.order_num,
+    i.id,
+    i.site_id,
+    i.short_id,
+    i.file_name,
+    i.file_path,
+    i.alt_text,
+    i.title,
+    i.width,
+    i.height,
+    i.created_at,
+    i.updated_at
+FROM section_images si
+JOIN image i ON si.image_id = i.id
+WHERE si.section_id = ?
+ORDER BY si.is_header DESC, si.order_num
+`
+
+type GetSectionImagesWithDetailsRow struct {
+	SectionImageID string         `json:"section_image_id"`
+	SectionID      string         `json:"section_id"`
+	IsHeader       sql.NullInt64  `json:"is_header"`
+	IsFeatured     sql.NullInt64  `json:"is_featured"`
+	OrderNum       sql.NullInt64  `json:"order_num"`
+	ID             string         `json:"id"`
+	SiteID         string         `json:"site_id"`
+	ShortID        sql.NullString `json:"short_id"`
+	FileName       string         `json:"file_name"`
+	FilePath       string         `json:"file_path"`
+	AltText        sql.NullString `json:"alt_text"`
+	Title          sql.NullString `json:"title"`
+	Width          sql.NullInt64  `json:"width"`
+	Height         sql.NullInt64  `json:"height"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetSectionImagesWithDetails(ctx context.Context, sectionID string) ([]GetSectionImagesWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSectionImagesWithDetails, sectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSectionImagesWithDetailsRow
+	for rows.Next() {
+		var i GetSectionImagesWithDetailsRow
+		if err := rows.Scan(
+			&i.SectionImageID,
+			&i.SectionID,
+			&i.IsHeader,
+			&i.IsFeatured,
+			&i.OrderNum,
+			&i.ID,
+			&i.SiteID,
+			&i.ShortID,
+			&i.FileName,
+			&i.FilePath,
+			&i.AltText,
+			&i.Title,
+			&i.Width,
+			&i.Height,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

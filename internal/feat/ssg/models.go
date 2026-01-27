@@ -344,6 +344,33 @@ type SectionImage struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// SectionImageWithDetails represents a section-image with full image data.
+type SectionImageWithDetails struct {
+	SectionImageID uuid.UUID `json:"section_image_id"`
+	SectionID      uuid.UUID `json:"section_id"`
+	IsHeader       bool      `json:"is_header"`
+	IsFeatured     bool      `json:"is_featured"`
+	OrderNum       int       `json:"order_num"`
+	ID             uuid.UUID `json:"id"`
+	SiteID         uuid.UUID `json:"site_id"`
+	ShortID        string    `json:"short_id"`
+	FileName       string    `json:"file_name"`
+	FilePath       string    `json:"file_path"`
+	AltText        string    `json:"alt_text"`
+	Title          string    `json:"title"`
+	Width          int       `json:"width"`
+	Height         int       `json:"height"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// SectionImageDetails represents minimal info for deletion.
+type SectionImageDetails struct {
+	SectionImageID uuid.UUID `json:"section_image_id"`
+	ImageID        uuid.UUID `json:"image_id"`
+	FilePath       string    `json:"file_path"`
+}
+
 // --- Utility Functions ---
 
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-z0-9]+`)

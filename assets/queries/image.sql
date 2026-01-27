@@ -116,3 +116,39 @@ SELECT * FROM section_images WHERE section_id = ? ORDER BY order_num;
 
 -- name: DeleteSectionImage :exec
 DELETE FROM section_images WHERE id = ?;
+
+-- name: GetSectionImagesWithDetails :many
+SELECT
+    si.id as section_image_id,
+    si.section_id,
+    si.is_header,
+    si.is_featured,
+    si.order_num,
+    i.id,
+    i.site_id,
+    i.short_id,
+    i.file_name,
+    i.file_path,
+    i.alt_text,
+    i.title,
+    i.width,
+    i.height,
+    i.created_at,
+    i.updated_at
+FROM section_images si
+JOIN image i ON si.image_id = i.id
+WHERE si.section_id = ?
+ORDER BY si.is_header DESC, si.order_num;
+
+-- name: GetSectionImageWithDetails :one
+SELECT
+    si.id as section_image_id,
+    si.section_id,
+    si.image_id,
+    si.is_header,
+    i.id,
+    i.site_id,
+    i.file_path
+FROM section_images si
+JOIN image i ON si.image_id = i.id
+WHERE si.id = ?;
