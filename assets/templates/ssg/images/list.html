@@ -12,7 +12,7 @@
         <div class="image-card">
             <a href="/ssg/get-image?id={{ .ID }}&site_id={{ $.Site.ID }}">
                 <div class="image-preview">
-                    <img src="{{ .FilePath }}" alt="{{ .AltText }}" onerror="this.parentElement.innerHTML='<span>No Preview</span>'">
+                    <img src="/ssg/workspace/{{ $.Site.Slug }}/images/{{ .FilePath }}" alt="{{ .AltText }}" onerror="this.parentElement.innerHTML='<span>No Preview</span>'">
                 </div>
                 <div class="image-info">
                     <strong>{{ .FileName }}</strong>

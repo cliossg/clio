@@ -1842,7 +1842,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create image record
-	image := NewImage(site.ID, header.Filename, "/images/"+fileName)
+	image := NewImage(site.ID, header.Filename, fileName)
 	image.Title = title
 	image.AltText = altText
 

@@ -4,7 +4,7 @@
     <h1>Edit Image</h1>
 
     <div class="image-display" style="margin-bottom: 1rem;">
-        <img src="{{ .Image.FilePath }}" alt="{{ .Image.AltText }}" style="max-width: 300px; height: auto;">
+        <img src="/ssg/workspace/{{ .Site.Slug }}/images/{{ .Image.FilePath }}" alt="{{ .Image.AltText }}" style="max-width: 300px; height: auto;">
     </div>
 
     <form method="POST" action="/ssg/update-image">
