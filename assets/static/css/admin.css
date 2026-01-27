@@ -317,10 +317,16 @@ h1, h2, h3 {
 }
 
 /* Alerts */
+.flash-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 2rem 0;
+}
+
 .alert {
     padding: 0.75rem 1rem;
     border-radius: 4px;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
 }
 
 .alert-error {
@@ -820,6 +826,45 @@ button.nav-card {
 
 .header-image-container:hover .delete-btn {
     opacity: 1;
+}
+
+.header-image-container .overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.75);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.header-image-container .overlay-alt {
+    display: block;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-image-container .overlay-title {
+    display: none;
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-top: 0.25rem;
+}
+
+.header-image-container:hover .overlay {
+    background: rgba(0,0,0,0.9);
+}
+
+.header-image-container:hover .overlay-alt {
+    white-space: normal;
+}
+
+.header-image-container:hover .overlay-title {
+    display: block;
 }
 
 /* Modal */
