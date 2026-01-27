@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contributors?site_id={{ .Site.ID }}">&larr; Contributors</a></p>
+    <h1>Edit Contributor</h1>
+
+    <form method="POST" action="/ssg/update-contributor">
+        <input type="hidden" name="id" value="{{ .Contributor.ID }}">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+
+        <div class="form-group">
+            <label for="handle">Handle</label>
+            <input type="text" id="handle" name="handle" value="{{ .Contributor.Handle }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .Contributor.Name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="surname">Surname</label>
+            <input type="text" id="surname" name="surname" value="{{ .Contributor.Surname }}">
+        </div>
+
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4">{{ .Contributor.Bio }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="/ssg/get-contributor?id={{ .Contributor.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

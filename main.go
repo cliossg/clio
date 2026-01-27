@@ -48,7 +48,7 @@ func main() {
 	siteCtxMw := ssg.SiteContextMiddleware(ssgService, log)
 
 	authHandler := auth.NewHandler(authService, optionalSessionMw, templatesFS, cfg, log)
-	ssgHandler := ssg.NewHandler(ssgService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, templatesFS, cfg, log)
+	ssgHandler := ssg.NewHandler(ssgService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, cfg, log)
 
 	authSeeder := auth.NewSeeder(authService, templatesFS, log)
 	if cfg.Credentials.Path != "" {

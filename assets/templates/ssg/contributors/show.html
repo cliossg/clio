@@ -1,0 +1,52 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contributors?site_id={{ .Site.ID }}">&larr; Contributors</a></p>
+    <div class="card-header">
+        <h1>{{ .Contributor.FullName }}</h1>
+        <div>
+            <a href="/ssg/edit-contributor?id={{ .Contributor.ID }}&site_id={{ .Site.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-contributor" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Contributor.ID }}">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this contributor?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <dl class="detail-list">
+        <dt>Handle</dt>
+        <dd><code>@{{ .Contributor.Handle }}</code></dd>
+
+        <dt>Name</dt>
+        <dd>{{ .Contributor.Name }}</dd>
+
+        {{ if .Contributor.Surname }}
+        <dt>Surname</dt>
+        <dd>{{ .Contributor.Surname }}</dd>
+        {{ end }}
+
+        {{ if .Contributor.Bio }}
+        <dt>Bio</dt>
+        <dd>{{ .Contributor.Bio }}</dd>
+        {{ end }}
+
+        {{ if .Contributor.SocialLinks }}
+        <dt>Social Links</dt>
+        <dd>
+            {{ range .Contributor.SocialLinks }}
+            <span class="social-link">
+                {{ .Platform }}: {{ if .Handle }}@{{ .Handle }}{{ else }}{{ .URL }}{{ end }}
+            </span>
+            {{ end }}
+        </dd>
+        {{ end }}
+
+        <dt>Created</dt>
+        <dd>{{ .Contributor.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Contributor.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+</div>
+{{ end }}

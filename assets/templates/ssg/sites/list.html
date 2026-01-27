@@ -1,8 +1,9 @@
 {{ define "content" }}
+{{ $isAdmin := hasRole .CurrentUserRoles "admin" }}
 <div class="card">
     <div class="card-header">
         <h1>Sites</h1>
-        <a href="/ssg/new-site" class="btn">New Site</a>
+        {{ if $isAdmin }}<a href="/ssg/new-site" class="btn">New Site</a>{{ end }}
     </div>
     <table>
         <thead>
@@ -11,7 +12,7 @@
                 <th>Slug</th>
                 <th>Mode</th>
                 <th>Active</th>
-                <th>Actions</th>
+                {{ if $isAdmin }}<th>Actions</th>{{ end }}
             </tr>
         </thead>
         <tbody>
@@ -21,9 +22,11 @@
                 <td>{{ .Slug }}</td>
                 <td>{{ .Mode }}</td>
                 <td>{{ if .Active }}Yes{{ else }}No{{ end }}</td>
+                {{ if $isAdmin }}
                 <td>
                     <a href="/ssg/edit-site?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
+                {{ end }}
             </tr>
             {{ end }}
         </tbody>

@@ -23,7 +23,8 @@
 
         <div class="form-group">
             <label for="ref_key">Reference Key</label>
-            <input type="text" id="ref_key" name="ref_key" value="{{ .Param.RefKey }}">
+            <input type="text" id="ref_key" value="{{ .Param.RefKey }}" readonly disabled>
+            <small>Reference key cannot be changed after creation.</small>
         </div>
 
         <div class="form-group">

@@ -1,9 +1,10 @@
 {{ define "content" }}
+{{ $canEdit := or (hasRole .CurrentUserRoles "admin") (hasRole .CurrentUserRoles "editor") }}
 <div class="card">
     <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">← {{ .Site.Name }}</a></p>
     <div class="card-header">
         <h1>Contents</h1>
-        <a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>
+        {{ if $canEdit }}<a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>{{ end }}
     </div>
 
     {{ if .Contents }}
@@ -14,7 +15,7 @@
                 <th>Section</th>
                 <th>Kind</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {{ if $canEdit }}<th>Actions</th>{{ end }}
             </tr>
         </thead>
         <tbody>
@@ -27,9 +28,11 @@
                     {{ if .Draft }}<span class="badge badge-warning">Draft</span>{{ else }}<span class="badge badge-success">Published</span>{{ end }}
                     {{ if .Featured }}<span class="badge badge-info">Featured</span>{{ end }}
                 </td>
+                {{ if $canEdit }}
                 <td>
                     <a href="/ssg/edit-content?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
+                {{ end }}
             </tr>
             {{ end }}
         </tbody>
@@ -47,7 +50,7 @@
     </div>
     {{ end }}
     {{ else }}
-    <p class="empty-state">No content yet. <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.</p>
+    <p class="empty-state">No content yet.{{ if $canEdit }} <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.{{ end }}</p>
     {{ end }}
 
 </div>

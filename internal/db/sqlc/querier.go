@@ -15,6 +15,7 @@ type Querier interface {
 	CountSearchContent(ctx context.Context, arg CountSearchContentParams) (int64, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateContentImage(ctx context.Context, arg CreateContentImageParams) error
+	CreateContributor(ctx context.Context, arg CreateContributorParams) (Contributor, error)
 	CreateImage(ctx context.Context, arg CreateImageParams) (Image, error)
 	CreateImageVariant(ctx context.Context, arg CreateImageVariantParams) (ImageVariant, error)
 	CreateLayout(ctx context.Context, arg CreateLayoutParams) (Layout, error)
@@ -29,6 +30,7 @@ type Querier interface {
 	DeleteContent(ctx context.Context, id string) error
 	DeleteContentImage(ctx context.Context, id string) error
 	DeleteContentImageByContentAndImage(ctx context.Context, arg DeleteContentImageByContentAndImageParams) error
+	DeleteContributor(ctx context.Context, id string) error
 	DeleteExpiredSessions(ctx context.Context) error
 	DeleteImage(ctx context.Context, id string) error
 	DeleteImageVariant(ctx context.Context, id string) error
@@ -53,6 +55,8 @@ type Querier interface {
 	GetContentImagesWithDetails(ctx context.Context, contentID string) ([]GetContentImagesWithDetailsRow, error)
 	GetContentWithMeta(ctx context.Context, id string) (GetContentWithMetaRow, error)
 	GetContentWithPagination(ctx context.Context, arg GetContentWithPaginationParams) ([]Content, error)
+	GetContributor(ctx context.Context, id string) (Contributor, error)
+	GetContributorByHandle(ctx context.Context, arg GetContributorByHandleParams) (Contributor, error)
 	GetImage(ctx context.Context, id string) (Image, error)
 	GetImageByPath(ctx context.Context, arg GetImageByPathParams) (Image, error)
 	GetImageByShortID(ctx context.Context, shortID sql.NullString) (Image, error)
@@ -87,12 +91,14 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetValidSession(ctx context.Context, id string) (Session, error)
 	ListAllSites(ctx context.Context) ([]Site, error)
+	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveAllTagsFromContent(ctx context.Context, contentID string) error
 	RemoveTagFromContent(ctx context.Context, arg RemoveTagFromContentParams) error
 	SearchContent(ctx context.Context, arg SearchContentParams) ([]Content, error)
 	UpdateContent(ctx context.Context, arg UpdateContentParams) (Content, error)
+	UpdateContributor(ctx context.Context, arg UpdateContributorParams) (Contributor, error)
 	UpdateImage(ctx context.Context, arg UpdateImageParams) (Image, error)
 	UpdateImageVariant(ctx context.Context, arg UpdateImageVariantParams) (ImageVariant, error)
 	UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Layout, error)

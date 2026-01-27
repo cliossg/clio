@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cliossg/clio/pkg/cl/config"
@@ -75,14 +76,28 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/change-password", h.HandleChangePassword)
 		r.Post("/change-password", h.HandleChangePassword)
 
-		// Users CRUD
-		r.Get("/admin/list-users", h.HandleListUsers)
-		r.Get("/admin/new-user", h.HandleNewUser)
-		r.Post("/admin/create-user", h.HandleCreateUser)
-		r.Get("/admin/get-user", h.HandleShowUser)
-		r.Get("/admin/edit-user", h.HandleEditUser)
-		r.Post("/admin/update-user", h.HandleUpdateUser)
-		r.Post("/admin/delete-user", h.HandleDeleteUser)
+		// Admin-only routes (Users CRUD)
+		r.Group(func(r chi.Router) {
+			r.Use(h.requireAdmin)
+			r.Get("/admin/list-users", h.HandleListUsers)
+			r.Get("/admin/new-user", h.HandleNewUser)
+			r.Post("/admin/create-user", h.HandleCreateUser)
+			r.Get("/admin/get-user", h.HandleShowUser)
+			r.Get("/admin/edit-user", h.HandleEditUser)
+			r.Post("/admin/update-user", h.HandleUpdateUser)
+			r.Post("/admin/delete-user", h.HandleDeleteUser)
+		})
+	})
+}
+
+func (h *Handler) requireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := h.GetCurrentUser(r.Context())
+		if err != nil || !user.HasRole(RoleAdmin) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -379,32 +394,55 @@ func (h *Handler) GetUserName(ctx context.Context) string {
 	return user.Email
 }
 
+// GetUserRoles returns the current user's roles from context.
+func (h *Handler) GetUserRoles(ctx context.Context) string {
+	user, err := h.GetCurrentUser(ctx)
+	if err != nil {
+		return ""
+	}
+	return user.Roles
+}
+
 // --- Users CRUD ---
 
 // AdminPageData holds data for admin pages.
 type AdminPageData struct {
-	Title           string
-	HideNav         bool
-	AuthPage        bool
-	Site            interface{}
-	Error           string
-	Success         string
-	User            *User
-	Users           []*User
-	GeneratedPass   string
-	CurrentUserName string
+	Title            string
+	HideNav          bool
+	AuthPage         bool
+	Site             interface{}
+	Error            string
+	Success          string
+	User             *User
+	Users            []*User
+	GeneratedPass    string
+	CurrentUserName  string
+	CurrentUserRoles string
 }
 
 func (h *Handler) renderAdmin(w http.ResponseWriter, r *http.Request, templateName string, data AdminPageData) {
 	funcMap := render.MergeFuncMaps(render.FuncMap(), template.FuncMap{
 		"add": func(a, b int) int { return a + b },
+		"hasRole": func(roles, role string) bool {
+			for _, r := range strings.Split(roles, ",") {
+				if strings.TrimSpace(r) == role {
+					return true
+				}
+			}
+			return false
+		},
 	})
 
-	if data.CurrentUserName == "" {
+	if data.CurrentUserName == "" || data.CurrentUserRoles == "" {
 		if user, err := h.GetCurrentUser(r.Context()); err == nil {
-			data.CurrentUserName = user.Name
 			if data.CurrentUserName == "" {
-				data.CurrentUserName = user.Email
+				data.CurrentUserName = user.Name
+				if data.CurrentUserName == "" {
+					data.CurrentUserName = user.Email
+				}
+			}
+			if data.CurrentUserRoles == "" {
+				data.CurrentUserRoles = user.Roles
 			}
 		}
 	}
@@ -456,9 +494,11 @@ func (h *Handler) HandleNewUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
 	email := r.FormValue("email")
 	name := r.FormValue("name")
 	password := r.FormValue("password")
+	roles := strings.Join(r.Form["roles"], ",")
 	mustChangePassword := r.FormValue("must_change_password") == "on"
 
 	if email == "" || password == "" {
@@ -470,7 +510,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.service.CreateUser(r.Context(), email, password, name, mustChangePassword)
+	_, err := h.service.CreateUser(r.Context(), email, password, name, roles, mustChangePassword)
 	if err != nil {
 		h.log.Errorf("Cannot create user: %v", err)
 		h.renderAdmin(w, r, "admin/users/new", AdminPageData{
@@ -544,6 +584,11 @@ func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	user.Email = r.FormValue("email")
 	user.Name = r.FormValue("name")
 	user.Status = r.FormValue("status")
+	// Only update roles if user is not admin (admin role is immutable)
+	if !user.HasRole(RoleAdmin) {
+		roles := r.Form["roles"]
+		user.Roles = strings.Join(roles, ",")
+	}
 	user.MustChangePassword = r.FormValue("must_change_password") == "on"
 	user.UpdatedAt = time.Now()
 
@@ -562,10 +607,14 @@ func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateUser(r.Context(), user); err != nil {
 		h.log.Errorf("Cannot update user: %v", err)
+		errMsg := "Cannot save user"
+		if err == ErrCannotChangeAdmin {
+			errMsg = "Cannot change admin role"
+		}
 		h.renderAdmin(w, r, "admin/users/edit", AdminPageData{
 			Title: "Edit " + user.Name,
 			User:  user,
-			Error: "Cannot save user",
+			Error: errMsg,
 		})
 		return
 	}
@@ -581,9 +630,21 @@ func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prevent deleting yourself
 	currentUserIDStr := middleware.GetUserID(r.Context())
 	if currentUserIDStr == id.String() {
 		http.Error(w, "Cannot delete yourself", http.StatusBadRequest)
+		return
+	}
+
+	// Prevent deleting the admin user
+	user, err := h.service.GetUser(r.Context(), id)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if user.HasRole(RoleAdmin) {
+		http.Error(w, "Cannot delete the admin user", http.StatusForbidden)
 		return
 	}
 

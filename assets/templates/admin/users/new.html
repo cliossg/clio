@@ -14,6 +14,14 @@
         </div>
 
         <div class="form-group">
+            <label>Roles</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="roles" value="editor" checked> Editor</label>
+                <label><input type="checkbox" name="roles" value="viewer"> Viewer</label>
+            </div>
+        </div>
+
+        <div class="form-group">
             <label for="password">Password</label>
             <input type="text" id="password" name="password" value="{{ .GeneratedPass }}" required>
             <small>Share this password with the user securely.</small>

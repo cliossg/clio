@@ -3,6 +3,7 @@ package ssg
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -94,6 +95,13 @@ type Service interface {
 	GetMetaByContentID(ctx context.Context, contentID uuid.UUID) (*Meta, error)
 	CreateMeta(ctx context.Context, meta *Meta) error
 	UpdateMeta(ctx context.Context, meta *Meta) error
+
+	// Contributor operations
+	CreateContributor(ctx context.Context, contributor *Contributor) error
+	GetContributor(ctx context.Context, id uuid.UUID) (*Contributor, error)
+	GetContributors(ctx context.Context, siteID uuid.UUID) ([]*Contributor, error)
+	UpdateContributor(ctx context.Context, contributor *Contributor) error
+	DeleteContributor(ctx context.Context, id uuid.UUID) error
 }
 
 // DBProvider provides access to the database.
@@ -247,25 +255,31 @@ func (s *service) DeleteSite(ctx context.Context, id uuid.UUID) error {
 func (s *service) CreateContent(ctx context.Context, content *Content) error {
 	s.ensureQueries()
 
+	var contributorID sql.NullString
+	if content.ContributorID != nil {
+		contributorID = nullString(content.ContributorID.String())
+	}
+
 	params := sqlc.CreateContentParams{
-		ID:          content.ID.String(),
-		SiteID:      content.SiteID.String(),
-		UserID:      nullString(content.UserID.String()),
-		ShortID:     nullString(content.ShortID),
-		SectionID:   nullString(content.SectionID.String()),
-		Kind:        nullString(content.Kind),
-		Heading:     content.Heading,
-		Summary:     nullString(content.Summary),
-		Body:        nullString(content.Body),
-		Draft:       nullInt(boolToInt(content.Draft)),
-		Featured:    nullInt(boolToInt(content.Featured)),
-		Series:      nullString(content.Series),
-		SeriesOrder: nullInt(int64(content.SeriesOrder)),
-		PublishedAt: nullTime(content.PublishedAt),
-		CreatedBy:   nullString(content.CreatedBy.String()),
-		UpdatedBy:   nullString(content.UpdatedBy.String()),
-		CreatedAt:   nullTime(&content.CreatedAt),
-		UpdatedAt:   nullTime(&content.UpdatedAt),
+		ID:            content.ID.String(),
+		SiteID:        content.SiteID.String(),
+		UserID:        nullString(content.UserID.String()),
+		ShortID:       nullString(content.ShortID),
+		SectionID:     nullString(content.SectionID.String()),
+		ContributorID: contributorID,
+		Kind:          nullString(content.Kind),
+		Heading:       content.Heading,
+		Summary:       nullString(content.Summary),
+		Body:          nullString(content.Body),
+		Draft:         nullInt(boolToInt(content.Draft)),
+		Featured:      nullInt(boolToInt(content.Featured)),
+		Series:        nullString(content.Series),
+		SeriesOrder:   nullInt(int64(content.SeriesOrder)),
+		PublishedAt:   nullTime(content.PublishedAt),
+		CreatedBy:     nullString(content.CreatedBy.String()),
+		UpdatedBy:     nullString(content.UpdatedBy.String()),
+		CreatedAt:     nullTime(&content.CreatedAt),
+		UpdatedAt:     nullTime(&content.UpdatedAt),
 	}
 
 	_, err := s.queries.CreateContent(ctx, params)
@@ -379,20 +393,26 @@ func (s *service) GetContentWithPagination(ctx context.Context, siteID uuid.UUID
 func (s *service) UpdateContent(ctx context.Context, content *Content) error {
 	s.ensureQueries()
 
+	var contributorID sql.NullString
+	if content.ContributorID != nil {
+		contributorID = nullString(content.ContributorID.String())
+	}
+
 	params := sqlc.UpdateContentParams{
-		SectionID:   nullString(content.SectionID.String()),
-		Kind:        nullString(content.Kind),
-		Heading:     content.Heading,
-		Summary:     nullString(content.Summary),
-		Body:        nullString(content.Body),
-		Draft:       nullInt(boolToInt(content.Draft)),
-		Featured:    nullInt(boolToInt(content.Featured)),
-		Series:      nullString(content.Series),
-		SeriesOrder: nullInt(int64(content.SeriesOrder)),
-		PublishedAt: nullTime(content.PublishedAt),
-		UpdatedBy:   nullString(content.UpdatedBy.String()),
-		UpdatedAt:   nullTime(&content.UpdatedAt),
-		ID:          content.ID.String(),
+		SectionID:     nullString(content.SectionID.String()),
+		ContributorID: contributorID,
+		Kind:          nullString(content.Kind),
+		Heading:       content.Heading,
+		Summary:       nullString(content.Summary),
+		Body:          nullString(content.Body),
+		Draft:         nullInt(boolToInt(content.Draft)),
+		Featured:      nullInt(boolToInt(content.Featured)),
+		Series:        nullString(content.Series),
+		SeriesOrder:   nullInt(int64(content.SeriesOrder)),
+		PublishedAt:   nullTime(content.PublishedAt),
+		UpdatedBy:     nullString(content.UpdatedBy.String()),
+		UpdatedAt:     nullTime(&content.UpdatedAt),
+		ID:            content.ID.String(),
 	}
 
 	_, err := s.queries.UpdateContent(ctx, params)
@@ -1283,4 +1303,135 @@ func timePtr(t time.Time) *time.Time {
 func parseUUID(s string) uuid.UUID {
 	id, _ := uuid.Parse(s)
 	return id
+}
+
+// --- Contributor Operations ---
+
+func (s *service) CreateContributor(ctx context.Context, contributor *Contributor) error {
+	s.ensureQueries()
+
+	socialLinksJSON, err := json.Marshal(contributor.SocialLinks)
+	if err != nil {
+		return fmt.Errorf("cannot marshal social links: %w", err)
+	}
+
+	params := sqlc.CreateContributorParams{
+		ID:          contributor.ID.String(),
+		ShortID:     contributor.ShortID,
+		SiteID:      contributor.SiteID.String(),
+		Handle:      contributor.Handle,
+		Name:        contributor.Name,
+		Surname:     contributor.Surname,
+		Bio:         contributor.Bio,
+		SocialLinks: string(socialLinksJSON),
+		Role:        contributor.Role,
+		CreatedBy:   contributor.CreatedBy.String(),
+		UpdatedBy:   contributor.UpdatedBy.String(),
+		CreatedAt:   contributor.CreatedAt,
+		UpdatedAt:   contributor.UpdatedAt,
+	}
+
+	_, err = s.queries.CreateContributor(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot create contributor: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) GetContributor(ctx context.Context, id uuid.UUID) (*Contributor, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetContributor(ctx, id.String())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get contributor: %w", err)
+	}
+
+	return contributorFromSQLC(row)
+}
+
+func (s *service) GetContributors(ctx context.Context, siteID uuid.UUID) ([]*Contributor, error) {
+	s.ensureQueries()
+
+	rows, err := s.queries.ListContributorsBySiteID(ctx, siteID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot list contributors: %w", err)
+	}
+
+	contributors := make([]*Contributor, 0, len(rows))
+	for _, row := range rows {
+		c, err := contributorFromSQLC(row)
+		if err != nil {
+			return nil, err
+		}
+		contributors = append(contributors, c)
+	}
+
+	return contributors, nil
+}
+
+func (s *service) UpdateContributor(ctx context.Context, contributor *Contributor) error {
+	s.ensureQueries()
+
+	socialLinksJSON, err := json.Marshal(contributor.SocialLinks)
+	if err != nil {
+		return fmt.Errorf("cannot marshal social links: %w", err)
+	}
+
+	params := sqlc.UpdateContributorParams{
+		ID:          contributor.ID.String(),
+		Handle:      contributor.Handle,
+		Name:        contributor.Name,
+		Surname:     contributor.Surname,
+		Bio:         contributor.Bio,
+		SocialLinks: string(socialLinksJSON),
+		Role:        contributor.Role,
+		UpdatedBy:   contributor.UpdatedBy.String(),
+		UpdatedAt:   contributor.UpdatedAt,
+	}
+
+	_, err = s.queries.UpdateContributor(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot update contributor: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) DeleteContributor(ctx context.Context, id uuid.UUID) error {
+	s.ensureQueries()
+
+	if err := s.queries.DeleteContributor(ctx, id.String()); err != nil {
+		return fmt.Errorf("cannot delete contributor: %w", err)
+	}
+
+	return nil
+}
+
+func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
+	var socialLinks []SocialLink
+	if row.SocialLinks != "" && row.SocialLinks != "[]" {
+		if err := json.Unmarshal([]byte(row.SocialLinks), &socialLinks); err != nil {
+			return nil, fmt.Errorf("cannot unmarshal social links: %w", err)
+		}
+	}
+
+	return &Contributor{
+		ID:          uuid.MustParse(row.ID),
+		SiteID:      uuid.MustParse(row.SiteID),
+		ShortID:     row.ShortID,
+		Handle:      row.Handle,
+		Name:        row.Name,
+		Surname:     row.Surname,
+		Bio:         row.Bio,
+		SocialLinks: socialLinks,
+		Role:        row.Role,
+		CreatedBy:   uuid.MustParse(row.CreatedBy),
+		UpdatedBy:   uuid.MustParse(row.UpdatedBy),
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+	}, nil
 }

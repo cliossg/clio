@@ -97,7 +97,7 @@
 
         <!-- Metadata (collapsible) -->
         <details class="form-details">
-            <summary>Section, Kind & Summary</summary>
+            <summary>Section, Kind, Contributor & Summary</summary>
             <div class="form-row">
                 <div class="form-group">
                     <label for="section_id">Section</label>
@@ -115,6 +115,16 @@
                         <option value="article" {{ if eq .Content.Kind "article" }}selected{{ end }}>Article</option>
                         <option value="blog" {{ if eq .Content.Kind "blog" }}selected{{ end }}>Blog</option>
                         <option value="series" {{ if eq .Content.Kind "series" }}selected{{ end }}>Series</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contributor_id">Contributor</label>
+                    <select id="contributor_id" name="contributor_id">
+                        <option value="">— None —</option>
+                        {{ range .Contributors }}
+                        <option value="{{ .ID }}" {{ if and $.Content.ContributorID (eq .ID (deref $.Content.ContributorID)) }}selected{{ end }}>{{ .FullName }} (@{{ .Handle }})</option>
+                        {{ end }}
                     </select>
                 </div>
             </div>

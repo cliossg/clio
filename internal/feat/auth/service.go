@@ -19,6 +19,8 @@ var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrSessionNotFound    = errors.New("session not found")
 	ErrSessionExpired     = errors.New("session expired")
+	ErrAdminExists        = errors.New("admin user already exists")
+	ErrCannotChangeAdmin  = errors.New("cannot change admin role")
 )
 
 // Service defines the auth service interface.
@@ -26,7 +28,7 @@ type Service interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 	Authenticate(ctx context.Context, email, password string) (*User, error)
-	CreateUser(ctx context.Context, email, password, name string, mustChangePassword bool) (*User, error)
+	CreateUser(ctx context.Context, email, password, name, roles string, mustChangePassword bool) (*User, error)
 	GetUser(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context) ([]*User, error)
@@ -82,6 +84,20 @@ func (s *service) ensureQueries() {
 	}
 }
 
+func (s *service) adminExists(ctx context.Context) (bool, error) {
+	users, err := s.queries.ListUsers(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, u := range users {
+		user := fromSQLCUser(u)
+		if user.HasRole(RoleAdmin) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (s *service) Authenticate(ctx context.Context, email, password string) (*User, error) {
 	s.ensureQueries()
 
@@ -101,7 +117,7 @@ func (s *service) Authenticate(ctx context.Context, email, password string) (*Us
 	return user, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, email, password, name string, mustChangePassword bool) (*User, error) {
+func (s *service) CreateUser(ctx context.Context, email, password, name, roles string, mustChangePassword bool) (*User, error) {
 	s.ensureQueries()
 
 	user, err := NewUser(email, password, name)
@@ -109,6 +125,18 @@ func (s *service) CreateUser(ctx context.Context, email, password, name string, 
 		return nil, fmt.Errorf("cannot create user: %w", err)
 	}
 	user.MustChangePassword = mustChangePassword
+	if roles != "" {
+		user.Roles = roles
+	}
+
+	// Check if trying to create an admin when one already exists
+	if user.HasRole(RoleAdmin) {
+		if exists, err := s.adminExists(ctx); err != nil {
+			return nil, fmt.Errorf("cannot check admin: %w", err)
+		} else if exists {
+			return nil, ErrAdminExists
+		}
+	}
 
 	params := sqlc.CreateUserParams{
 		ID:                 user.ID.String(),
@@ -117,6 +145,7 @@ func (s *service) CreateUser(ctx context.Context, email, password, name string, 
 		PasswordHash:       user.PasswordHash,
 		Name:               user.Name,
 		Status:             user.Status,
+		Roles:              user.Roles,
 		MustChangePassword: boolToInt(user.MustChangePassword),
 		CreatedAt:          user.CreatedAt,
 		UpdatedAt:          user.UpdatedAt,
@@ -177,18 +206,35 @@ func (s *service) ListUsers(ctx context.Context) ([]*User, error) {
 func (s *service) UpdateUser(ctx context.Context, user *User) error {
 	s.ensureQueries()
 
+	existing, err := s.queries.GetUser(ctx, user.ID.String())
+	if err != nil {
+		return fmt.Errorf("cannot get existing user: %w", err)
+	}
+
+	existingUser := fromSQLCUser(existing)
+
+	// Prevent adding admin role to non-admin
+	if user.HasRole(RoleAdmin) && !existingUser.HasRole(RoleAdmin) {
+		return ErrCannotChangeAdmin
+	}
+
+	// Prevent removing admin role from admin
+	if existingUser.HasRole(RoleAdmin) && !user.HasRole(RoleAdmin) {
+		return ErrCannotChangeAdmin
+	}
+
 	params := sqlc.UpdateUserParams{
 		ID:                 user.ID.String(),
 		Email:              user.Email,
 		PasswordHash:       user.PasswordHash,
 		Name:               user.Name,
 		Status:             user.Status,
+		Roles:              user.Roles,
 		MustChangePassword: boolToInt(user.MustChangePassword),
 		UpdatedAt:          user.UpdatedAt,
 	}
 
-	_, err := s.queries.UpdateUser(ctx, params)
-	if err != nil {
+	if _, err = s.queries.UpdateUser(ctx, params); err != nil {
 		return fmt.Errorf("cannot update user: %w", err)
 	}
 
@@ -258,7 +304,6 @@ func (s *service) GetSessionTTL() time.Duration {
 	return s.sessionTTL
 }
 
-// fromSQLCUser converts a sqlc User to our domain User.
 func fromSQLCUser(u sqlc.User) *User {
 	id, _ := uuid.Parse(u.ID)
 	return &User{
@@ -268,6 +313,7 @@ func fromSQLCUser(u sqlc.User) *User {
 		PasswordHash:       u.PasswordHash,
 		Name:               u.Name,
 		Status:             u.Status,
+		Roles:              u.Roles,
 		MustChangePassword: u.MustChangePassword != 0,
 		CreatedAt:          u.CreatedAt,
 		UpdatedAt:          u.UpdatedAt,

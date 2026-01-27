@@ -76,7 +76,7 @@
 
         <!-- Metadata -->
         <details class="form-details">
-            <summary>Section, Kind & Summary</summary>
+            <summary>Section, Kind, Contributor & Summary</summary>
             <div class="form-row">
                 <div class="form-group">
                     <label for="section_id">Section</label>
@@ -94,6 +94,16 @@
                         <option value="article">Article</option>
                         <option value="blog">Blog</option>
                         <option value="series">Series</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contributor_id">Contributor</label>
+                    <select id="contributor_id" name="contributor_id">
+                        <option value="">— None —</option>
+                        {{ range .Contributors }}
+                        <option value="{{ .ID }}">{{ .FullName }} (@{{ .Handle }})</option>
+                        {{ end }}
                     </select>
                 </div>
             </div>

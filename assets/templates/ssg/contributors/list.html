@@ -1,0 +1,35 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">&larr; {{ .Site.Name }}</a></p>
+    <div class="card-header">
+        <h1>Contributors</h1>
+        <a href="/ssg/new-contributor?site_id={{ .Site.ID }}" class="btn">New Contributor</a>
+    </div>
+
+    {{ if .Contributors }}
+    <table>
+        <thead>
+            <tr>
+                <th>Handle</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Contributors }}
+            <tr class="clickable-row" onclick="window.location='/ssg/get-contributor?id={{ .ID }}&site_id={{ $.Site.ID }}'">
+                <td><code>@{{ .Handle }}</code></td>
+                <td>{{ .FullName }}</td>
+                <td>
+                    <a href="/ssg/edit-contributor?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No contributors yet. <a href="/ssg/new-contributor?site_id={{ .Site.ID }}">Create your first contributor</a>.</p>
+    {{ end }}
+
+</div>
+{{ end }}

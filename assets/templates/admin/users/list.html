@@ -11,6 +11,7 @@
             <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Roles</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -20,6 +21,7 @@
             <tr class="clickable-row" onclick="window.location='/admin/get-user?id={{ .ID }}'">
                 <td>{{ .Name }}</td>
                 <td>{{ .Email }}</td>
+                <td>{{ .Roles }}</td>
                 <td>{{ .Status }}</td>
                 <td>
                     <a href="/admin/edit-user?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>

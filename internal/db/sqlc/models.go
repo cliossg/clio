@@ -10,24 +10,25 @@ import (
 )
 
 type Content struct {
-	ID          string         `json:"id"`
-	SiteID      string         `json:"site_id"`
-	UserID      sql.NullString `json:"user_id"`
-	ShortID     sql.NullString `json:"short_id"`
-	SectionID   sql.NullString `json:"section_id"`
-	Kind        sql.NullString `json:"kind"`
-	Heading     string         `json:"heading"`
-	Summary     sql.NullString `json:"summary"`
-	Body        sql.NullString `json:"body"`
-	Draft       sql.NullInt64  `json:"draft"`
-	Featured    sql.NullInt64  `json:"featured"`
-	Series      sql.NullString `json:"series"`
-	SeriesOrder sql.NullInt64  `json:"series_order"`
-	PublishedAt sql.NullTime   `json:"published_at"`
-	CreatedBy   sql.NullString `json:"created_by"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	ID            string         `json:"id"`
+	SiteID        string         `json:"site_id"`
+	UserID        sql.NullString `json:"user_id"`
+	ShortID       sql.NullString `json:"short_id"`
+	SectionID     sql.NullString `json:"section_id"`
+	Kind          sql.NullString `json:"kind"`
+	Heading       string         `json:"heading"`
+	Summary       sql.NullString `json:"summary"`
+	Body          sql.NullString `json:"body"`
+	Draft         sql.NullInt64  `json:"draft"`
+	Featured      sql.NullInt64  `json:"featured"`
+	Series        sql.NullString `json:"series"`
+	SeriesOrder   sql.NullInt64  `json:"series_order"`
+	PublishedAt   sql.NullTime   `json:"published_at"`
+	CreatedBy     sql.NullString `json:"created_by"`
+	UpdatedBy     sql.NullString `json:"updated_by"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	ContributorID sql.NullString `json:"contributor_id"`
 }
 
 type ContentImage struct {
@@ -45,6 +46,22 @@ type ContentTag struct {
 	ContentID string       `json:"content_id"`
 	TagID     string       `json:"tag_id"`
 	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+type Contributor struct {
+	ID          string    `json:"id"`
+	ShortID     string    `json:"short_id"`
+	SiteID      string    `json:"site_id"`
+	Handle      string    `json:"handle"`
+	Name        string    `json:"name"`
+	Surname     string    `json:"surname"`
+	Bio         string    `json:"bio"`
+	SocialLinks string    `json:"social_links"`
+	CreatedBy   string    `json:"created_by"`
+	UpdatedBy   string    `json:"updated_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Role        string    `json:"role"`
 }
 
 type Image struct {
@@ -196,4 +213,5 @@ type User struct {
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
 	MustChangePassword int64     `json:"must_change_password"`
+	Roles              string    `json:"roles"`
 }

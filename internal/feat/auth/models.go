@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,10 +16,17 @@ type User struct {
 	PasswordHash       string
 	Name               string
 	Status             string
+	Roles              string
 	MustChangePassword bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }
+
+const (
+	RoleAdmin  = "admin"
+	RoleEditor = "editor"
+	RoleViewer = "viewer"
+)
 
 // NewUser creates a new user with the given email and password.
 func NewUser(email, password, name string) (*User, error) {
@@ -35,6 +43,7 @@ func NewUser(email, password, name string) (*User, error) {
 		PasswordHash: string(hash),
 		Name:         name,
 		Status:       "active",
+		Roles:        RoleEditor,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}, nil
@@ -60,6 +69,45 @@ func (u *User) UpdatePassword(password string) error {
 // IsActive returns true if the user status is "active".
 func (u *User) IsActive() bool {
 	return u.Status == "active"
+}
+
+// HasRole returns true if the user has the specified role.
+func (u *User) HasRole(role string) bool {
+	for _, r := range strings.Split(u.Roles, ",") {
+		if strings.TrimSpace(r) == role {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAdmin returns true if the user has admin role.
+func (u *User) IsAdmin() bool {
+	return u.HasRole(RoleAdmin)
+}
+
+// IsEditor returns true if the user has editor or admin role.
+func (u *User) IsEditor() bool {
+	return u.HasRole(RoleEditor) || u.HasRole(RoleAdmin)
+}
+
+// IsViewer returns true if the user has viewer, editor, or admin role.
+func (u *User) IsViewer() bool {
+	return u.HasRole(RoleViewer) || u.HasRole(RoleEditor) || u.HasRole(RoleAdmin)
+}
+
+// RolesList returns the roles as a slice.
+func (u *User) RolesList() []string {
+	if u.Roles == "" {
+		return nil
+	}
+	var roles []string
+	for _, r := range strings.Split(u.Roles, ",") {
+		if trimmed := strings.TrimSpace(r); trimmed != "" {
+			roles = append(roles, trimmed)
+		}
+	}
+	return roles
 }
 
 // Session represents a user session.

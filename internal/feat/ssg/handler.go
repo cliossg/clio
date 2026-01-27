@@ -27,29 +27,31 @@ type Handler struct {
 	service    Service
 	workspace  *Workspace
 	generator  *Generator
-	htmlGen    *HTMLGenerator
-	siteCtxMw  func(http.Handler) http.Handler
-	sessionMw  func(http.Handler) http.Handler
-	userNameFn func(context.Context) string
-	assetsFS   embed.FS
-	cfg        *config.Config
-	log        logger.Logger
+	htmlGen     *HTMLGenerator
+	siteCtxMw   func(http.Handler) http.Handler
+	sessionMw   func(http.Handler) http.Handler
+	userNameFn  func(context.Context) string
+	userRolesFn func(context.Context) string
+	assetsFS    embed.FS
+	cfg         *config.Config
+	log         logger.Logger
 }
 
 // NewHandler creates a new SSG handler.
-func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	return &Handler{
-		service:    service,
-		workspace:  workspace,
-		generator:  NewGenerator(workspace),
-		htmlGen:    NewHTMLGenerator(workspace, assetsFS),
-		siteCtxMw:  siteCtxMw,
-		sessionMw:  sessionMw,
-		userNameFn: userNameFn,
-		assetsFS:   assetsFS,
-		cfg:        cfg,
-		log:        log,
+		service:     service,
+		workspace:   workspace,
+		generator:   NewGenerator(workspace),
+		htmlGen:     NewHTMLGenerator(workspace, assetsFS),
+		siteCtxMw:   siteCtxMw,
+		sessionMw:   sessionMw,
+		userNameFn:  userNameFn,
+		userRolesFn: userRolesFn,
+		assetsFS:    assetsFS,
+		cfg:         cfg,
+		log:         log,
 	}
 }
 
@@ -117,8 +119,50 @@ func (h *Handler) processTagifyTags(ctx context.Context, siteID, contentID uuid.
 	}
 }
 
+func (h *Handler) requireEditor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		roles := ""
+		if h.userRolesFn != nil {
+			roles = h.userRolesFn(r.Context())
+		}
+		isEditor := false
+		for _, role := range strings.Split(roles, ",") {
+			r := strings.TrimSpace(role)
+			if r == "admin" || r == "editor" {
+				isEditor = true
+				break
+			}
+		}
+		if !isEditor {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *Handler) requireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		roles := ""
+		if h.userRolesFn != nil {
+			roles = h.userRolesFn(r.Context())
+		}
+		isAdmin := false
+		for _, role := range strings.Split(roles, ",") {
+			if strings.TrimSpace(role) == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // RegisterRoutes registers SSG routes.
-// Routes follow DDD/CQRS pattern: /ssg/verb-noun with query params.
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	h.log.Info("Registering SSG routes")
 
@@ -128,102 +172,129 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Use(h.sessionMw)
 
-		// Sites
+		// Sites - read
 		r.Get("/ssg/list-sites", h.HandleListSites)
-		r.Get("/ssg/new-site", h.HandleNewSite)
-		r.Post("/ssg/create-site", h.HandleCreateSite)
 		r.Get("/ssg/get-site", h.HandleShowSite)
-		r.Get("/ssg/edit-site", h.HandleEditSite)
-		r.Post("/ssg/update-site", h.HandleUpdateSite)
-		r.Post("/ssg/delete-site", h.HandleDeleteSite)
+
+		// Sites - write (admin only)
+		r.Group(func(r chi.Router) {
+			r.Use(h.requireAdmin)
+			r.Get("/ssg/new-site", h.HandleNewSite)
+			r.Post("/ssg/create-site", h.HandleCreateSite)
+			r.Get("/ssg/edit-site", h.HandleEditSite)
+			r.Post("/ssg/update-site", h.HandleUpdateSite)
+			r.Post("/ssg/delete-site", h.HandleDeleteSite)
+		})
 
 		// Routes that need site context middleware
 		r.Group(func(r chi.Router) {
 			r.Use(h.siteCtxMw)
 
-			// Sections
-			r.Get("/ssg/list-sections", h.HandleListSections)
-			r.Get("/ssg/new-section", h.HandleNewSection)
-			r.Post("/ssg/create-section", h.HandleCreateSection)
-			r.Get("/ssg/get-section", h.HandleShowSection)
-			r.Get("/ssg/edit-section", h.HandleEditSection)
-			r.Post("/ssg/update-section", h.HandleUpdateSection)
-			r.Post("/ssg/delete-section", h.HandleDeleteSection)
-
-			// Contents
+			// Read-only routes (viewer+)
 			r.Get("/ssg/list-contents", h.HandleListContents)
-			r.Get("/ssg/new-content", h.HandleNewContent)
-			r.Post("/ssg/create-content", h.HandleCreateContent)
 			r.Get("/ssg/get-content", h.HandleShowContent)
-			r.Get("/ssg/edit-content", h.HandleEditContent)
-			r.Post("/ssg/update-content", h.HandleUpdateContent)
-			r.Post("/ssg/autosave-content", h.HandleAutosaveContent)
-			r.Post("/ssg/delete-content", h.HandleDeleteContent)
-
-			// Layouts
-			r.Get("/ssg/list-layouts", h.HandleListLayouts)
-			r.Get("/ssg/new-layout", h.HandleNewLayout)
-			r.Post("/ssg/create-layout", h.HandleCreateLayout)
-			r.Get("/ssg/get-layout", h.HandleShowLayout)
-			r.Get("/ssg/edit-layout", h.HandleEditLayout)
-			r.Post("/ssg/update-layout", h.HandleUpdateLayout)
-			r.Post("/ssg/delete-layout", h.HandleDeleteLayout)
-
-			// Tags
 			r.Get("/ssg/list-tags", h.HandleListTags)
-			r.Get("/ssg/new-tag", h.HandleNewTag)
-			r.Post("/ssg/create-tag", h.HandleCreateTag)
 			r.Get("/ssg/get-tag", h.HandleShowTag)
-			r.Get("/ssg/edit-tag", h.HandleEditTag)
-			r.Post("/ssg/update-tag", h.HandleUpdateTag)
-			r.Post("/ssg/delete-tag", h.HandleDeleteTag)
-
-			// Params
-			r.Get("/ssg/list-params", h.HandleListParams)
-			r.Get("/ssg/new-param", h.HandleNewParam)
-			r.Post("/ssg/create-param", h.HandleCreateParam)
-			r.Get("/ssg/get-param", h.HandleShowParam)
-			r.Get("/ssg/edit-param", h.HandleEditParam)
-			r.Post("/ssg/update-param", h.HandleUpdateParam)
-			r.Post("/ssg/delete-param", h.HandleDeleteParam)
-
-			// Images
 			r.Get("/ssg/list-images", h.HandleListImages)
-			r.Get("/ssg/new-image", h.HandleNewImage)
-			r.Post("/ssg/create-image", h.HandleCreateImage)
 			r.Get("/ssg/get-image", h.HandleShowImage)
-			r.Get("/ssg/edit-image", h.HandleEditImage)
-			r.Post("/ssg/update-image", h.HandleUpdateImage)
-			r.Post("/ssg/delete-image", h.HandleDeleteImage)
 
-			// Content Images (for editor)
-			r.Post("/ssg/upload-content-image", h.HandleUploadContentImage)
-			r.Post("/ssg/delete-content-image", h.HandleDeleteContentImage)
-			r.Post("/ssg/remove-header-image", h.HandleRemoveHeaderImage)
+			// Editor routes (editor+)
+			r.Group(func(r chi.Router) {
+				r.Use(h.requireEditor)
 
-			// Section Images
-			r.Post("/ssg/upload-section-image", h.HandleUploadSectionImage)
-			r.Post("/ssg/delete-section-image", h.HandleDeleteSectionImage)
+				// Contents
+				r.Get("/ssg/new-content", h.HandleNewContent)
+				r.Post("/ssg/create-content", h.HandleCreateContent)
+				r.Get("/ssg/edit-content", h.HandleEditContent)
+				r.Post("/ssg/update-content", h.HandleUpdateContent)
+				r.Post("/ssg/autosave-content", h.HandleAutosaveContent)
+				r.Post("/ssg/delete-content", h.HandleDeleteContent)
 
-			// Meta (SEO/Settings)
-			r.Post("/ssg/update-meta", h.HandleUpdateMeta)
+				// Tags
+				r.Get("/ssg/new-tag", h.HandleNewTag)
+				r.Post("/ssg/create-tag", h.HandleCreateTag)
+				r.Get("/ssg/edit-tag", h.HandleEditTag)
+				r.Post("/ssg/update-tag", h.HandleUpdateTag)
+				r.Post("/ssg/delete-tag", h.HandleDeleteTag)
 
-			// Generation
-			r.Post("/ssg/generate-markdown", h.HandleGenerateMarkdown)
-			r.Post("/ssg/generate-html", h.HandleGenerateHTML)
-			r.Post("/ssg/publish", h.HandlePublish)
+				// Images
+				r.Get("/ssg/new-image", h.HandleNewImage)
+				r.Post("/ssg/create-image", h.HandleCreateImage)
+				r.Get("/ssg/edit-image", h.HandleEditImage)
+				r.Post("/ssg/update-image", h.HandleUpdateImage)
+				r.Post("/ssg/delete-image", h.HandleDeleteImage)
+
+				// Content Images
+				r.Post("/ssg/upload-content-image", h.HandleUploadContentImage)
+				r.Post("/ssg/delete-content-image", h.HandleDeleteContentImage)
+				r.Post("/ssg/remove-header-image", h.HandleRemoveHeaderImage)
+
+				// Meta
+				r.Post("/ssg/update-meta", h.HandleUpdateMeta)
+
+				// Generation
+				r.Post("/ssg/generate-markdown", h.HandleGenerateMarkdown)
+				r.Post("/ssg/generate-html", h.HandleGenerateHTML)
+				r.Post("/ssg/publish", h.HandlePublish)
+			})
+
+			// Admin-only routes
+			r.Group(func(r chi.Router) {
+				r.Use(h.requireAdmin)
+
+				// Params
+				r.Get("/ssg/list-params", h.HandleListParams)
+				r.Get("/ssg/get-param", h.HandleShowParam)
+				r.Get("/ssg/new-param", h.HandleNewParam)
+				r.Post("/ssg/create-param", h.HandleCreateParam)
+				r.Get("/ssg/edit-param", h.HandleEditParam)
+				r.Post("/ssg/update-param", h.HandleUpdateParam)
+				r.Post("/ssg/delete-param", h.HandleDeleteParam)
+
+				// Sections
+				r.Get("/ssg/list-sections", h.HandleListSections)
+				r.Get("/ssg/new-section", h.HandleNewSection)
+				r.Post("/ssg/create-section", h.HandleCreateSection)
+				r.Get("/ssg/get-section", h.HandleShowSection)
+				r.Get("/ssg/edit-section", h.HandleEditSection)
+				r.Post("/ssg/update-section", h.HandleUpdateSection)
+				r.Post("/ssg/delete-section", h.HandleDeleteSection)
+
+				// Layouts
+				r.Get("/ssg/list-layouts", h.HandleListLayouts)
+				r.Get("/ssg/new-layout", h.HandleNewLayout)
+				r.Post("/ssg/create-layout", h.HandleCreateLayout)
+				r.Get("/ssg/get-layout", h.HandleShowLayout)
+				r.Get("/ssg/edit-layout", h.HandleEditLayout)
+				r.Post("/ssg/update-layout", h.HandleUpdateLayout)
+				r.Post("/ssg/delete-layout", h.HandleDeleteLayout)
+
+				// Section Images
+				r.Post("/ssg/upload-section-image", h.HandleUploadSectionImage)
+				r.Post("/ssg/delete-section-image", h.HandleDeleteSectionImage)
+
+				// Contributors
+				r.Get("/ssg/list-contributors", h.HandleListContributors)
+				r.Get("/ssg/new-contributor", h.HandleNewContributor)
+				r.Post("/ssg/create-contributor", h.HandleCreateContributor)
+				r.Get("/ssg/get-contributor", h.HandleShowContributor)
+				r.Get("/ssg/edit-contributor", h.HandleEditContributor)
+				r.Post("/ssg/update-contributor", h.HandleUpdateContributor)
+				r.Post("/ssg/delete-contributor", h.HandleDeleteContributor)
+			})
 		})
 	})
 }
 
 // PageData holds common page data for templates.
 type PageData struct {
-	Title           string
-	Template        string
-	HideNav         bool
-	AuthPage        bool
-	CurrentUserName string
-	Site            *Site
+	Title            string
+	Template         string
+	HideNav          bool
+	AuthPage         bool
+	CurrentUserName  string
+	CurrentUserRoles string
+	Site             *Site
 	Sites           []*Site
 	Section         *Section
 	Sections        []*Section
@@ -237,6 +308,8 @@ type PageData struct {
 	Params          []*Param
 	Image           *Image
 	Images          []*Image
+	Contributor     *Contributor
+	Contributors    []*Contributor
 	HeaderImage     *ContentImageWithDetails
 	ContentImages   []*ContentImageWithDetails
 	SectionImages   []*SectionImageWithDetails
@@ -256,10 +329,27 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName st
 		"add":      func(a, b int) int { return a + b },
 		"subtract": func(a, b int) int { return a - b },
 		"multiply": func(a, b int) int { return a * b },
+		"deref": func(p *uuid.UUID) uuid.UUID {
+			if p == nil {
+				return uuid.Nil
+			}
+			return *p
+		},
+		"hasRole": func(roles, role string) bool {
+			for _, r := range strings.Split(roles, ",") {
+				if strings.TrimSpace(r) == role {
+					return true
+				}
+			}
+			return false
+		},
 	})
 
 	if data.CurrentUserName == "" && h.userNameFn != nil {
 		data.CurrentUserName = h.userNameFn(r.Context())
+	}
+	if data.CurrentUserRoles == "" && h.userRolesFn != nil {
+		data.CurrentUserRoles = h.userRolesFn(r.Context())
 	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
@@ -789,12 +879,14 @@ func (h *Handler) HandleNewContent(w http.ResponseWriter, r *http.Request) {
 
 	sections, _ := h.service.GetSections(r.Context(), site.ID)
 	tags, _ := h.service.GetTags(r.Context(), site.ID)
+	contributors, _ := h.service.GetContributors(r.Context(), site.ID)
 
 	h.render(w, r, "ssg/contents/new", PageData{
-		Title:    "New Content",
-		Site:     site,
-		Sections: sections,
-		Tags:     tags,
+		Title:        "New Content",
+		Site:         site,
+		Sections:     sections,
+		Tags:         tags,
+		Contributors: contributors,
 	})
 }
 
@@ -827,6 +919,12 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 	content.Featured = r.FormValue("featured") == "on"
 	content.Series = r.FormValue("series")
 
+	if cid := r.FormValue("contributor_id"); cid != "" {
+		if id, err := uuid.Parse(cid); err == nil {
+			content.ContributorID = &id
+		}
+	}
+
 	if order := r.FormValue("series_order"); order != "" {
 		if o, err := strconv.Atoi(order); err == nil {
 			content.SeriesOrder = o
@@ -846,13 +944,15 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot create content: %v", err)
 		sections, _ := h.service.GetSections(r.Context(), site.ID)
 		tags, _ := h.service.GetTags(r.Context(), site.ID)
+		contributors, _ := h.service.GetContributors(r.Context(), site.ID)
 		h.render(w, r, "ssg/contents/new", PageData{
-			Title:    "New Content",
-			Site:     site,
-			Content:  content,
-			Sections: sections,
-			Tags:     tags,
-			Error:    "Cannot create content",
+			Title:        "New Content",
+			Site:         site,
+			Content:      content,
+			Sections:     sections,
+			Tags:         tags,
+			Contributors: contributors,
+			Error:        "Cannot create content",
 		})
 		return
 	}
@@ -916,6 +1016,7 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 	content.Tags, _ = h.service.GetTagsForContent(r.Context(), contentID)
 	sections, _ := h.service.GetSections(r.Context(), site.ID)
 	tags, _ := h.service.GetTags(r.Context(), site.ID)
+	contributors, _ := h.service.GetContributors(r.Context(), site.ID)
 
 	// Get content images and separate header from content images
 	allImages, _ := h.service.GetContentImagesWithDetails(r.Context(), contentID)
@@ -938,6 +1039,7 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 		Content:       content,
 		Sections:      sections,
 		Tags:          tags,
+		Contributors:  contributors,
 		HeaderImage:   headerImage,
 		ContentImages: contentImages,
 		Meta:          meta,
@@ -983,6 +1085,14 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if cid := r.FormValue("contributor_id"); cid != "" {
+		if id, err := uuid.Parse(cid); err == nil {
+			content.ContributorID = &id
+		}
+	} else {
+		content.ContributorID = nil
+	}
+
 	if order := r.FormValue("series_order"); order != "" {
 		if o, err := strconv.Atoi(order); err == nil {
 			content.SeriesOrder = o
@@ -1000,13 +1110,15 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot update content: %v", err)
 		sections, _ := h.service.GetSections(r.Context(), site.ID)
 		tags, _ := h.service.GetTags(r.Context(), site.ID)
+		contributors, _ := h.service.GetContributors(r.Context(), site.ID)
 		h.render(w, r, "ssg/contents/edit", PageData{
-			Title:    "Edit " + content.Heading,
-			Site:     site,
-			Content:  content,
-			Sections: sections,
-			Tags:     tags,
-			Error:    "Cannot update content",
+			Title:        "Edit " + content.Heading,
+			Site:         site,
+			Content:      content,
+			Sections:     sections,
+			Tags:         tags,
+			Contributors: contributors,
+			Error:        "Cannot update content",
 		})
 		return
 	}
@@ -1070,6 +1182,14 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 		if id, err := uuid.Parse(sectionID); err == nil {
 			content.SectionID = id
 		}
+	}
+
+	if cid := r.FormValue("contributor_id"); cid != "" {
+		if id, err := uuid.Parse(cid); err == nil {
+			content.ContributorID = &id
+		}
+	} else {
+		content.ContributorID = nil
 	}
 
 	if seriesOrder := r.FormValue("series_order"); seriesOrder != "" {
@@ -1701,7 +1821,7 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 	param.Name = r.FormValue("name")
 	param.Description = r.FormValue("description")
 	param.Value = r.FormValue("value")
-	param.RefKey = r.FormValue("ref_key")
+	// RefKey is immutable after creation
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -2407,6 +2527,210 @@ func (h *Handler) HandleUpdateMeta(w http.ResponseWriter, r *http.Request) {
 
 	h.log.Infof("Meta updated for content: %s", contentID)
 	w.WriteHeader(http.StatusOK)
+}
+
+// --- Contributor Handlers ---
+
+func (h *Handler) HandleListContributors(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	contributors, err := h.service.GetContributors(r.Context(), site.ID)
+	if err != nil {
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load contributors")
+		return
+	}
+
+	h.render(w, r, "ssg/contributors/list", PageData{
+		Title:        "Contributors",
+		Site:         site,
+		Contributors: contributors,
+	})
+}
+
+func (h *Handler) HandleNewContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	h.render(w, r, "ssg/contributors/new", PageData{
+		Title: "New Contributor",
+		Site:  site,
+	})
+}
+
+func (h *Handler) HandleCreateContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	handle := r.FormValue("handle")
+	name := r.FormValue("name")
+	surname := r.FormValue("surname")
+	bio := r.FormValue("bio")
+
+	if handle == "" || name == "" {
+		h.render(w, r, "ssg/contributors/new", PageData{
+			Title: "New Contributor",
+			Site:  site,
+			Error: "Handle and name are required",
+		})
+		return
+	}
+
+	contributor := NewContributor(site.ID, handle, name, surname)
+	contributor.Bio = bio
+	contributor.CreatedBy = parseUUID(middleware.GetUserID(r.Context()))
+	contributor.UpdatedBy = contributor.CreatedBy
+
+	if err := h.service.CreateContributor(r.Context(), contributor); err != nil {
+		h.render(w, r, "ssg/contributors/new", PageData{
+			Title: "New Contributor",
+			Site:  site,
+			Error: "Cannot create contributor: " + err.Error(),
+		})
+		return
+	}
+
+	h.siteRedirect(w, r, "/ssg/list-contributors")
+}
+
+func (h *Handler) HandleShowContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), id)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	h.render(w, r, "ssg/contributors/show", PageData{
+		Title:       contributor.FullName(),
+		Site:        site,
+		Contributor: contributor,
+	})
+}
+
+func (h *Handler) HandleEditContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), id)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	h.render(w, r, "ssg/contributors/edit", PageData{
+		Title:       "Edit " + contributor.FullName(),
+		Site:        site,
+		Contributor: contributor,
+	})
+}
+
+func (h *Handler) HandleUpdateContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), id)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	contributor.Handle = r.FormValue("handle")
+	contributor.Name = r.FormValue("name")
+	contributor.Surname = r.FormValue("surname")
+	contributor.Bio = r.FormValue("bio")
+	contributor.UpdatedBy = parseUUID(middleware.GetUserID(r.Context()))
+	contributor.UpdatedAt = time.Now()
+
+	if err := h.service.UpdateContributor(r.Context(), contributor); err != nil {
+		h.render(w, r, "ssg/contributors/edit", PageData{
+			Title:       "Edit " + contributor.FullName(),
+			Site:        site,
+			Contributor: contributor,
+			Error:       "Cannot update contributor",
+		})
+		return
+	}
+
+	h.siteRedirect(w, r, "/ssg/get-contributor?id="+id.String())
+}
+
+func (h *Handler) HandleDeleteContributor(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	if err := h.service.DeleteContributor(r.Context(), id); err != nil {
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete contributor")
+		return
+	}
+
+	h.siteRedirect(w, r, "/ssg/list-contributors")
 }
 
 // --- Generation Handlers ---

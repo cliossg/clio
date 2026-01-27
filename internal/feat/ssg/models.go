@@ -75,26 +75,28 @@ func NewSection(siteID uuid.UUID, name, description, path string) *Section {
 
 // Content represents a content item (article, page, etc.).
 type Content struct {
-	ID          uuid.UUID  `json:"id"`
-	SiteID      uuid.UUID  `json:"site_id"`
-	UserID      uuid.UUID  `json:"user_id"`
-	ShortID     string     `json:"short_id"`
-	SectionID   uuid.UUID  `json:"section_id"`
-	Kind        string     `json:"kind"` // "post", "page", "series"
-	Heading     string     `json:"heading"`
-	Summary     string     `json:"summary"`
-	Body        string     `json:"body"`
-	Draft       bool       `json:"draft"`
-	Featured    bool       `json:"featured"`
-	Series      string     `json:"series,omitempty"`
-	SeriesOrder int        `json:"series_order,omitempty"`
-	PublishedAt *time.Time `json:"published_at"`
+	ID            uuid.UUID  `json:"id"`
+	SiteID        uuid.UUID  `json:"site_id"`
+	UserID        uuid.UUID  `json:"user_id"`
+	ShortID       string     `json:"short_id"`
+	SectionID     uuid.UUID  `json:"section_id"`
+	ContributorID *uuid.UUID `json:"contributor_id,omitempty"`
+	Kind          string     `json:"kind"` // "post", "page", "series"
+	Heading       string     `json:"heading"`
+	Summary       string     `json:"summary"`
+	Body          string     `json:"body"`
+	Draft         bool       `json:"draft"`
+	Featured      bool       `json:"featured"`
+	Series        string     `json:"series,omitempty"`
+	SeriesOrder   int        `json:"series_order,omitempty"`
+	PublishedAt   *time.Time `json:"published_at"`
 
 	// Joined fields
-	SectionPath string `json:"section_path,omitempty"`
-	SectionName string `json:"section_name,omitempty"`
-	Tags        []*Tag `json:"tags,omitempty"`
-	Meta        *Meta  `json:"meta,omitempty"`
+	SectionPath string       `json:"section_path,omitempty"`
+	SectionName string       `json:"section_name,omitempty"`
+	Tags        []*Tag       `json:"tags,omitempty"`
+	Meta        *Meta        `json:"meta,omitempty"`
+	Contributor *Contributor `json:"contributor,omitempty"`
 
 	// Image fields (from relationships)
 	HeaderImageURL     string `json:"header_image_url,omitempty"`
@@ -373,6 +375,55 @@ type SectionImageDetails struct {
 	SectionImageID uuid.UUID `json:"section_image_id"`
 	ImageID        uuid.UUID `json:"image_id"`
 	FilePath       string    `json:"file_path"`
+}
+
+// --- Contributor ---
+
+type SocialLink struct {
+	Platform string `json:"platform"`
+	Handle   string `json:"handle,omitempty"`
+	URL      string `json:"url,omitempty"`
+}
+
+type Contributor struct {
+	ID          uuid.UUID    `json:"id"`
+	SiteID      uuid.UUID    `json:"site_id"`
+	ShortID     string       `json:"short_id"`
+	Handle      string       `json:"handle"`
+	Name        string       `json:"name"`
+	Surname     string       `json:"surname"`
+	Bio         string       `json:"bio"`
+	SocialLinks []SocialLink `json:"social_links"`
+	Role        string       `json:"role"`
+	CreatedBy   uuid.UUID    `json:"-"`
+	UpdatedBy   uuid.UUID    `json:"-"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+}
+
+const ContributorRoleEditor = "editor"
+
+func NewContributor(siteID uuid.UUID, handle, name, surname string) *Contributor {
+	now := time.Now()
+	return &Contributor{
+		ID:          uuid.New(),
+		SiteID:      siteID,
+		ShortID:     uuid.New().String()[:8],
+		Handle:      handle,
+		Name:        name,
+		Surname:     surname,
+		SocialLinks: []SocialLink{},
+		Role:        ContributorRoleEditor,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+}
+
+func (c *Contributor) FullName() string {
+	if c.Surname == "" {
+		return c.Name
+	}
+	return c.Name + " " + c.Surname
 }
 
 // --- Utility Functions ---

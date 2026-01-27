@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contributors?site_id={{ .Site.ID }}">&larr; Contributors</a></p>
+    <h1>New Contributor</h1>
+
+    <form method="POST" action="/ssg/create-contributor">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+
+        <div class="form-group">
+            <label for="handle">Handle</label>
+            <input type="text" id="handle" name="handle" required placeholder="e.g., johndoe">
+            <small>Unique identifier, like a username</small>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="surname">Surname</label>
+            <input type="text" id="surname" name="surname">
+        </div>
+
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Contributor</button>
+            <a href="/ssg/list-contributors?site_id={{ .Site.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

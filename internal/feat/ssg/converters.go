@@ -63,6 +63,10 @@ func contentFromSQLC(c sqlc.Content) *Content {
 	if c.UpdatedAt.Valid {
 		content.UpdatedAt = c.UpdatedAt.Time
 	}
+	if c.ContributorID.Valid {
+		id := parseUUID(c.ContributorID.String)
+		content.ContributorID = &id
+	}
 
 	return content
 }
@@ -122,6 +126,10 @@ func contentWithMetaFromSQLC(row sqlc.GetContentWithMetaRow) *Content {
 			Keywords:    row.MetaKeywords.String,
 		}
 	}
+	if row.ContributorID.Valid {
+		id := parseUUID(row.ContributorID.String)
+		content.ContributorID = &id
+	}
 
 	return content
 }
@@ -180,6 +188,10 @@ func contentWithMetaFromSQLCAll(row sqlc.GetAllContentWithMetaRow) *Content {
 			Description: row.MetaDescription.String,
 			Keywords:    row.MetaKeywords.String,
 		}
+	}
+	if row.ContributorID.Valid {
+		id := parseUUID(row.ContributorID.String)
+		content.ContributorID = &id
 	}
 
 	return content

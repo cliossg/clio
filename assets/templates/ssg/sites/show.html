@@ -1,8 +1,11 @@
 {{ define "content" }}
+{{ $isAdmin := hasRole .CurrentUserRoles "admin" }}
+{{ $canEdit := or $isAdmin (hasRole .CurrentUserRoles "editor") }}
 <div class="card">
     <p class="breadcrumb"><a href="/ssg/list-sites">← Sites</a></p>
     <div class="card-header">
         <h1>{{ .Site.Name }}</h1>
+        {{ if $isAdmin }}
         <div>
             <a href="/ssg/edit-site?id={{ .Site.ID }}" class="btn">Edit</a>
             <form method="POST" action="/ssg/delete-site" style="display:inline;">
@@ -10,6 +13,7 @@
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this site and all its content?')">Delete</button>
             </form>
         </div>
+        {{ end }}
     </div>
 
     <dl class="detail-list">
@@ -36,10 +40,12 @@
                 <strong>Contents</strong>
                 <span>Manage posts, pages, and articles</span>
             </a>
+            {{ if $isAdmin }}
             <a href="/ssg/list-sections?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Sections</strong>
                 <span>Organize content into sections</span>
             </a>
+            {{ end }}
             <a href="/ssg/list-tags?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Tags</strong>
                 <span>Categorize and tag content</span>
@@ -50,6 +56,7 @@
             </a>
         </div>
 
+        {{ if $isAdmin }}
         <h3>Site Configuration</h3>
         <div class="nav-grid">
             <a href="/ssg/list-layouts?site_id={{ .Site.ID }}" class="nav-card">
@@ -61,7 +68,9 @@
                 <span>Site settings and configuration</span>
             </a>
         </div>
+        {{ end }}
 
+        {{ if $canEdit }}
         <h3>Generation</h3>
         <div class="nav-grid">
             <form method="POST" action="/ssg/generate-markdown" class="nav-card-form">
@@ -86,6 +95,7 @@
                 </button>
             </form>
         </div>
+        {{ end }}
     </div>
 
 </div>
