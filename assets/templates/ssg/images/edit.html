@@ -1,7 +1,7 @@
 {{ define "content" }}
 <div class="card">
     <p class="breadcrumb"><a href="/ssg/list-images?site_id={{ .Site.ID }}">← Images</a></p>
-    <h1>Edit Image</h1>
+    <h1>Edit Image Details</h1>
 
     <div class="image-display" style="margin-bottom: 1rem;">
         <img src="/ssg/workspace/{{ .Site.Slug }}/images/{{ .Image.FilePath }}" alt="{{ .Image.AltText }}" style="max-width: 300px; height: auto;">
@@ -22,7 +22,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Update Image</button>
+            <button type="submit" class="btn btn-primary">Save</button>
             <a href="/ssg/get-image?id={{ .Image.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>
         </div>
     </form>
