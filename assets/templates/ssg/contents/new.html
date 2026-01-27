@@ -1,14 +1,25 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contents?site_id={{ .Site.ID }}">← Contents</a></p>
     <div class="card-header">
         <h1>New Content</h1>
+        <div id="save-status" class="save-status">
+            <span id="save-indicator" class="htmx-indicator">Saving...</span>
+            <span id="save-text"></span>
+        </div>
     </div>
 
     {{ if .Error }}
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/create-content">
+    <form id="content-form" method="POST" action="/ssg/create-content"
+          hx-post="/ssg/autosave-content"
+          hx-trigger="keyup changed delay:500ms, change delay:500ms"
+          hx-target="#save-status"
+          hx-swap="outerHTML"
+          hx-indicator="#save-indicator">
+        <input type="hidden" id="content-id" name="id" value="">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
 
         <!-- Basic Fields -->
@@ -115,12 +126,16 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Create Content</button>
-            <a href="/ssg/list-contents?site_id={{ .Site.ID }}" class="btn btn-secondary">Cancel</a>
+            <button type="button" class="btn btn-primary"
+                    hx-post="/ssg/autosave-content"
+                    hx-include="#content-form"
+                    hx-target="#save-status"
+                    hx-swap="outerHTML">Save</button>
         </div>
     </form>
 </div>
 
+<script src="/static/js/vendor/htmx.min.js"></script>
 <script src="/static/js/vendor/marked.min.js"></script>
 <script>
 // Elements
@@ -205,5 +220,36 @@ document.querySelectorAll('.tag-chip').forEach(chip => {
         chip.classList.toggle('selected', checkbox.checked);
     });
 });
+
+// Capture content ID after first autosave
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    const saveStatus = document.getElementById('save-status');
+    if (saveStatus && saveStatus.dataset.contentId) {
+        const contentIdField = document.getElementById('content-id');
+        if (contentIdField && !contentIdField.value) {
+            contentIdField.value = saveStatus.dataset.contentId;
+        }
+    }
+});
+
+// Update save time display
+let lastSaveTime = null;
+function updateSaveTimeDisplay() {
+    const saveStatus = document.getElementById('save-status');
+    if (saveStatus && saveStatus.dataset.savedAt) {
+        lastSaveTime = parseInt(saveStatus.dataset.savedAt) * 1000;
+    }
+    if (lastSaveTime) {
+        const seconds = Math.floor((Date.now() - lastSaveTime) / 1000);
+        const saveText = document.getElementById('save-text');
+        if (saveText) {
+            if (seconds < 5) saveText.textContent = 'Saved just now';
+            else if (seconds < 60) saveText.textContent = `Saved ${seconds}s ago`;
+            else saveText.textContent = `Saved ${Math.floor(seconds/60)}m ago`;
+        }
+    }
+}
+setInterval(updateSaveTimeDisplay, 1000);
+document.body.addEventListener('htmx:afterSwap', updateSaveTimeDisplay);
 </script>
 {{ end }}

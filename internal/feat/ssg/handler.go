@@ -925,24 +925,43 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<div id="save-status" class="save-status error">Site context required</div>`))
+		return
+	}
+
 	if err := r.ParseForm(); err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<div id="save-status" class="save-status error">Error parsing form</div>`))
 		return
 	}
 
-	contentID, err := uuid.Parse(r.FormValue("id"))
-	if err != nil {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<div id="save-status" class="save-status error">Invalid content ID</div>`))
-		return
-	}
+	var content *Content
+	var isNew bool
 
-	content, err := h.service.GetContent(r.Context(), contentID)
-	if err != nil {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<div id="save-status" class="save-status error">Content not found</div>`))
-		return
+	contentIDStr := r.FormValue("id")
+	if contentIDStr == "" {
+		isNew = true
+		var sectionID uuid.UUID
+		if sid := r.FormValue("section_id"); sid != "" {
+			sectionID, _ = uuid.Parse(sid)
+		}
+		content = NewContent(site.ID, sectionID, r.FormValue("heading"), r.FormValue("body"))
+	} else {
+		contentID, err := uuid.Parse(contentIDStr)
+		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<div id="save-status" class="save-status error">Invalid content ID</div>`))
+			return
+		}
+		content, err = h.service.GetContent(r.Context(), contentID)
+		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<div id="save-status" class="save-status error">Content not found</div>`))
+			return
+		}
 	}
 
 	content.Heading = r.FormValue("heading")
@@ -968,15 +987,27 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
 		if userID, err := uuid.Parse(userIDStr); err == nil {
+			if isNew {
+				content.CreatedBy = userID
+			}
 			content.UpdatedBy = userID
 		}
 	}
 
-	if err := h.service.UpdateContent(r.Context(), content); err != nil {
-		h.log.Errorf("Autosave failed: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<div id="save-status" class="save-status error">Save failed</div>`))
-		return
+	if isNew {
+		if err := h.service.CreateContent(r.Context(), content); err != nil {
+			h.log.Errorf("Autosave create failed: %v", err)
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<div id="save-status" class="save-status error">Save failed</div>`))
+			return
+		}
+	} else {
+		if err := h.service.UpdateContent(r.Context(), content); err != nil {
+			h.log.Errorf("Autosave update failed: %v", err)
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<div id="save-status" class="save-status error">Save failed</div>`))
+			return
+		}
 	}
 
 	_ = h.service.RemoveAllTagsFromContent(r.Context(), content.ID)
@@ -989,7 +1020,7 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "text/html")
 	timestamp := time.Now().Unix()
-	w.Write([]byte(fmt.Sprintf(`<div id="save-status" class="save-status saved" data-saved-at="%d"><span id="save-indicator" class="htmx-indicator">Saving...</span><span id="save-text">Saved just now</span></div>`, timestamp)))
+	w.Write([]byte(fmt.Sprintf(`<div id="save-status" class="save-status saved" data-saved-at="%d" data-content-id="%s"><span id="save-indicator" class="htmx-indicator">Saving...</span><span id="save-text">Saved just now</span></div>`, timestamp, content.ID.String())))
 }
 
 func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {

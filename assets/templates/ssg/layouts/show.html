@@ -1,5 +1,6 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-layouts?site_id={{ .Site.ID }}">← Layouts</a></p>
     <div class="card-header">
         <h1>{{ .Layout.Name }}</h1>
         <div>
@@ -38,8 +39,5 @@
     </div>
     {{ end }}
 
-    <p class="nav-links">
-        <a href="/ssg/list-layouts?site_id={{ .Site.ID }}">&larr; Back to Layouts</a>
-    </p>
 </div>
 {{ end }}

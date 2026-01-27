@@ -1,5 +1,6 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-params?site_id={{ .Site.ID }}">← Parameters</a></p>
     <div class="card-header">
         <h1>{{ .Param.Name }}</h1>
         <div>
@@ -42,8 +43,5 @@
         <dd>{{ .Param.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
     </dl>
 
-    <p class="nav-links">
-        <a href="/ssg/list-params?site_id={{ .Site.ID }}">&larr; Back to Parameters</a>
-    </p>
 </div>
 {{ end }}

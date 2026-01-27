@@ -1,5 +1,6 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contents?site_id={{ .Site.ID }}">← Contents</a></p>
     <div class="card-header">
         <h1>Edit Content</h1>
         <div id="save-status" class="save-status">
@@ -164,8 +165,11 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Update Content</button>
-            <a href="/ssg/get-content?id={{ .Content.ID }}" class="btn btn-secondary">Cancel</a>
+            <button type="button" class="btn btn-primary"
+                    hx-post="/ssg/autosave-content"
+                    hx-include="#content-form"
+                    hx-target="#save-status"
+                    hx-swap="outerHTML">Save</button>
         </div>
     </form>
 </div>

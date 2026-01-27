@@ -198,6 +198,21 @@ h1, h2, h3 {
     color: var(--navy-deep);
 }
 
+/* Breadcrumb */
+.breadcrumb {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+}
+
+.breadcrumb a {
+    color: var(--stone-beige-dark, #8a8578);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    color: var(--navy-deep);
+}
+
 /* Card Header */
 .card-header {
     display: flex;

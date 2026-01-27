@@ -1,5 +1,6 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">← {{ .Site.Name }}</a></p>
     <div class="card-header">
         <h1>Contents</h1>
         <a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>
@@ -57,8 +58,5 @@
     <p class="empty-state">No content yet. <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.</p>
     {{ end }}
 
-    <p class="nav-links">
-        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
-    </p>
 </div>
 {{ end }}
