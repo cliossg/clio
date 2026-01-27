@@ -199,6 +199,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Post("/ssg/delete-content-image", h.HandleDeleteContentImage)
 			r.Post("/ssg/remove-header-image", h.HandleRemoveHeaderImage)
 
+			// Section Images
+			r.Post("/ssg/upload-section-image", h.HandleUploadSectionImage)
+			r.Post("/ssg/delete-section-image", h.HandleDeleteSectionImage)
+
 			// Meta (SEO/Settings)
 			r.Post("/ssg/update-meta", h.HandleUpdateMeta)
 
@@ -230,9 +234,11 @@ type PageData struct {
 	Params        []*Param
 	Image         *Image
 	Images        []*Image
-	HeaderImage   *ContentImageWithDetails
-	ContentImages []*ContentImageWithDetails
-	Meta          *Meta
+	HeaderImage    *ContentImageWithDetails
+	ContentImages  []*ContentImageWithDetails
+	SectionImages  []*SectionImageWithDetails
+	SectionHeader  *SectionImageWithDetails
+	Meta           *Meta
 	Error         string
 	Success       string
 	CSRFToken     string
@@ -266,11 +272,24 @@ func (h *Handler) render(w http.ResponseWriter, templateName string, data PageDa
 }
 
 func (h *Handler) renderError(w http.ResponseWriter, status int, message string) {
+	h.log.Errorf("HTTP %d: %s", status, message)
 	w.WriteHeader(status)
 	h.render(w, "error", PageData{
 		Title: "Error",
 		Error: message,
 	})
+}
+
+func (h *Handler) siteRedirect(w http.ResponseWriter, r *http.Request, path string) {
+	site := getSiteFromContext(r.Context())
+	if site != nil {
+		if strings.Contains(path, "?") {
+			path += "&site_id=" + site.ID.String()
+		} else {
+			path += "?site_id=" + site.ID.String()
+		}
+	}
+	http.Redirect(w, r, path, http.StatusSeeOther)
 }
 
 // --- Site Handlers ---
@@ -550,7 +569,7 @@ func (h *Handler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/get-section?id="+section.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-section?id="+section.ID.String())
 }
 
 func (h *Handler) HandleShowSection(w http.ResponseWriter, r *http.Request) {
@@ -602,11 +621,24 @@ func (h *Handler) HandleEditSection(w http.ResponseWriter, r *http.Request) {
 
 	layouts, _ := h.service.GetLayouts(r.Context(), site.ID)
 
+	allImages, _ := h.service.GetSectionImagesWithDetails(r.Context(), sectionID)
+	var sectionHeader *SectionImageWithDetails
+	var sectionImages []*SectionImageWithDetails
+	for _, img := range allImages {
+		if img.IsHeader {
+			sectionHeader = img
+		} else {
+			sectionImages = append(sectionImages, img)
+		}
+	}
+
 	h.render(w, "ssg/sections/edit", PageData{
-		Title:   "Edit " + section.Name,
-		Site:    site,
-		Section: section,
-		Layouts: layouts,
+		Title:         "Edit " + section.Name,
+		Site:          site,
+		Section:       section,
+		Layouts:       layouts,
+		SectionHeader: sectionHeader,
+		SectionImages: sectionImages,
 	})
 }
 
@@ -665,7 +697,7 @@ func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/get-section?id="+section.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-section?id="+section.ID.String())
 }
 
 func (h *Handler) HandleDeleteSection(w http.ResponseWriter, r *http.Request) {
@@ -692,7 +724,7 @@ func (h *Handler) HandleDeleteSection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-sections?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-sections")
 }
 
 // --- Content Handlers ---
@@ -815,7 +847,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 	// Handle tags (Tagify format)
 	h.processTagifyTags(r.Context(), site.ID, content.ID, r.FormValue("tags"))
 
-	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-content?id="+content.ID.String())
 }
 
 func (h *Handler) HandleShowContent(w http.ResponseWriter, r *http.Request) {
@@ -970,7 +1002,7 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 	_ = h.service.RemoveAllTagsFromContent(r.Context(), content.ID)
 	h.processTagifyTags(r.Context(), site.ID, content.ID, r.FormValue("tags"))
 
-	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-content?id="+content.ID.String())
 }
 
 func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) {
@@ -1091,7 +1123,7 @@ func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-contents?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-contents")
 }
 
 // --- Layout Handlers ---
@@ -1164,7 +1196,7 @@ func (h *Handler) HandleCreateLayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/get-layout?id="+layout.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-layout?id="+layout.ID.String())
 }
 
 func (h *Handler) HandleShowLayout(w http.ResponseWriter, r *http.Request) {
@@ -1268,7 +1300,7 @@ func (h *Handler) HandleUpdateLayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/get-layout?id="+layout.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/get-layout?id="+layout.ID.String())
 }
 
 func (h *Handler) HandleDeleteLayout(w http.ResponseWriter, r *http.Request) {
@@ -1295,7 +1327,7 @@ func (h *Handler) HandleDeleteLayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-layouts?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-layouts")
 }
 
 // --- Tag Handlers ---
@@ -1367,7 +1399,7 @@ func (h *Handler) HandleCreateTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-tags?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-tags")
 }
 
 func (h *Handler) HandleShowTag(w http.ResponseWriter, r *http.Request) {
@@ -1470,7 +1502,7 @@ func (h *Handler) HandleUpdateTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-tags?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-tags")
 }
 
 func (h *Handler) HandleDeleteTag(w http.ResponseWriter, r *http.Request) {
@@ -1497,7 +1529,7 @@ func (h *Handler) HandleDeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-tags?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-tags")
 }
 
 // --- Param Handlers ---
@@ -1571,7 +1603,7 @@ func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-params?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-params")
 }
 
 func (h *Handler) HandleShowParam(w http.ResponseWriter, r *http.Request) {
@@ -1676,7 +1708,7 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-params?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-params")
 }
 
 func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
@@ -1703,7 +1735,7 @@ func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-params?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-params")
 }
 
 // --- Image Handlers ---
@@ -1830,7 +1862,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Infof("Image uploaded: %s", fileName)
-	http.Redirect(w, r, "/ssg/list-images?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-images")
 }
 
 func (h *Handler) HandleShowImage(w http.ResponseWriter, r *http.Request) {
@@ -1933,7 +1965,7 @@ func (h *Handler) HandleUpdateImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-images?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-images")
 }
 
 func (h *Handler) HandleDeleteImage(w http.ResponseWriter, r *http.Request) {
@@ -1960,7 +1992,7 @@ func (h *Handler) HandleDeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/ssg/list-images?site_id="+site.ID.String(), http.StatusSeeOther)
+	h.siteRedirect(w, r, "/ssg/list-images")
 }
 
 // --- Workspace File Handlers ---
@@ -2158,22 +2190,157 @@ func (h *Handler) HandleRemoveHeaderImage(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
+// --- Section Image Handlers ---
+
+func (h *Handler) HandleUploadSectionImage(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.log.Errorf("HandleUploadSectionImage: site context required")
+		http.Error(w, "Site context required", http.StatusBadRequest)
+		return
+	}
+
+	sectionID, err := uuid.Parse(r.URL.Query().Get("section_id"))
+	if err != nil {
+		h.log.Errorf("HandleUploadSectionImage: invalid section ID: %v", err)
+		http.Error(w, "Invalid section ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		h.log.Errorf("Cannot parse multipart form: %v", err)
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		h.log.Errorf("Cannot get uploaded file: %v", err)
+		http.Error(w, "No file uploaded", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	altText := r.FormValue("alt_text")
+	title := r.FormValue("title")
+	purpose := r.FormValue("purpose")
+	isHeader := purpose == "header"
+
+	imagesPath := h.workspace.GetImagesPath(site.Slug)
+	if err := os.MkdirAll(imagesPath, 0755); err != nil {
+		h.log.Errorf("Cannot create images directory: %v", err)
+		http.Error(w, "Cannot create images directory", http.StatusInternalServerError)
+		return
+	}
+
+	ext := filepath.Ext(header.Filename)
+	uniqueID := uuid.New().String()[:8]
+	fileName := Slugify(strings.TrimSuffix(header.Filename, ext)) + "-" + uniqueID + ext
+	filePath := filepath.Join(imagesPath, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		h.log.Errorf("Cannot create file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		h.log.Errorf("Cannot write file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+
+	image := NewImage(site.ID, header.Filename, fileName)
+	image.AltText = altText
+	image.Title = title
+
+	userIDStr := middleware.GetUserID(r.Context())
+	if userIDStr != "" {
+		if userID, err := uuid.Parse(userIDStr); err == nil {
+			image.CreatedBy = userID
+			image.UpdatedBy = userID
+		}
+	}
+
+	if err := h.service.CreateImage(r.Context(), image); err != nil {
+		h.log.Errorf("Cannot create image record: %v", err)
+		os.Remove(filePath)
+		http.Error(w, "Cannot save image record", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.service.LinkImageToSection(r.Context(), sectionID, image.ID, isHeader); err != nil {
+		h.log.Errorf("Cannot link image to section: %v", err)
+		http.Error(w, "Cannot link image to section", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Infof("Section image uploaded: %s (header: %v)", fileName, isHeader)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) HandleDeleteSectionImage(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.log.Errorf("HandleDeleteSectionImage: site context required")
+		http.Error(w, "Site context required", http.StatusBadRequest)
+		return
+	}
+
+	sectionImageID, err := uuid.Parse(r.URL.Query().Get("id"))
+	if err != nil {
+		h.log.Errorf("HandleDeleteSectionImage: invalid section image ID: %v", err)
+		http.Error(w, "Invalid section image ID", http.StatusBadRequest)
+		return
+	}
+
+	imageDetails, err := h.service.GetSectionImageDetails(r.Context(), sectionImageID)
+	if err != nil {
+		h.log.Errorf("Cannot get section image details: %v", err)
+		http.Error(w, "Cannot find section image", http.StatusNotFound)
+		return
+	}
+
+	if err := h.service.UnlinkImageFromSection(r.Context(), sectionImageID); err != nil {
+		h.log.Errorf("Cannot delete section image link: %v", err)
+		http.Error(w, "Cannot delete section image", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.service.DeleteImage(r.Context(), imageDetails.ImageID); err != nil {
+		h.log.Errorf("Cannot delete image record: %v", err)
+	}
+
+	filePath := filepath.Join(h.workspace.GetImagesPath(site.Slug), imageDetails.FilePath)
+	if err := os.Remove(filePath); err != nil {
+		h.log.Errorf("Cannot delete image file: %v", err)
+	}
+
+	h.log.Infof("Section image fully deleted: %s", sectionImageID)
+	w.WriteHeader(http.StatusOK)
+}
+
 // --- Meta Handlers ---
 
 func (h *Handler) HandleUpdateMeta(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
+		h.log.Errorf("HandleUpdateMeta: site context required")
 		http.Error(w, "Site context required", http.StatusBadRequest)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
+		h.log.Errorf("HandleUpdateMeta: invalid form data: %v", err)
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
 
 	contentID, err := uuid.Parse(r.FormValue("content_id"))
 	if err != nil {
+		h.log.Errorf("HandleUpdateMeta: invalid content ID: %v", err)
 		http.Error(w, "Invalid content ID", http.StatusBadRequest)
 		return
 	}
