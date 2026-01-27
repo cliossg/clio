@@ -26,12 +26,12 @@
         </thead>
         <tbody>
             {{ range .Params }}
-            <tr>
-                <td><a href="/ssg/get-param?id={{ .ID }}">{{ .Name }}</a></td>
+            <tr class="clickable-row" onclick="window.location='/ssg/get-param?id={{ .ID }}'">
+                <td>{{ .Name }}</td>
                 <td><code>{{ if gt (len .Value) 50 }}{{ slice .Value 0 50 }}...{{ else }}{{ .Value }}{{ end }}</code></td>
                 <td>{{ if .System }}<span class="badge">System</span>{{ else }}-{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-param?id={{ .ID }}" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-param?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

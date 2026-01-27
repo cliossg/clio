@@ -665,16 +665,22 @@ button.nav-card {
 
 /* Image Gallery for Editor */
 .image-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
     margin-top: 1rem;
+}
+
+.image-gallery .gallery-image {
+    width: 140px;
+    flex-shrink: 0;
 }
 
 .gallery-image {
     position: relative;
     aspect-ratio: 1;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     cursor: pointer;
     border: 2px solid transparent;
@@ -697,16 +703,16 @@ button.nav-card {
 
 .gallery-image .delete-btn {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 20px;
-    height: 20px;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
     background: #c44536;
     color: white;
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1;
     opacity: 0;
     transition: opacity 0.2s;
@@ -721,16 +727,38 @@ button.nav-card {
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    background: rgba(0,0,0,0.75);
     color: white;
     padding: 0.5rem;
-    font-size: 0.625rem;
-    opacity: 0;
-    transition: opacity 0.2s;
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.gallery-image .overlay-alt {
+    display: block;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gallery-image .overlay-title {
+    display: none;
+    font-size: 0.7rem;
+    opacity: 0.9;
+    margin-top: 0.25rem;
 }
 
 .gallery-image:hover .overlay {
-    opacity: 1;
+    background: rgba(0,0,0,0.9);
+}
+
+.gallery-image:hover .overlay-alt {
+    white-space: normal;
+}
+
+.gallery-image:hover .overlay-title {
+    display: block;
 }
 
 /* Header Image */
@@ -873,44 +901,56 @@ button.nav-card {
 }
 
 /* Zen Mode */
-body.zen-mode .site-header,
-body.zen-mode nav,
-body.zen-mode .container > *:not(.editor-fullscreen) {
-    display: none !important;
-}
-
-body.zen-mode .editor-fullscreen {
+body.zen-mode-active #editor-wrapper {
     position: fixed;
     inset: 0;
     z-index: 2000;
     display: flex;
     background: white;
+    border: none;
+    border-radius: 0;
 }
 
-body.zen-mode .editor-pane {
-    padding: 2rem;
+body.zen-mode-active #editor-wrapper .editor-splitter,
+body.zen-mode-active #editor-wrapper .editor-preview {
+    display: none;
 }
 
-body.zen-mode.dark-mode {
+body.zen-mode-active #editor-wrapper .editor-pane {
+    flex: 1;
+    padding: 2rem 4rem;
+}
+
+body.zen-mode-active #editor-wrapper .editor-textarea {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    border: none;
+    box-shadow: none;
+    height: 100%;
+}
+
+/* Zen Mode - Dark */
+body.zen-mode-active.dark-mode #editor-wrapper {
     background: #1e1e1e;
 }
 
-body.zen-mode.dark-mode .editor-fullscreen {
+body.zen-mode-active.dark-mode #editor-wrapper .editor-pane {
     background: #1e1e1e;
 }
 
-body.zen-mode.dark-mode .editor-textarea {
+body.zen-mode-active.dark-mode #editor-wrapper .editor-textarea {
     background: #1e1e1e;
     color: #e0e0e0;
+    caret-color: #e0e0e0;
 }
 
-body.zen-mode.dark-mode .editor-preview {
-    background: #252525;
-    color: #e0e0e0;
-}
-
-body.zen-mode.dark-mode .editor-splitter {
+body.zen-mode-active.dark-mode .floating-buttons .floating-btn {
     background: #333;
+    color: #e0e0e0;
+}
+
+body.zen-mode-active.dark-mode .floating-buttons .floating-btn:hover {
+    background: #555;
 }
 
 /* Floating Buttons (for Zen Mode) */
@@ -946,4 +986,100 @@ body.zen-mode.dark-mode .editor-splitter {
 /* Hidden utility */
 .hidden {
     display: none !important;
+}
+
+/* Clickable Table Rows */
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+    background-color: var(--white-warm);
+}
+
+/* Tagify overrides */
+.tagify {
+    width: 100%;
+    border-radius: 4px;
+    border-color: var(--stone-beige);
+}
+
+.tagify--focus {
+    border-color: var(--blue-intense);
+}
+
+/* Foldable details */
+.form-details {
+    margin: 1rem 0;
+    border: 1px solid var(--stone-beige);
+    border-radius: 4px;
+    padding: 0;
+}
+
+.form-details summary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    background: var(--white-warm);
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.form-details[open] summary {
+    border-bottom: 1px solid var(--stone-beige);
+    border-radius: 4px 4px 0 0;
+}
+
+.form-details > *:not(summary) {
+    padding: 0 1rem;
+}
+
+.form-details > *:not(summary):first-of-type {
+    padding-top: 1rem;
+}
+
+.form-details > *:last-child {
+    padding-bottom: 1rem;
+}
+
+/* File Input Styled as Button */
+.file-input-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-input-wrapper .btn {
+    pointer-events: none;
+}
+
+/* Alternative: style the native file input */
+input[type="file"].styled-file-input {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    background: var(--blue-intense);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+input[type="file"].styled-file-input:hover {
+    background: var(--navy-deep);
+}
+
+input[type="file"].styled-file-input::file-selector-button {
+    display: none;
 }

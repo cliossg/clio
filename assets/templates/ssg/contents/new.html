@@ -28,43 +28,47 @@
             <input type="text" id="heading" name="heading" required placeholder="Enter content title">
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="section_id">Section</label>
-                <select id="section_id" name="section_id">
-                    <option value="">-- No Section --</option>
-                    {{ range .Sections }}
-                    <option value="{{ .ID }}">{{ .Name }}</option>
-                    {{ end }}
-                </select>
+        <!-- Metadata (expanded by default for new content) -->
+        <details class="form-details" open>
+            <summary>Section, Kind & Summary</summary>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="section_id">Section</label>
+                    <select id="section_id" name="section_id">
+                        {{ range .Sections }}
+                        <option value="{{ .ID }}">{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="kind">Kind</label>
+                    <select id="kind" name="kind" onchange="toggleSeriesFields()">
+                        <option value="page">Page</option>
+                        <option value="article">Article</option>
+                        <option value="blog">Blog</option>
+                        <option value="series">Series</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="series-fields" class="form-row" style="display: none;">
+                <div class="form-group">
+                    <label for="series">Series Name</label>
+                    <input type="text" id="series" name="series" placeholder="Series name">
+                </div>
+
+                <div class="form-group">
+                    <label for="series_order">Series Order</label>
+                    <input type="number" id="series_order" name="series_order" value="0" min="0">
+                </div>
             </div>
 
             <div class="form-group">
-                <label for="kind">Kind</label>
-                <select id="kind" name="kind">
-                    <option value="post">Post</option>
-                    <option value="page">Page</option>
-                    <option value="series">Series</option>
-                </select>
+                <label for="summary">Summary</label>
+                <textarea id="summary" name="summary" rows="2" placeholder="Brief summary for listings"></textarea>
             </div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="series">Series Name</label>
-                <input type="text" id="series" name="series" placeholder="Optional series name">
-            </div>
-
-            <div class="form-group">
-                <label for="series_order">Series Order</label>
-                <input type="number" id="series_order" name="series_order" value="0" min="0">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="summary">Summary</label>
-            <textarea id="summary" name="summary" rows="2" placeholder="Brief summary for listings"></textarea>
-        </div>
+        </details>
 
         <!-- Split Pane Editor -->
         <div class="form-group">
@@ -92,17 +96,9 @@
 
         <!-- Tags -->
         <div class="form-group">
-            <label>Tags</label>
-            <div id="tags-container" class="tags-chips">
-                {{ range .Tags }}
-                <label class="tag-chip" data-tag-id="{{ .ID }}">
-                    <input type="checkbox" name="tag_ids" value="{{ .ID }}">
-                    <span>{{ .Name }}</span>
-                </label>
-                {{ else }}
-                <p class="empty-state">No tags available. <a href="/ssg/new-tag?site_id={{ $.Site.ID }}">Create one</a></p>
-                {{ end }}
-            </div>
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" placeholder="Add tags...">
+            <input type="hidden" id="tags-whitelist" value='[{{ range $i, $t := .Tags }}{{ if $i }},{{ end }}{"value":"{{ $t.Name }}","id":"{{ $t.ID }}"}{{ end }}]'>
         </div>
 
         <!-- Publishing Options -->
@@ -137,6 +133,7 @@
 
 <script src="/static/js/vendor/htmx.min.js"></script>
 <script src="/static/js/vendor/marked.min.js"></script>
+<script src="/static/js/vendor/tagify.min.js"></script>
 <script>
 // Elements
 const bodyTextarea = document.getElementById('body');
@@ -157,6 +154,18 @@ function updatePreview() {
 
 bodyTextarea.addEventListener('input', updatePreview);
 updatePreview(); // Initial render
+
+// Toggle series fields based on content kind
+function toggleSeriesFields() {
+    const kind = document.getElementById('kind').value;
+    const seriesFields = document.getElementById('series-fields');
+    if (kind === 'series') {
+        seriesFields.style.display = '';
+    } else {
+        seriesFields.style.display = 'none';
+    }
+}
+toggleSeriesFields(); // Initial state
 
 // Splitter drag functionality
 let isDragging = false;
@@ -209,17 +218,24 @@ function insertMarkdown(before, after) {
     updatePreview();
 }
 
-// Tag chips handling
-document.querySelectorAll('.tag-chip').forEach(chip => {
-    const checkbox = chip.querySelector('input[type="checkbox"]');
+// Tagify initialization
+(function() {
+    const input = document.getElementById('tags');
+    if (!input) return;
 
-    chip.addEventListener('click', function(e) {
-        if (e.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-        }
-        chip.classList.toggle('selected', checkbox.checked);
+    const whitelist = JSON.parse(document.getElementById('tags-whitelist').value || '[]');
+
+    new Tagify(input, {
+        whitelist: whitelist,
+        enforceWhitelist: false,
+        dropdown: {
+            maxItems: 20,
+            enabled: 0,
+            closeOnSelect: false
+        },
+        originalInputValueFormat: valuesArr => valuesArr.map(item => JSON.stringify({value: item.value, id: item.id || ''})).join(',')
     });
-});
+})();
 
 // Capture content ID after first autosave
 document.body.addEventListener('htmx:afterSwap', function(evt) {

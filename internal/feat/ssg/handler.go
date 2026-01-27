@@ -3,6 +3,7 @@ package ssg
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -54,6 +55,64 @@ func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Ha
 func (h *Handler) Start(ctx context.Context) error {
 	h.log.Info("SSG handler started")
 	return nil
+}
+
+type tagifyEntry struct {
+	Value string `json:"value"`
+	ID    string `json:"id"`
+}
+
+func (h *Handler) processTagifyTags(ctx context.Context, siteID, contentID uuid.UUID, tagsStr string) {
+	if tagsStr == "" {
+		h.log.Debugf("processTagifyTags: empty tags string")
+		return
+	}
+
+	h.log.Debugf("processTagifyTags: received tags string: %s", tagsStr)
+
+	var entries []tagifyEntry
+	jsonStr := "[" + tagsStr + "]"
+	if err := json.Unmarshal([]byte(jsonStr), &entries); err != nil {
+		h.log.Errorf("Failed to parse tagify tags: %v (input: %s)", err, tagsStr)
+		return
+	}
+
+	h.log.Debugf("processTagifyTags: parsed %d entries", len(entries))
+
+	for _, entry := range entries {
+		if entry.Value == "" {
+			continue
+		}
+
+		var tagID uuid.UUID
+		if entry.ID != "" {
+			if parsed, err := uuid.Parse(entry.ID); err == nil {
+				tagID = parsed
+			}
+		}
+
+		if tagID == uuid.Nil {
+			existing, err := h.service.GetTagByName(ctx, siteID, entry.Value)
+			if err == nil && existing != nil {
+				tagID = existing.ID
+			} else {
+				slug := strings.ToLower(strings.ReplaceAll(entry.Value, " ", "-"))
+				tag := &Tag{
+					ID:     uuid.New(),
+					SiteID: siteID,
+					Name:   entry.Value,
+					Slug:   slug,
+				}
+				if err := h.service.CreateTag(ctx, tag); err != nil {
+					h.log.Errorf("Failed to create tag %s: %v", entry.Value, err)
+					continue
+				}
+				tagID = tag.ID
+			}
+		}
+
+		_ = h.service.AddTagToContentByID(ctx, contentID, tagID)
+	}
 }
 
 // RegisterRoutes registers SSG routes.
@@ -753,13 +812,8 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle tags
-	tagIDs := r.Form["tag_ids"]
-	for _, tagIDStr := range tagIDs {
-		if tagID, err := uuid.Parse(tagIDStr); err == nil {
-			_ = h.service.AddTagToContentByID(r.Context(), content.ID, tagID)
-		}
-	}
+	// Handle tags (Tagify format)
+	h.processTagifyTags(r.Context(), site.ID, content.ID, r.FormValue("tags"))
 
 	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
 }
@@ -912,14 +966,9 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update tags
+	// Update tags (Tagify format)
 	_ = h.service.RemoveAllTagsFromContent(r.Context(), content.ID)
-	tagIDs := r.Form["tag_ids"]
-	for _, tagIDStr := range tagIDs {
-		if tagID, err := uuid.Parse(tagIDStr); err == nil {
-			_ = h.service.AddTagToContentByID(r.Context(), content.ID, tagID)
-		}
-	}
+	h.processTagifyTags(r.Context(), site.ID, content.ID, r.FormValue("tags"))
 
 	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
 }
@@ -1011,12 +1060,7 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 	}
 
 	_ = h.service.RemoveAllTagsFromContent(r.Context(), content.ID)
-	tagIDs := r.Form["tag_ids"]
-	for _, tagIDStr := range tagIDs {
-		if tagID, err := uuid.Parse(tagIDStr); err == nil {
-			_ = h.service.AddTagToContentByID(r.Context(), content.ID, tagID)
-		}
-	}
+	h.processTagifyTags(r.Context(), site.ID, content.ID, r.FormValue("tags"))
 
 	w.Header().Set("Content-Type", "text/html")
 	timestamp := time.Now().Unix()
@@ -1983,6 +2027,7 @@ func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Reques
 
 	// Get form values
 	altText := r.FormValue("alt_text")
+	title := r.FormValue("title")
 	purpose := r.FormValue("purpose") // "header" or "content"
 	isHeader := purpose == "header"
 
@@ -2019,6 +2064,7 @@ func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Reques
 	// Create image record
 	image := NewImage(site.ID, header.Filename, fileName)
 	image.AltText = altText
+	image.Title = title
 
 	// Get user ID from context
 	userIDStr := middleware.GetUserID(r.Context())

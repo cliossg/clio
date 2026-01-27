@@ -27,8 +27,8 @@
         </thead>
         <tbody>
             {{ range .Contents }}
-            <tr>
-                <td><a href="/ssg/get-content?id={{ .ID }}&site_id={{ $.Site.ID }}">{{ .Heading }}</a></td>
+            <tr class="clickable-row" onclick="window.location='/ssg/get-content?id={{ .ID }}&site_id={{ $.Site.ID }}'">
+                <td>{{ .Heading }}</td>
                 <td>{{ if .SectionName }}{{ .SectionName }}{{ else }}<em>None</em>{{ end }}</td>
                 <td>{{ .Kind }}</td>
                 <td>
@@ -36,7 +36,7 @@
                     {{ if .Featured }}<span class="badge badge-info">Featured</span>{{ end }}
                 </td>
                 <td>
-                    <a href="/ssg/edit-content?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-content?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

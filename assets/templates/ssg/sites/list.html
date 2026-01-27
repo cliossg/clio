@@ -1,7 +1,9 @@
 {{ define "content" }}
 <div class="card">
-    <h1>Sites</h1>
-    <p><a href="/ssg/new-site" class="btn">New Site</a></p>
+    <div class="card-header">
+        <h1>Sites</h1>
+        <a href="/ssg/new-site" class="btn">New Site</a>
+    </div>
     <table>
         <thead>
             <tr>
@@ -14,13 +16,13 @@
         </thead>
         <tbody>
             {{ range .Sites }}
-            <tr>
-                <td><a href="/ssg/get-site?id={{ .ID }}">{{ .Name }}</a></td>
+            <tr class="clickable-row" onclick="window.location='/ssg/get-site?id={{ .ID }}'">
+                <td>{{ .Name }}</td>
                 <td>{{ .Slug }}</td>
                 <td>{{ .Mode }}</td>
                 <td>{{ if .Active }}Yes{{ else }}No{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-site?id={{ .ID }}" class="btn">Edit</a>
+                    <a href="/ssg/edit-site?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

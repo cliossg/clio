@@ -28,44 +28,6 @@
             <input type="text" id="heading" name="heading" value="{{ .Content.Heading }}" required>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="section_id">Section</label>
-                <select id="section_id" name="section_id">
-                    <option value="">-- No Section --</option>
-                    {{ range .Sections }}
-                    <option value="{{ .ID }}" {{ if eq .ID $.Content.SectionID }}selected{{ end }}>{{ .Name }}</option>
-                    {{ end }}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="kind">Kind</label>
-                <select id="kind" name="kind">
-                    <option value="post" {{ if eq .Content.Kind "post" }}selected{{ end }}>Post</option>
-                    <option value="page" {{ if eq .Content.Kind "page" }}selected{{ end }}>Page</option>
-                    <option value="series" {{ if eq .Content.Kind "series" }}selected{{ end }}>Series</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="series">Series Name</label>
-                <input type="text" id="series" name="series" value="{{ .Content.Series }}">
-            </div>
-
-            <div class="form-group">
-                <label for="series_order">Series Order</label>
-                <input type="number" id="series_order" name="series_order" value="{{ .Content.SeriesOrder }}" min="0">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="summary">Summary</label>
-            <textarea id="summary" name="summary" rows="2">{{ .Content.Summary }}</textarea>
-        </div>
-
         <!-- Header Image Section -->
         <div class="form-group">
             <label>Header Image</label>
@@ -113,35 +75,74 @@
 
         <!-- Content Images Gallery -->
         <div class="form-group">
-            <label>Content Images <small>(click to insert at cursor)</small></label>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                <label style="margin-bottom: 0;">Content Images <small>(click to insert at cursor)</small></label>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openImageModal('content')">Upload Image</button>
+            </div>
             <div id="content-images" class="image-gallery">
                 {{ range .ContentImages }}
-                <div class="gallery-image" onclick="insertImageAtCursor('{{ .FilePath }}', '{{ .AltText }}')" title="{{ .AltText }}">
+                <div class="gallery-image" onclick="insertImageAtCursor('{{ .FilePath }}', '{{ .AltText }}')" title="{{ if .AltText }}{{ .AltText }}{{ end }}{{ if .Title }} - {{ .Title }}{{ end }}">
                     <img src="/ssg/workspace/{{ $.Site.Slug }}/images/{{ .FilePath }}" alt="{{ .AltText }}">
                     <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteContentImage('{{ .ContentImageID }}')" title="Delete">&times;</button>
-                    <div class="overlay">{{ .AltText }}</div>
+                    <div class="overlay">
+                        <span class="overlay-alt">{{ if .AltText }}{{ .AltText }}{{ else }}No alt text{{ end }}</span>
+                        {{ if .Title }}<span class="overlay-title">{{ .Title }}</span>{{ end }}
+                    </div>
                 </div>
                 {{ else }}
                 <p class="empty-state">No images yet</p>
                 {{ end }}
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="openImageModal('content')" style="margin-top: 0.5rem;">Upload Image</button>
         </div>
+
+        <!-- Metadata (collapsible) -->
+        <details class="form-details">
+            <summary>Section, Kind & Summary</summary>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="section_id">Section</label>
+                    <select id="section_id" name="section_id">
+                        {{ range .Sections }}
+                        <option value="{{ .ID }}" {{ if eq .ID $.Content.SectionID }}selected{{ end }}>{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="kind">Kind</label>
+                    <select id="kind" name="kind" onchange="toggleSeriesFields()">
+                        <option value="page" {{ if eq .Content.Kind "page" }}selected{{ end }}>Page</option>
+                        <option value="article" {{ if eq .Content.Kind "article" }}selected{{ end }}>Article</option>
+                        <option value="blog" {{ if eq .Content.Kind "blog" }}selected{{ end }}>Blog</option>
+                        <option value="series" {{ if eq .Content.Kind "series" }}selected{{ end }}>Series</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="series-fields" class="form-row" style="display: none;">
+                <div class="form-group">
+                    <label for="series">Series Name</label>
+                    <input type="text" id="series" name="series" value="{{ .Content.Series }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="series_order">Series Order</label>
+                    <input type="number" id="series_order" name="series_order" value="{{ .Content.SeriesOrder }}" min="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="summary">Summary</label>
+                <textarea id="summary" name="summary" rows="2">{{ .Content.Summary }}</textarea>
+            </div>
+        </details>
 
         <!-- Tags -->
         <div class="form-group">
-            <label>Tags</label>
-            <div id="tags-container" class="tags-chips">
-                {{ range .Tags }}
-                <label class="tag-chip" data-tag-id="{{ .ID }}">
-                    <input type="checkbox" name="tag_ids" value="{{ .ID }}">
-                    <span>{{ .Name }}</span>
-                </label>
-                {{ else }}
-                <p class="empty-state">No tags available. <a href="/ssg/new-tag?site_id={{ $.Site.ID }}">Create one</a></p>
-                {{ end }}
-            </div>
-            <input type="hidden" id="content-tag-ids" value="{{ range $i, $t := .Content.Tags }}{{ if $i }},{{ end }}{{ $t.ID }}{{ end }}">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" placeholder="Add tags...">
+            <input type="hidden" id="tags-whitelist" value='[{{ range $i, $t := .Tags }}{{ if $i }},{{ end }}{"value":"{{ $t.Name }}","id":"{{ $t.ID }}"}{{ end }}]'>
+            <input type="hidden" id="tags-initial" value='[{{ range $i, $t := .Content.Tags }}{{ if $i }},{{ end }}{"value":"{{ $t.Name }}","id":"{{ $t.ID }}"}{{ end }}]'>
         </div>
 
         <!-- Publishing Options -->
@@ -191,15 +192,19 @@
             <input type="hidden" id="image-purpose" name="purpose" value="content">
             <div class="form-group">
                 <label for="image-file">Image File</label>
-                <input type="file" id="image-file" name="file" accept="image/*" required>
+                <div class="file-input-wrapper">
+                    <button type="button" class="btn btn-secondary">Choose File</button>
+                    <input type="file" id="image-file" name="file" accept="image/*" required>
+                </div>
+                <small id="file-name-display" style="display: block; margin-top: 0.5rem; color: var(--stone-beige);"></small>
             </div>
             <div class="form-group">
                 <label for="image-alt">Alt Text</label>
                 <input type="text" id="image-alt" name="alt_text" placeholder="Describe the image">
             </div>
             <div class="form-group">
-                <label for="image-caption">Caption (optional)</label>
-                <input type="text" id="image-caption" name="caption">
+                <label for="image-title">Title (optional)</label>
+                <input type="text" id="image-title" name="title">
             </div>
             <div id="upload-progress" class="upload-progress hidden">
                 <div id="upload-progress-bar" class="upload-progress-bar" style="width: 0%"></div>
@@ -272,6 +277,7 @@
 
 <script src="/static/js/vendor/htmx.min.js"></script>
 <script src="/static/js/vendor/marked.min.js"></script>
+<script src="/static/js/vendor/tagify.min.js"></script>
 <script>
 // Configuration
 const siteId = '{{ .Site.ID }}';
@@ -298,6 +304,18 @@ function updatePreview() {
 
 bodyTextarea.addEventListener('input', updatePreview);
 updatePreview(); // Initial render
+
+// Toggle series fields based on content kind
+function toggleSeriesFields() {
+    const kind = document.getElementById('kind').value;
+    const seriesFields = document.getElementById('series-fields');
+    if (kind === 'series') {
+        seriesFields.style.display = '';
+    } else {
+        seriesFields.style.display = 'none';
+    }
+}
+toggleSeriesFields(); // Initial state
 
 // Splitter drag functionality
 let isDragging = false;
@@ -364,24 +382,28 @@ function insertImageAtCursor(filePath, altText) {
 
 // Zen Mode
 function toggleZenMode() {
-    document.body.classList.toggle('zen-mode');
-    editorWrapper.classList.toggle('editor-fullscreen');
+    document.body.classList.toggle('zen-mode-active');
     floatingButtons.classList.toggle('hidden');
 }
 
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
+    console.log('Dark mode toggled, classes:', document.body.className);
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key === 'z') {
+    const key = e.key.toLowerCase();
+    if (e.altKey && key === 'z') {
         e.preventDefault();
         toggleZenMode();
     }
-    if (e.altKey && e.key === 'd' && document.body.classList.contains('zen-mode')) {
+    if (e.altKey && key === 'd' && document.body.classList.contains('zen-mode-active')) {
         e.preventDefault();
         toggleDarkMode();
+    }
+    if (e.key === 'Escape' && document.body.classList.contains('zen-mode-active')) {
+        toggleZenMode();
     }
 });
 
@@ -396,6 +418,16 @@ function closeImageModal() {
     document.getElementById('image-upload-form').reset();
     document.getElementById('upload-progress').classList.add('hidden');
 }
+
+// Display selected file name
+document.getElementById('image-file').addEventListener('change', function(e) {
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (this.files.length > 0) {
+        fileNameDisplay.textContent = this.files[0].name;
+    } else {
+        fileNameDisplay.textContent = '';
+    }
+});
 
 // Image Upload (placeholder - requires handler implementation)
 document.getElementById('image-upload-form').addEventListener('submit', async (e) => {
@@ -519,29 +551,29 @@ document.getElementById('meta-modal').addEventListener('click', function(e) {
     }
 });
 
-// Tag chips initialization and handling
+// Tagify initialization
 (function() {
-    const contentTagIds = document.getElementById('content-tag-ids').value.split(',').filter(id => id);
-    const tagChips = document.querySelectorAll('.tag-chip');
+    const input = document.getElementById('tags');
+    if (!input) return;
 
-    tagChips.forEach(chip => {
-        const checkbox = chip.querySelector('input[type="checkbox"]');
-        const tagId = chip.dataset.tagId;
+    const whitelist = JSON.parse(document.getElementById('tags-whitelist').value || '[]');
+    const initialTags = JSON.parse(document.getElementById('tags-initial').value || '[]');
 
-        // Initialize selection state
-        if (contentTagIds.includes(tagId)) {
-            checkbox.checked = true;
-            chip.classList.add('selected');
-        }
-
-        // Toggle on click
-        chip.addEventListener('click', function(e) {
-            if (e.target !== checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
-            chip.classList.toggle('selected', checkbox.checked);
-        });
+    const tagify = new Tagify(input, {
+        whitelist: whitelist,
+        enforceWhitelist: false,
+        dropdown: {
+            maxItems: 20,
+            enabled: 0,
+            closeOnSelect: false
+        },
+        originalInputValueFormat: valuesArr => valuesArr.map(item => JSON.stringify({value: item.value, id: item.id || ''})).join(',')
     });
+
+    // Load initial tags
+    if (initialTags.length > 0) {
+        tagify.addTags(initialTags);
+    }
 })();
 
 // Autosave time indicator

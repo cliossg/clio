@@ -25,11 +25,11 @@
         </thead>
         <tbody>
             {{ range .Tags }}
-            <tr>
-                <td><a href="/ssg/get-tag?id={{ .ID }}">{{ .Name }}</a></td>
+            <tr class="clickable-row" onclick="window.location='/ssg/get-tag?id={{ .ID }}'">
+                <td>{{ .Name }}</td>
                 <td><code>{{ .Slug }}</code></td>
                 <td>
-                    <a href="/ssg/edit-tag?id={{ .ID }}" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-tag?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

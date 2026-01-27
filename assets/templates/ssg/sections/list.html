@@ -26,12 +26,12 @@
         </thead>
         <tbody>
             {{ range .Sections }}
-            <tr>
-                <td><a href="/ssg/get-section?id={{ .ID }}">{{ .Name }}</a></td>
+            <tr class="clickable-row" onclick="window.location='/ssg/get-section?id={{ .ID }}'">
+                <td>{{ .Name }}</td>
                 <td><code>{{ .Path }}</code></td>
                 <td>{{ if .LayoutName }}{{ .LayoutName }}{{ else }}<em>None</em>{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-section?id={{ .ID }}" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-section?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

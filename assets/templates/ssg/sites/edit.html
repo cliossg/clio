@@ -1,6 +1,14 @@
 {{ define "content" }}
 <div class="card">
-    <h1>Edit {{ .Site.Name }}</h1>
+    <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">← {{ .Site.Name }}</a></p>
+    <div class="card-header">
+        <h1>Edit Site</h1>
+        <form method="POST" action="/ssg/delete-site" onsubmit="return confirm('Delete this site and all its content?')" style="display:inline;">
+            <input type="hidden" name="id" value="{{ .Site.ID }}">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+
     <form method="POST" action="/ssg/update-site">
         <input type="hidden" name="id" value="{{ .Site.ID }}">
         <div class="form-group">
@@ -19,18 +27,13 @@
             </select>
         </div>
         <div class="form-group">
-            <label style="display: inline-flex; align-items: center; gap: 8px;">
-                <input type="checkbox" name="active" {{ if .Site.Active }}checked{{ end }} style="width: auto;"> Active
+            <label class="checkbox-label">
+                <input type="checkbox" name="active" {{ if .Site.Active }}checked{{ end }}> Active
             </label>
         </div>
-        <div class="actions">
+        <div class="form-actions">
             <button type="submit" class="btn">Save</button>
-            <a href="/ssg/list-sites" class="btn btn-secondary">Cancel</a>
         </div>
-    </form>
-    <form method="POST" action="/ssg/delete-site" onsubmit="return confirm('Delete this site?')" style="margin-top: 30px;">
-        <input type="hidden" name="id" value="{{ .Site.ID }}">
-        <button type="submit" class="btn btn-danger">Delete Site</button>
     </form>
 </div>
 {{ end }}
