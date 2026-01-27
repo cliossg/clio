@@ -6,7 +6,11 @@
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="file">Image File</label>
-            <input type="file" id="file" name="file" accept="image/*" required>
+            <div class="file-input-wrapper">
+                <button type="button" class="btn btn-secondary">Choose File</button>
+                <input type="file" id="file" name="file" accept="image/*" required>
+            </div>
+            <small id="file-name-display" style="display: block; margin-top: 0.5rem;"></small>
             <small>Supported formats: PNG, JPG, GIF, WebP</small>
         </div>
 
@@ -27,4 +31,11 @@
         </div>
     </form>
 </div>
+
+<script>
+document.getElementById('file').addEventListener('change', function() {
+    const display = document.getElementById('file-name-display');
+    display.textContent = this.files.length > 0 ? this.files[0].name : '';
+});
+</script>
 {{ end }}
