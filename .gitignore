@@ -11,6 +11,8 @@ __debug_bin*
 _workspace/*
 !_workspace/README.md
 !_workspace/db/
+_workspace/db/*.db
+_workspace/db/*.db-*
 !_workspace/sites/
 _workspace/sites/*/*
 !_workspace/sites/*/documents/
