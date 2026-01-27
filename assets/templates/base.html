@@ -27,7 +27,9 @@
     {{ if .Error }}<div class="flash-container"><div class="alert alert-error">{{ .Error }}</div></div>{{ end }}
     {{ if .Success }}<div class="flash-container"><div class="alert alert-success">{{ .Success }}</div></div>{{ end }}
     <div class="{{ if .AuthPage }}auth-container{{ else }}container{{ end }}">
-        {{ template "content" . }}
+        {{ if eq .Template "login" }}{{ template "login" . }}
+        {{ else if eq .Template "change-password" }}{{ template "change-password" . }}
+        {{ else }}{{ template "content" . }}{{ end }}
     </div>
 </body>
 </html>
