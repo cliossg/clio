@@ -19,7 +19,7 @@ help:
 	@echo "  vet         - Run go vet"
 	@echo "  sqlc        - Generate sqlc code"
 	@echo "  clean       - Clean build files"
-	@echo "  db-reset    - Delete dev database and workspace"
+	@echo "  dev-db-reset - Delete dev database and workspace"
 
 build:
 	@mkdir -p $(BUILD_DIR)
@@ -83,10 +83,10 @@ clean:
 	@rm -rf $(BUILD_DIR) coverage.out coverage.html
 	@go clean -testcache
 
-db-reset:
+dev-db-reset:
 	@echo "Resetting dev database..."
 	@rm -f _workspace/db/clio.db
 	@rm -rf _workspace/sites
 	@echo "Done. Run 'make run' to recreate."
 
-.PHONY: all build run run-prod kill test test-v coverage coverage-profile coverage-html coverage-check fmt vet lint sqlc tidy check clean db-reset help
+.PHONY: all build run run-prod kill test test-v coverage coverage-profile coverage-html coverage-check fmt vet lint sqlc tidy check clean dev-db-reset help
