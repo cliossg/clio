@@ -187,12 +187,13 @@ type Tag struct {
 }
 
 type User struct {
-	ID           string    `json:"id"`
-	ShortID      string    `json:"short_id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
-	Name         string    `json:"name"`
-	Status       string    `json:"status"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                 string    `json:"id"`
+	ShortID            string    `json:"short_id"`
+	Email              string    `json:"email"`
+	PasswordHash       string    `json:"password_hash"`
+	Name               string    `json:"name"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	MustChangePassword int64     `json:"must_change_password"`
 }

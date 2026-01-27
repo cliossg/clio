@@ -26,10 +26,11 @@ type Service interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 	Authenticate(ctx context.Context, email, password string) (*User, error)
-	CreateUser(ctx context.Context, email, password, name string) (*User, error)
+	CreateUser(ctx context.Context, email, password, name string, mustChangePassword bool) (*User, error)
 	GetUser(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context) ([]*User, error)
+	UpdateUser(ctx context.Context, user *User) error
 	CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error)
 	ValidateSession(ctx context.Context, sessionID string) (string, error)
 	DeleteSession(ctx context.Context, sessionID string) error
@@ -99,23 +100,25 @@ func (s *service) Authenticate(ctx context.Context, email, password string) (*Us
 	return user, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, email, password, name string) (*User, error) {
+func (s *service) CreateUser(ctx context.Context, email, password, name string, mustChangePassword bool) (*User, error) {
 	s.ensureQueries()
 
 	user, err := NewUser(email, password, name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create user: %w", err)
 	}
+	user.MustChangePassword = mustChangePassword
 
 	params := sqlc.CreateUserParams{
-		ID:           user.ID.String(),
-		ShortID:      user.ShortID,
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash,
-		Name:         user.Name,
-		Status:       user.Status,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		ID:                 user.ID.String(),
+		ShortID:            user.ShortID,
+		Email:              user.Email,
+		PasswordHash:       user.PasswordHash,
+		Name:               user.Name,
+		Status:             user.Status,
+		MustChangePassword: boolToInt(user.MustChangePassword),
+		CreatedAt:          user.CreatedAt,
+		UpdatedAt:          user.UpdatedAt,
 	}
 
 	_, err = s.queries.CreateUser(ctx, params)
@@ -168,6 +171,27 @@ func (s *service) ListUsers(ctx context.Context) ([]*User, error) {
 	}
 
 	return users, nil
+}
+
+func (s *service) UpdateUser(ctx context.Context, user *User) error {
+	s.ensureQueries()
+
+	params := sqlc.UpdateUserParams{
+		ID:                 user.ID.String(),
+		Email:              user.Email,
+		PasswordHash:       user.PasswordHash,
+		Name:               user.Name,
+		Status:             user.Status,
+		MustChangePassword: boolToInt(user.MustChangePassword),
+		UpdatedAt:          user.UpdatedAt,
+	}
+
+	_, err := s.queries.UpdateUser(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot update user: %w", err)
+	}
+
+	return nil
 }
 
 func (s *service) CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error) {
@@ -223,13 +247,21 @@ func (s *service) GetSessionTTL() time.Duration {
 func fromSQLCUser(u sqlc.User) *User {
 	id, _ := uuid.Parse(u.ID)
 	return &User{
-		ID:           id,
-		ShortID:      u.ShortID,
-		Email:        u.Email,
-		PasswordHash: u.PasswordHash,
-		Name:         u.Name,
-		Status:       u.Status,
-		CreatedAt:    u.CreatedAt,
-		UpdatedAt:    u.UpdatedAt,
+		ID:                 id,
+		ShortID:            u.ShortID,
+		Email:              u.Email,
+		PasswordHash:       u.PasswordHash,
+		Name:               u.Name,
+		Status:             u.Status,
+		MustChangePassword: u.MustChangePassword != 0,
+		CreatedAt:          u.CreatedAt,
+		UpdatedAt:          u.UpdatedAt,
 	}
+}
+
+func boolToInt(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
 }

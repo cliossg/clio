@@ -19,8 +19,8 @@
         <a href="/ssg/list-params?site_id={{ .Site.ID }}">Params</a>
         <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
         {{ end }}
-        <form action="/logout" method="POST" style="display: inline; float: right;">
-            <button type="submit" class="btn" style="background: transparent; padding: 0;">Logout</button>
+        <form action="/signout" method="POST" style="display: inline; float: right;">
+            <button type="submit" class="btn" style="background: transparent; padding: 0;">Sign Out</button>
         </form>
     </nav>
     {{ end }}

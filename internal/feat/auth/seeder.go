@@ -50,7 +50,7 @@ func (s *Seeder) Start(ctx context.Context) error {
 	password := generateRandomPassword()
 	name := "Admin"
 
-	user, err := s.service.CreateUser(ctx, email, password, name)
+	user, err := s.service.CreateUser(ctx, email, password, name, true)
 	if err != nil {
 		return fmt.Errorf("cannot create admin user: %w", err)
 	}

@@ -41,20 +41,21 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO user (id, short_id, email, password_hash, name, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at
+INSERT INTO user (id, short_id, email, password_hash, name, status, must_change_password, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password
 `
 
 type CreateUserParams struct {
-	ID           string    `json:"id"`
-	ShortID      string    `json:"short_id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
-	Name         string    `json:"name"`
-	Status       string    `json:"status"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                 string    `json:"id"`
+	ShortID            string    `json:"short_id"`
+	Email              string    `json:"email"`
+	PasswordHash       string    `json:"password_hash"`
+	Name               string    `json:"name"`
+	Status             string    `json:"status"`
+	MustChangePassword int64     `json:"must_change_password"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -65,6 +66,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.PasswordHash,
 		arg.Name,
 		arg.Status,
+		arg.MustChangePassword,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -78,6 +80,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MustChangePassword,
 	)
 	return i, err
 }
@@ -135,7 +138,7 @@ func (q *Queries) GetSession(ctx context.Context, id string) (Session, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at FROM user WHERE id = ?
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password FROM user WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
@@ -150,12 +153,13 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MustChangePassword,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at FROM user WHERE email = ?
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password FROM user WHERE email = ?
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -170,6 +174,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MustChangePassword,
 	)
 	return i, err
 }
@@ -191,7 +196,7 @@ func (q *Queries) GetValidSession(ctx context.Context, id string) (Session, erro
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at FROM user ORDER BY created_at DESC
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password FROM user ORDER BY created_at DESC
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -212,6 +217,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MustChangePassword,
 		); err != nil {
 			return nil, err
 		}
@@ -232,18 +238,20 @@ UPDATE user SET
     password_hash = ?,
     name = ?,
     status = ?,
+    must_change_password = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at
+RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password
 `
 
 type UpdateUserParams struct {
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
-	Name         string    `json:"name"`
-	Status       string    `json:"status"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	ID           string    `json:"id"`
+	Email              string    `json:"email"`
+	PasswordHash       string    `json:"password_hash"`
+	Name               string    `json:"name"`
+	Status             string    `json:"status"`
+	MustChangePassword int64     `json:"must_change_password"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	ID                 string    `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -252,6 +260,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.PasswordHash,
 		arg.Name,
 		arg.Status,
+		arg.MustChangePassword,
 		arg.UpdatedAt,
 		arg.ID,
 	)
@@ -265,6 +274,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MustChangePassword,
 	)
 	return i, err
 }

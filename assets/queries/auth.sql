@@ -1,6 +1,6 @@
 -- name: CreateUser :one
-INSERT INTO user (id, short_id, email, password_hash, name, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO user (id, short_id, email, password_hash, name, status, must_change_password, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetUser :one
@@ -18,6 +18,7 @@ UPDATE user SET
     password_hash = ?,
     name = ?,
     status = ?,
+    must_change_password = ?,
     updated_at = ?
 WHERE id = ?
 RETURNING *;

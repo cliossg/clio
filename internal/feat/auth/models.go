@@ -9,14 +9,15 @@ import (
 
 // User represents a user in the system.
 type User struct {
-	ID           uuid.UUID
-	ShortID      string
-	Email        string
-	PasswordHash string
-	Name         string
-	Status       string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                 uuid.UUID
+	ShortID            string
+	Email              string
+	PasswordHash       string
+	Name               string
+	Status             string
+	MustChangePassword bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // NewUser creates a new user with the given email and password.
