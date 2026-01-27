@@ -45,7 +45,7 @@ func main() {
 
 	optionalSessionMw := middleware.OptionalSession(authService)
 	requiredSessionMw := middleware.Session(authService)
-	siteCtxMw := ssg.SiteContextMiddleware(ssgService)
+	siteCtxMw := ssg.SiteContextMiddleware(ssgService, log)
 
 	authHandler := auth.NewHandler(authService, optionalSessionMw, templatesFS, cfg, log)
 	ssgHandler := ssg.NewHandler(ssgService, siteCtxMw, requiredSessionMw, templatesFS, cfg, log)
