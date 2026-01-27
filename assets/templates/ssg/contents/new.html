@@ -9,10 +9,6 @@
         </div>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
     <form id="content-form" method="POST" action="/ssg/create-content"
           hx-post="/ssg/autosave-content"
           hx-trigger="keyup changed delay:500ms, change delay:500ms"

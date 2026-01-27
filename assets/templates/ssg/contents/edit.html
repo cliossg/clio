@@ -9,10 +9,6 @@
         </div>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
     <form id="content-form" method="POST" action="/ssg/update-content"
           hx-post="/ssg/autosave-content"
           hx-trigger="keyup changed delay:500ms, change delay:500ms, every 30s"
@@ -35,6 +31,10 @@
                 {{ if .HeaderImage }}
                 <img src="/ssg/workspace/{{ .Site.Slug }}/images/{{ .HeaderImage.FilePath }}" alt="{{ .HeaderImage.AltText }}">
                 <button type="button" class="delete-btn" onclick="removeHeaderImage()" title="Remove header image">&times;</button>
+                <div class="overlay">
+                    <span class="overlay-alt">{{ if .HeaderImage.AltText }}{{ .HeaderImage.AltText }}{{ else }}No alt text{{ end }}</span>
+                    {{ if .HeaderImage.Title }}<span class="overlay-title">{{ .HeaderImage.Title }}</span>{{ end }}
+                </div>
                 {{ else }}
                 <div class="header-image-placeholder" onclick="openImageModal('header')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
