@@ -12,25 +12,26 @@ import (
 )
 
 const createContributor = `-- name: CreateContributor :one
-INSERT INTO contributor (id, short_id, site_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO contributor (id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
 `
 
 type CreateContributorParams struct {
-	ID          string    `json:"id"`
-	ShortID     string    `json:"short_id"`
-	SiteID      string    `json:"site_id"`
-	Handle      string    `json:"handle"`
-	Name        string    `json:"name"`
-	Surname     string    `json:"surname"`
-	Bio         string    `json:"bio"`
-	SocialLinks string    `json:"social_links"`
-	Role        string    `json:"role"`
-	CreatedBy   string    `json:"created_by"`
-	UpdatedBy   string    `json:"updated_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string         `json:"id"`
+	ShortID     string         `json:"short_id"`
+	SiteID      string         `json:"site_id"`
+	ProfileID   sql.NullString `json:"profile_id"`
+	Handle      string         `json:"handle"`
+	Name        string         `json:"name"`
+	Surname     string         `json:"surname"`
+	Bio         string         `json:"bio"`
+	SocialLinks string         `json:"social_links"`
+	Role        string         `json:"role"`
+	CreatedBy   string         `json:"created_by"`
+	UpdatedBy   string         `json:"updated_by"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 func (q *Queries) CreateContributor(ctx context.Context, arg CreateContributorParams) (Contributor, error) {
@@ -38,6 +39,7 @@ func (q *Queries) CreateContributor(ctx context.Context, arg CreateContributorPa
 		arg.ID,
 		arg.ShortID,
 		arg.SiteID,
+		arg.ProfileID,
 		arg.Handle,
 		arg.Name,
 		arg.Surname,

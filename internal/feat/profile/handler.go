@@ -5,7 +5,10 @@ import (
 	"embed"
 	"encoding/json"
 	"html/template"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cliossg/clio/pkg/cl/config"
@@ -14,6 +17,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
+
+const profilesBasePath = "_workspace/profiles"
 
 type UserProvider interface {
 	GetCurrentUserID(ctx context.Context) (uuid.UUID, error)
@@ -57,7 +62,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/profile/edit", h.HandleEditProfile)
 		r.Post("/profile/create", h.HandleCreateProfile)
 		r.Post("/profile/update", h.HandleUpdateProfile)
+		r.Post("/profile/upload-photo", h.HandleUploadPhoto)
+		r.Post("/profile/remove-photo", h.HandleRemovePhoto)
 	})
+
+	r.Get("/profile/photo/{filename}", h.HandleServePhoto)
 }
 
 type PageData struct {
@@ -224,6 +233,130 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	if err != nil || profileID == nil {
+		http.Error(w, "No profile found", http.StatusBadRequest)
+		return
+	}
+
+	profile, err := h.service.GetProfile(ctx, *profileID)
+	if err != nil {
+		http.Error(w, "Profile not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		h.log.Errorf("Cannot parse multipart form: %v", err)
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("photo")
+	if err != nil {
+		h.log.Errorf("Cannot get uploaded file: %v", err)
+		http.Error(w, "No file uploaded", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if err := os.MkdirAll(profilesBasePath, 0755); err != nil {
+		h.log.Errorf("Cannot create profiles directory: %v", err)
+		http.Error(w, "Cannot create directory", http.StatusInternalServerError)
+		return
+	}
+
+	if profile.PhotoPath != "" {
+		oldPath := filepath.Join(profilesBasePath, profile.PhotoPath)
+		os.Remove(oldPath)
+	}
+
+	ext := filepath.Ext(header.Filename)
+	fileName := profile.ID.String() + ext
+	filePath := filepath.Join(profilesBasePath, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		h.log.Errorf("Cannot create file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		h.log.Errorf("Cannot write file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+
+	userID, _ := h.userProvider.GetCurrentUserID(ctx)
+	profile.PhotoPath = fileName
+	profile.UpdatedBy = userID.String()
+
+	if err := h.service.UpdateProfile(ctx, profile); err != nil {
+		h.log.Errorf("Cannot update profile photo path: %v", err)
+		http.Error(w, "Cannot update profile", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Infof("Profile photo uploaded: %s", fileName)
+	http.Redirect(w, r, "/profile/edit", http.StatusSeeOther)
+}
+
+func (h *Handler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	if err != nil || profileID == nil {
+		http.Error(w, "No profile found", http.StatusBadRequest)
+		return
+	}
+
+	profile, err := h.service.GetProfile(ctx, *profileID)
+	if err != nil {
+		http.Error(w, "Profile not found", http.StatusNotFound)
+		return
+	}
+
+	if profile.PhotoPath != "" {
+		filePath := filepath.Join(profilesBasePath, profile.PhotoPath)
+		os.Remove(filePath)
+	}
+
+	userID, _ := h.userProvider.GetCurrentUserID(ctx)
+	profile.PhotoPath = ""
+	profile.UpdatedBy = userID.String()
+
+	if err := h.service.UpdateProfile(ctx, profile); err != nil {
+		h.log.Errorf("Cannot update profile: %v", err)
+		http.Error(w, "Cannot update profile", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Info("Profile photo removed")
+	http.Redirect(w, r, "/profile/edit", http.StatusSeeOther)
+}
+
+func (h *Handler) HandleServePhoto(w http.ResponseWriter, r *http.Request) {
+	filename := chi.URLParam(r, "filename")
+	if filename == "" {
+		http.Error(w, "Filename required", http.StatusBadRequest)
+		return
+	}
+
+	filename = filepath.Base(filename)
+	filePath := filepath.Join(profilesBasePath, filename)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		http.Error(w, "Photo not found", http.StatusNotFound)
+		return
+	}
+
+	http.ServeFile(w, r, filePath)
 }
 
 func (h *Handler) renderTemplate(w http.ResponseWriter, templateName string, data PageData) {

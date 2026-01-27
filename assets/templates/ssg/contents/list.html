@@ -15,7 +15,7 @@
                 <th>Section</th>
                 <th>Kind</th>
                 <th>Status</th>
-                {{ if $canEdit }}<th>Actions</th>{{ end }}
+                {{ if $canEdit }}<th class="actions">Actions</th>{{ end }}
             </tr>
         </thead>
         <tbody>
@@ -29,7 +29,7 @@
                     {{ if .Featured }}<span class="badge badge-info">Featured</span>{{ end }}
                 </td>
                 {{ if $canEdit }}
-                <td>
+                <td class="actions">
                     <a href="/ssg/edit-content?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
                 {{ end }}

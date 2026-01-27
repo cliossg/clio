@@ -1,6 +1,6 @@
 -- name: CreateContributor :one
-INSERT INTO contributor (id, short_id, site_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO contributor (id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetContributor :one

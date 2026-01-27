@@ -27,6 +27,7 @@ type ProfileService interface {
 	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 	GetProfile(ctx context.Context, id uuid.UUID) (*profile.Profile, error)
 	UpdateProfile(ctx context.Context, p *profile.Profile) error
+	DeleteProfile(ctx context.Context, id uuid.UUID) error
 }
 
 type Handler struct {
@@ -288,6 +289,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Get("/ssg/edit-contributor", h.HandleEditContributor)
 				r.Post("/ssg/update-contributor", h.HandleUpdateContributor)
 				r.Post("/ssg/delete-contributor", h.HandleDeleteContributor)
+				r.Get("/ssg/edit-contributor-profile", h.HandleEditContributorProfile)
+				r.Post("/ssg/update-contributor-profile", h.HandleUpdateContributorProfile)
+				r.Post("/ssg/upload-contributor-photo", h.HandleUploadContributorPhoto)
+				r.Post("/ssg/remove-contributor-photo", h.HandleRemoveContributorPhoto)
 			})
 		})
 	})
@@ -2599,12 +2604,35 @@ func (h *Handler) HandleCreateContributor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	userIDStr := middleware.GetUserID(r.Context())
+
+	contributorProfile, err := h.profileService.CreateProfile(
+		r.Context(),
+		normalizeSlug(handle),
+		name,
+		surname,
+		bio,
+		"[]",
+		"",
+		userIDStr,
+	)
+	if err != nil {
+		h.render(w, r, "ssg/contributors/new", PageData{
+			Title: "New Contributor",
+			Site:  site,
+			Error: "Cannot create profile: " + err.Error(),
+		})
+		return
+	}
+
 	contributor := NewContributor(site.ID, handle, name, surname)
 	contributor.Bio = bio
-	contributor.CreatedBy = parseUUID(middleware.GetUserID(r.Context()))
+	contributor.ProfileID = &contributorProfile.ID
+	contributor.CreatedBy = parseUUID(userIDStr)
 	contributor.UpdatedBy = contributor.CreatedBy
 
 	if err := h.service.CreateContributor(r.Context(), contributor); err != nil {
+		h.profileService.DeleteProfile(r.Context(), contributorProfile.ID)
 		h.render(w, r, "ssg/contributors/new", PageData{
 			Title: "New Contributor",
 			Site:  site,
@@ -2613,7 +2641,7 @@ func (h *Handler) HandleCreateContributor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.siteRedirect(w, r, "/ssg/list-contributors")
+	h.siteRedirect(w, r, "/ssg/edit-contributor?id="+contributor.ID.String())
 }
 
 func (h *Handler) HandleShowContributor(w http.ResponseWriter, r *http.Request) {
@@ -2781,6 +2809,247 @@ func (h *Handler) HandleDeleteContributor(w http.ResponseWriter, r *http.Request
 	}
 
 	h.siteRedirect(w, r, "/ssg/list-contributors")
+}
+
+func (h *Handler) HandleEditContributorProfile(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), id)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	if contributor.ProfileID == nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor has no profile")
+		return
+	}
+
+	contributorProfile, err := h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Profile not found")
+		return
+	}
+
+	h.render(w, r, "ssg/contributors/edit-profile", PageData{
+		Title:              "Edit Profile: " + contributor.FullName(),
+		Site:               site,
+		Contributor:        contributor,
+		ContributorProfile: contributorProfile,
+		ProfileSocialLinks: parseSocialLinksToMap(contributorProfile.SocialLinks),
+	})
+}
+
+func (h *Handler) HandleUpdateContributorProfile(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), id)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	if contributor.ProfileID == nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor has no profile")
+		return
+	}
+
+	contributorProfile, err := h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Profile not found")
+		return
+	}
+
+	userIDStr := middleware.GetUserID(r.Context())
+
+	contributorProfile.Slug = normalizeSlug(r.FormValue("slug"))
+	contributorProfile.Name = strings.TrimSpace(r.FormValue("name"))
+	contributorProfile.Surname = strings.TrimSpace(r.FormValue("surname"))
+	contributorProfile.Bio = strings.TrimSpace(r.FormValue("bio"))
+	contributorProfile.SocialLinks = buildSocialLinksJSON(r)
+	contributorProfile.UpdatedBy = userIDStr
+
+	if err := h.profileService.UpdateProfile(r.Context(), contributorProfile); err != nil {
+		h.render(w, r, "ssg/contributors/edit-profile", PageData{
+			Title:              "Edit Profile: " + contributor.FullName(),
+			Site:               site,
+			Contributor:        contributor,
+			ContributorProfile: contributorProfile,
+			ProfileSocialLinks: parseSocialLinksToMap(contributorProfile.SocialLinks),
+			Error:              "Cannot update profile",
+		})
+		return
+	}
+
+	h.siteRedirect(w, r, "/ssg/edit-contributor-profile?id="+id.String())
+}
+
+const profilesBasePath = "_workspace/profiles"
+
+func (h *Handler) HandleUploadContributorPhoto(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	contributorID, err := uuid.Parse(r.FormValue("contributor_id"))
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), contributorID)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	if contributor.ProfileID == nil {
+		http.Error(w, "Contributor has no profile. Save profile data first.", http.StatusBadRequest)
+		return
+	}
+
+	contributorProfile, err := h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+	if err != nil {
+		http.Error(w, "Profile not found", http.StatusNotFound)
+		return
+	}
+
+	file, header, err := r.FormFile("photo")
+	if err != nil {
+		http.Error(w, "No file uploaded", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if err := os.MkdirAll(profilesBasePath, 0755); err != nil {
+		h.log.Errorf("Cannot create profiles directory: %v", err)
+		http.Error(w, "Cannot create directory", http.StatusInternalServerError)
+		return
+	}
+
+	if contributorProfile.PhotoPath != "" {
+		oldPath := filepath.Join(profilesBasePath, contributorProfile.PhotoPath)
+		os.Remove(oldPath)
+	}
+
+	ext := filepath.Ext(header.Filename)
+	fileName := contributorProfile.ID.String() + ext
+	filePath := filepath.Join(profilesBasePath, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		h.log.Errorf("Cannot create file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		h.log.Errorf("Cannot write file: %v", err)
+		http.Error(w, "Cannot save file", http.StatusInternalServerError)
+		return
+	}
+
+	userIDStr := middleware.GetUserID(r.Context())
+	contributorProfile.PhotoPath = fileName
+	contributorProfile.UpdatedBy = userIDStr
+
+	if err := h.profileService.UpdateProfile(r.Context(), contributorProfile); err != nil {
+		h.log.Errorf("Cannot update profile photo path: %v", err)
+		http.Error(w, "Cannot update profile", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Infof("Contributor profile photo uploaded: %s", fileName)
+	h.siteRedirect(w, r, "/ssg/edit-contributor-profile?id="+contributorID.String())
+}
+
+func (h *Handler) HandleRemoveContributorPhoto(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	contributorID, err := uuid.Parse(r.FormValue("contributor_id"))
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid contributor ID")
+		return
+	}
+
+	contributor, err := h.service.GetContributor(r.Context(), contributorID)
+	if err != nil {
+		h.renderError(w, r, http.StatusNotFound, "Contributor not found")
+		return
+	}
+
+	if contributor.ProfileID == nil {
+		h.siteRedirect(w, r, "/ssg/edit-contributor-profile?id="+contributorID.String())
+		return
+	}
+
+	contributorProfile, err := h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+	if err != nil {
+		h.siteRedirect(w, r, "/ssg/edit-contributor-profile?id="+contributorID.String())
+		return
+	}
+
+	if contributorProfile.PhotoPath != "" {
+		filePath := filepath.Join(profilesBasePath, contributorProfile.PhotoPath)
+		os.Remove(filePath)
+	}
+
+	userIDStr := middleware.GetUserID(r.Context())
+	contributorProfile.PhotoPath = ""
+	contributorProfile.UpdatedBy = userIDStr
+
+	if err := h.profileService.UpdateProfile(r.Context(), contributorProfile); err != nil {
+		h.log.Errorf("Cannot update profile: %v", err)
+		http.Error(w, "Cannot update profile", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Info("Contributor profile photo removed")
+	h.siteRedirect(w, r, "/ssg/edit-contributor-profile?id="+contributorID.String())
 }
 
 // --- Generation Handlers ---

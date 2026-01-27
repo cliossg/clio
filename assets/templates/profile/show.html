@@ -5,16 +5,30 @@
         <a href="/profile/edit" class="btn">Edit</a>
     </div>
 
+    <!-- Profile Photo -->
+    <div style="margin-bottom: 1.5rem;">
+        {{ if .Profile.PhotoPath }}
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="/profile/photo/{{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <div>
+                <strong>{{ .Profile.FullName }}</strong>
+                <div style="color: var(--stone-beige); font-size: 0.875rem;">@{{ .Profile.Slug }}</div>
+            </div>
+        </div>
+        {{ else }}
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; background: var(--white-warm-dark); display: flex; align-items: center; justify-content: center; color: var(--stone-beige); font-size: 2.5rem;">
+                {{ slice .Profile.Name 0 1 }}
+            </div>
+            <div>
+                <strong>{{ .Profile.FullName }}</strong>
+                <div style="color: var(--stone-beige); font-size: 0.875rem;">@{{ .Profile.Slug }}</div>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+
     <dl class="detail-list">
-        <dt>Slug</dt>
-        <dd><code>{{ .Profile.Slug }}</code></dd>
-
-        <dt>Name</dt>
-        <dd>{{ .Profile.Name }}</dd>
-
-        <dt>Surname</dt>
-        <dd>{{ .Profile.Surname }}</dd>
-
         <dt>Bio</dt>
         <dd>{{ if .Profile.Bio }}{{ .Profile.Bio }}{{ else }}<em>Not set</em>{{ end }}</dd>
 
@@ -30,9 +44,6 @@
                 </ul>
             {{ end }}
         </dd>
-
-        <dt>Photo</dt>
-        <dd>{{ if .Profile.PhotoPath }}{{ .Profile.PhotoPath }}{{ else }}<em>Not set</em>{{ end }}</dd>
 
         <dt>Updated</dt>
         <dd>{{ .Profile.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>

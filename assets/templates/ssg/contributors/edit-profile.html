@@ -1,0 +1,156 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-contributors?site_id={{ .Site.ID }}">&larr; Contributors</a></p>
+    <h1>Edit Profile: {{ .Contributor.FullName }}</h1>
+
+    {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
+
+    <!-- Profile Photo Section -->
+    <div class="form-group">
+        <label>Profile Photo</label>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            {{ if .ContributorProfile.PhotoPath }}
+            <img src="/profile/photo/{{ .ContributorProfile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Change Photo</button>
+                <form method="POST" action="/ssg/remove-contributor-photo?site_id={{ .Site.ID }}" style="display: inline;">
+                    <input type="hidden" name="contributor_id" value="{{ .Contributor.ID }}">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove profile photo?')">Remove</button>
+                </form>
+            </div>
+            {{ else }}
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--white-warm-dark); display: flex; align-items: center; justify-content: center; color: var(--stone-beige); font-size: 2rem; border: 2px dashed var(--stone-beige);">
+                {{ slice .ContributorProfile.Name 0 1 }}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Upload Photo</button>
+            {{ end }}
+        </div>
+    </div>
+
+    <form method="POST" action="/ssg/update-contributor-profile?site_id={{ .Site.ID }}">
+        <input type="hidden" name="id" value="{{ .Contributor.ID }}">
+
+        <div class="form-group">
+            <label for="slug">Slug</label>
+            <input type="text" id="slug" name="slug" value="{{ .ContributorProfile.Slug }}" required>
+            <small>URL-friendly identifier for the author page</small>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="name">Display Name</label>
+                <input type="text" id="name" name="name" value="{{ .ContributorProfile.Name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="surname">Display Surname</label>
+                <input type="text" id="surname" name="surname" value="{{ .ContributorProfile.Surname }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4">{{ .ContributorProfile.Bio }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Social Links</label>
+            <table class="social-links-table">
+                <tbody>
+                    <tr><td><label for="social_facebook">Facebook</label></td><td><input type="text" id="social_facebook" name="social_facebook" value="{{ index .ProfileSocialLinks "facebook" }}" placeholder="https://facebook.com/..."></td></tr>
+                    <tr><td><label for="social_youtube">YouTube</label></td><td><input type="text" id="social_youtube" name="social_youtube" value="{{ index .ProfileSocialLinks "youtube" }}" placeholder="https://youtube.com/..."></td></tr>
+                    <tr><td><label for="social_instagram">Instagram</label></td><td><input type="text" id="social_instagram" name="social_instagram" value="{{ index .ProfileSocialLinks "instagram" }}" placeholder="https://instagram.com/..."></td></tr>
+                    <tr><td><label for="social_x">X</label></td><td><input type="text" id="social_x" name="social_x" value="{{ index .ProfileSocialLinks "x" }}" placeholder="https://x.com/..."></td></tr>
+                    <tr><td><label for="social_tiktok">TikTok</label></td><td><input type="text" id="social_tiktok" name="social_tiktok" value="{{ index .ProfileSocialLinks "tiktok" }}" placeholder="https://tiktok.com/..."></td></tr>
+                    <tr><td><label for="social_linkedin">LinkedIn</label></td><td><input type="text" id="social_linkedin" name="social_linkedin" value="{{ index .ProfileSocialLinks "linkedin" }}" placeholder="https://linkedin.com/in/..."></td></tr>
+                    <tr><td><label for="social_github">GitHub</label></td><td><input type="text" id="social_github" name="social_github" value="{{ index .ProfileSocialLinks "github" }}" placeholder="https://github.com/..."></td></tr>
+                    <tr><td><label for="social_whatsapp">WhatsApp</label></td><td><input type="text" id="social_whatsapp" name="social_whatsapp" value="{{ index .ProfileSocialLinks "whatsapp" }}" placeholder="https://wa.me/..."></td></tr>
+                    <tr><td><label for="social_telegram">Telegram</label></td><td><input type="text" id="social_telegram" name="social_telegram" value="{{ index .ProfileSocialLinks "telegram" }}" placeholder="https://t.me/..."></td></tr>
+                    <tr><td><label for="social_reddit">Reddit</label></td><td><input type="text" id="social_reddit" name="social_reddit" value="{{ index .ProfileSocialLinks "reddit" }}" placeholder="https://reddit.com/u/..."></td></tr>
+                </tbody>
+            </table>
+
+            <details class="form-details">
+                <summary>More platforms</summary>
+                <div>
+                <table class="social-links-table">
+                    <tbody>
+                        <tr><td><label for="social_messenger">Messenger</label></td><td><input type="text" id="social_messenger" name="social_messenger" value="{{ index .ProfileSocialLinks "messenger" }}"></td></tr>
+                        <tr><td><label for="social_snapchat">Snapchat</label></td><td><input type="text" id="social_snapchat" name="social_snapchat" value="{{ index .ProfileSocialLinks "snapchat" }}"></td></tr>
+                        <tr><td><label for="social_pinterest">Pinterest</label></td><td><input type="text" id="social_pinterest" name="social_pinterest" value="{{ index .ProfileSocialLinks "pinterest" }}"></td></tr>
+                        <tr><td><label for="social_tumblr">Tumblr</label></td><td><input type="text" id="social_tumblr" name="social_tumblr" value="{{ index .ProfileSocialLinks "tumblr" }}"></td></tr>
+                        <tr><td><label for="social_discord">Discord</label></td><td><input type="text" id="social_discord" name="social_discord" value="{{ index .ProfileSocialLinks "discord" }}"></td></tr>
+                        <tr><td><label for="social_twitch">Twitch</label></td><td><input type="text" id="social_twitch" name="social_twitch" value="{{ index .ProfileSocialLinks "twitch" }}"></td></tr>
+                        <tr><td><label for="social_signal">Signal</label></td><td><input type="text" id="social_signal" name="social_signal" value="{{ index .ProfileSocialLinks "signal" }}"></td></tr>
+                        <tr><td><label for="social_viber">Viber</label></td><td><input type="text" id="social_viber" name="social_viber" value="{{ index .ProfileSocialLinks "viber" }}"></td></tr>
+                        <tr><td><label for="social_line">LINE</label></td><td><input type="text" id="social_line" name="social_line" value="{{ index .ProfileSocialLinks "line" }}"></td></tr>
+                        <tr><td><label for="social_kakaotalk">KakaoTalk</label></td><td><input type="text" id="social_kakaotalk" name="social_kakaotalk" value="{{ index .ProfileSocialLinks "kakaotalk" }}"></td></tr>
+                        <tr><td><label for="social_wechat">WeChat</label></td><td><input type="text" id="social_wechat" name="social_wechat" value="{{ index .ProfileSocialLinks "wechat" }}"></td></tr>
+                        <tr><td><label for="social_qq">QQ</label></td><td><input type="text" id="social_qq" name="social_qq" value="{{ index .ProfileSocialLinks "qq" }}"></td></tr>
+                        <tr><td><label for="social_douyin">Douyin</label></td><td><input type="text" id="social_douyin" name="social_douyin" value="{{ index .ProfileSocialLinks "douyin" }}"></td></tr>
+                        <tr><td><label for="social_kuaishou">Kuaishou</label></td><td><input type="text" id="social_kuaishou" name="social_kuaishou" value="{{ index .ProfileSocialLinks "kuaishou" }}"></td></tr>
+                        <tr><td><label for="social_weibo">Weibo</label></td><td><input type="text" id="social_weibo" name="social_weibo" value="{{ index .ProfileSocialLinks "weibo" }}"></td></tr>
+                        <tr><td><label for="social_xiaohongshu">Xiaohongshu</label></td><td><input type="text" id="social_xiaohongshu" name="social_xiaohongshu" value="{{ index .ProfileSocialLinks "xiaohongshu" }}"></td></tr>
+                        <tr><td><label for="social_bilibili">Bilibili</label></td><td><input type="text" id="social_bilibili" name="social_bilibili" value="{{ index .ProfileSocialLinks "bilibili" }}"></td></tr>
+                        <tr><td><label for="social_zhihu">Zhihu</label></td><td><input type="text" id="social_zhihu" name="social_zhihu" value="{{ index .ProfileSocialLinks "zhihu" }}"></td></tr>
+                        <tr><td><label for="social_vk">VK</label></td><td><input type="text" id="social_vk" name="social_vk" value="{{ index .ProfileSocialLinks "vk" }}"></td></tr>
+                        <tr><td><label for="social_odnoklassniki">Odnoklassniki</label></td><td><input type="text" id="social_odnoklassniki" name="social_odnoklassniki" value="{{ index .ProfileSocialLinks "odnoklassniki" }}"></td></tr>
+                        <tr><td><label for="social_mastodon">Mastodon</label></td><td><input type="text" id="social_mastodon" name="social_mastodon" value="{{ index .ProfileSocialLinks "mastodon" }}"></td></tr>
+                        <tr><td><label for="social_bluesky">Bluesky</label></td><td><input type="text" id="social_bluesky" name="social_bluesky" value="{{ index .ProfileSocialLinks "bluesky" }}"></td></tr>
+                        <tr><td><label for="social_threads">Threads</label></td><td><input type="text" id="social_threads" name="social_threads" value="{{ index .ProfileSocialLinks "threads" }}"></td></tr>
+                        <tr><td><label for="social_flickr">Flickr</label></td><td><input type="text" id="social_flickr" name="social_flickr" value="{{ index .ProfileSocialLinks "flickr" }}"></td></tr>
+                        <tr><td><label for="social_vimeo">Vimeo</label></td><td><input type="text" id="social_vimeo" name="social_vimeo" value="{{ index .ProfileSocialLinks "vimeo" }}"></td></tr>
+                        <tr><td><label for="social_dailymotion">Dailymotion</label></td><td><input type="text" id="social_dailymotion" name="social_dailymotion" value="{{ index .ProfileSocialLinks "dailymotion" }}"></td></tr>
+                        <tr><td><label for="social_quora">Quora</label></td><td><input type="text" id="social_quora" name="social_quora" value="{{ index .ProfileSocialLinks "quora" }}"></td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </details>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="/ssg/edit-contributor?id={{ .Contributor.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Photo Upload Modal -->
+<div id="photo-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 24rem;">
+        <div class="modal-header">
+            <h2>Upload Photo</h2>
+            <button type="button" class="modal-close" onclick="closePhotoModal()">&times;</button>
+        </div>
+        <form method="POST" action="/ssg/upload-contributor-photo?site_id={{ .Site.ID }}" enctype="multipart/form-data">
+            <input type="hidden" name="contributor_id" value="{{ .Contributor.ID }}">
+            <div class="form-group">
+                <label for="photo">Select Image</label>
+                <input type="file" id="photo" name="photo" accept="image/*" required>
+                <small>Recommended: Square image, at least 200x200 pixels</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closePhotoModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPhotoModal() {
+    document.getElementById('photo-modal').classList.remove('hidden');
+}
+
+function closePhotoModal() {
+    document.getElementById('photo-modal').classList.add('hidden');
+}
+
+document.getElementById('photo-modal').addEventListener('click', function(e) {
+    if (e.target === this) closePhotoModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePhotoModal();
+});
+</script>
+{{ end }}

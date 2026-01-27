@@ -1316,10 +1316,16 @@ func (s *service) CreateContributor(ctx context.Context, contributor *Contributo
 		return fmt.Errorf("cannot marshal social links: %w", err)
 	}
 
+	var profileID sql.NullString
+	if contributor.ProfileID != nil {
+		profileID = sql.NullString{String: contributor.ProfileID.String(), Valid: true}
+	}
+
 	params := sqlc.CreateContributorParams{
 		ID:          contributor.ID.String(),
 		ShortID:     contributor.ShortID,
 		SiteID:      contributor.SiteID.String(),
+		ProfileID:   profileID,
 		Handle:      contributor.Handle,
 		Name:        contributor.Name,
 		Surname:     contributor.Surname,

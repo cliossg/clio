@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
@@ -18,24 +19,30 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProfileService interface {
+	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+}
+
 // Handler handles authentication routes.
 type Handler struct {
-	service   Service
-	sessionMw func(http.Handler) http.Handler
-	assetsFS  embed.FS
-	tmpl      *template.Template
-	cfg       *config.Config
-	log       logger.Logger
+	service        Service
+	profileService ProfileService
+	sessionMw      func(http.Handler) http.Handler
+	assetsFS       embed.FS
+	tmpl           *template.Template
+	cfg            *config.Config
+	log            logger.Logger
 }
 
 // NewHandler creates a new auth handler.
-func NewHandler(service Service, sessionMw func(http.Handler) http.Handler, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, profileService ProfileService, sessionMw func(http.Handler) http.Handler, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	return &Handler{
-		service:   service,
-		sessionMw: sessionMw,
-		assetsFS:  assetsFS,
-		cfg:       cfg,
-		log:       log,
+		service:        service,
+		profileService: profileService,
+		sessionMw:      sessionMw,
+		assetsFS:       assetsFS,
+		cfg:            cfg,
+		log:            log,
 	}
 }
 
@@ -538,7 +545,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.service.CreateUser(r.Context(), email, password, name, roles, mustChangePassword)
+	user, err := h.service.CreateUser(r.Context(), email, password, name, roles, mustChangePassword)
 	if err != nil {
 		h.log.Errorf("Cannot create user: %v", err)
 		h.renderAdmin(w, r, "admin/users/new", AdminPageData{
@@ -547,6 +554,17 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 			GeneratedPass: password,
 		})
 		return
+	}
+
+	slug := normalizeSlug(name)
+	if slug == "" {
+		slug = normalizeSlug(strings.Split(email, "@")[0])
+	}
+	userProfile, err := h.profileService.CreateProfile(r.Context(), slug, name, "", "", "[]", "", user.ID.String())
+	if err != nil {
+		h.log.Errorf("Cannot create profile for user: %v", err)
+	} else {
+		h.service.SetUserProfile(r.Context(), user.ID, userProfile.ID)
 	}
 
 	http.Redirect(w, r, "/admin/list-users", http.StatusSeeOther)
@@ -683,4 +701,15 @@ func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/admin/list-users", http.StatusSeeOther)
+}
+
+func normalizeSlug(s string) string {
+	s = strings.ToLower(s)
+	var result strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }

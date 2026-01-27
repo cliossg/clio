@@ -5,6 +5,27 @@
 
     {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
 
+    <!-- Profile Photo Section -->
+    <div class="form-group">
+        <label>Profile Photo</label>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            {{ if .Profile.PhotoPath }}
+            <img src="/profile/photo/{{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Change Photo</button>
+                <form method="POST" action="/profile/remove-photo" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove profile photo?')">Remove</button>
+                </form>
+            </div>
+            {{ else }}
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--white-warm-dark); display: flex; align-items: center; justify-content: center; color: var(--stone-beige); font-size: 2rem; border: 2px dashed var(--stone-beige);">
+                {{ slice .Profile.Name 0 1 }}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Upload Photo</button>
+            {{ end }}
+        </div>
+    </div>
+
     <form method="POST" action="/profile/update">
         <div class="form-group">
             <label for="slug">Slug</label>
@@ -88,4 +109,43 @@
         </div>
     </form>
 </div>
+
+<!-- Photo Upload Modal -->
+<div id="photo-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 24rem;">
+        <div class="modal-header">
+            <h2>Upload Photo</h2>
+            <button type="button" class="modal-close" onclick="closePhotoModal()">&times;</button>
+        </div>
+        <form method="POST" action="/profile/upload-photo" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="photo">Select Image</label>
+                <input type="file" id="photo" name="photo" accept="image/*" required>
+                <small>Recommended: Square image, at least 200x200 pixels</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closePhotoModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPhotoModal() {
+    document.getElementById('photo-modal').classList.remove('hidden');
+}
+
+function closePhotoModal() {
+    document.getElementById('photo-modal').classList.add('hidden');
+}
+
+document.getElementById('photo-modal').addEventListener('click', function(e) {
+    if (e.target === this) closePhotoModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePhotoModal();
+});
+</script>
 {{ end }}

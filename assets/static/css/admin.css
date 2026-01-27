@@ -160,6 +160,12 @@ th {
     color: var(--navy-deep);
 }
 
+td.actions, th.actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: center;
+}
+
 /* Links */
 a {
     color: var(--blue-intense);

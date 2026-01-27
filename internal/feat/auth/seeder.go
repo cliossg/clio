@@ -7,24 +7,32 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/logger"
 )
+
+type SeederProfileService interface {
+	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+}
 
 // Seeder handles seeding auth-related data.
 type Seeder struct {
 	service         Service
+	profileService  SeederProfileService
 	assetsFS        embed.FS
 	log             logger.Logger
 	credentialsPath string
 }
 
 // NewSeeder creates a new auth seeder.
-func NewSeeder(service Service, assetsFS embed.FS, log logger.Logger) *Seeder {
+func NewSeeder(service Service, profileService SeederProfileService, assetsFS embed.FS, log logger.Logger) *Seeder {
 	return &Seeder{
-		service:  service,
-		assetsFS: assetsFS,
-		log:      log,
+		service:        service,
+		profileService: profileService,
+		assetsFS:       assetsFS,
+		log:            log,
 	}
 }
 
@@ -53,6 +61,14 @@ func (s *Seeder) Start(ctx context.Context) error {
 	user, err := s.service.CreateUser(ctx, email, password, name, RoleAdmin, true)
 	if err != nil {
 		return fmt.Errorf("cannot create admin user: %w", err)
+	}
+
+	slug := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+	userProfile, err := s.profileService.CreateProfile(ctx, slug, name, "", "", "[]", "", user.ID.String())
+	if err != nil {
+		s.log.Errorf("Cannot create profile for admin user: %v", err)
+	} else {
+		s.service.SetUserProfile(ctx, user.ID, userProfile.ID)
 	}
 
 	s.log.Infof("Created admin user: %s", user.Email)
