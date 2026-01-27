@@ -10,7 +10,7 @@
     {{ if .Error }}<div class="flash-container"><div class="alert alert-error">{{ .Error }}</div></div>{{ end }}
     {{ if .Success }}<div class="flash-container"><div class="alert alert-success">{{ .Success }}</div></div>{{ end }}
     <div class="auth-container">
-        {{ if eq .Template "login" }}{{ template "login" . }}
+        {{ if eq .Template "signin" }}{{ template "signin" . }}
         {{ else if eq .Template "change-password" }}{{ template "change-password" . }}
         {{ end }}
     </div>

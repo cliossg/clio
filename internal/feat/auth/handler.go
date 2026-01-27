@@ -140,7 +140,7 @@ func (h *Handler) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) renderSignInForm(w http.ResponseWriter, errorMsg, email string) {
 	data := PageData{
 		Title:    "Sign In",
-		Template: "login",
+		Template: "signin",
 		HideNav:  true,
 		AuthPage: true,
 		Error:    errorMsg,
