@@ -41,8 +41,8 @@ func (h *Handler) Start(ctx context.Context) error {
 		"add": func(a, b int) int { return a + b },
 	})
 
+	// Parse only auth templates to avoid collision with SSG templates
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
-		"assets/templates/*.html",
 		"assets/templates/auth/*.html",
 	)
 	if err != nil {
@@ -186,7 +186,7 @@ h1 { margin: 0 0 24px 0; font-size: 1.5rem; text-align: center; }
 		return
 	}
 
-	if err := h.tmpl.ExecuteTemplate(w, "auth/base.html", data); err != nil {
+	if err := h.tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
 		h.log.Errorf("Template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
@@ -334,7 +334,7 @@ h1 { margin: 0 0 24px 0; font-size: 1.5rem; text-align: center; }
 		return
 	}
 
-	if err := h.tmpl.ExecuteTemplate(w, "auth/base.html", data); err != nil {
+	if err := h.tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
 		h.log.Errorf("Template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
