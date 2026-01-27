@@ -3,6 +3,7 @@ package ssg
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -19,7 +20,12 @@ func SiteContextMiddleware(service Service, log logger.Logger) func(http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			siteIDStr := r.URL.Query().Get("site_id")
 			if siteIDStr == "" {
-				_ = r.ParseForm()
+				contentType := r.Header.Get("Content-Type")
+				if strings.HasPrefix(contentType, "multipart/form-data") {
+					_ = r.ParseMultipartForm(32 << 20)
+				} else {
+					_ = r.ParseForm()
+				}
 				siteIDStr = r.FormValue("site_id")
 			}
 			if siteIDStr == "" {
