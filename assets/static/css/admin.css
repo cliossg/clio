@@ -316,6 +316,22 @@ h1, h2, h3 {
     width: auto;
 }
 
+/* Checkbox Groups */
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.checkbox-group.vertical {
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.checkbox-group.vertical .checkbox-label {
+    padding: 0.25rem 0;
+}
+
 /* Alerts */
 .flash-container {
     max-width: 1200px;

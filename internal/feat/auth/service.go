@@ -19,7 +19,6 @@ var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrSessionNotFound    = errors.New("session not found")
 	ErrSessionExpired     = errors.New("session expired")
-	ErrAdminExists        = errors.New("admin user already exists")
 	ErrCannotChangeAdmin  = errors.New("cannot change admin role")
 )
 
@@ -84,20 +83,6 @@ func (s *service) ensureQueries() {
 	}
 }
 
-func (s *service) adminExists(ctx context.Context) (bool, error) {
-	users, err := s.queries.ListUsers(ctx)
-	if err != nil {
-		return false, err
-	}
-	for _, u := range users {
-		user := fromSQLCUser(u)
-		if user.HasRole(RoleAdmin) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func (s *service) Authenticate(ctx context.Context, email, password string) (*User, error) {
 	s.ensureQueries()
 
@@ -127,15 +112,6 @@ func (s *service) CreateUser(ctx context.Context, email, password, name, roles s
 	user.MustChangePassword = mustChangePassword
 	if roles != "" {
 		user.Roles = roles
-	}
-
-	// Check if trying to create an admin when one already exists
-	if user.HasRole(RoleAdmin) {
-		if exists, err := s.adminExists(ctx); err != nil {
-			return nil, fmt.Errorf("cannot check admin: %w", err)
-		} else if exists {
-			return nil, ErrAdminExists
-		}
 	}
 
 	params := sqlc.CreateUserParams{

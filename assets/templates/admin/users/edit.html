@@ -27,14 +27,14 @@
         <div class="form-group">
             <label>Roles</label>
             {{ if hasRole .User.Roles "admin" }}
-            <div class="checkbox-group">
-                <label><input type="checkbox" checked disabled> Admin</label>
+            <div class="checkbox-group vertical">
+                <label class="checkbox-label"><input type="checkbox" checked disabled> Admin</label>
             </div>
             <small>Admin roles cannot be changed.</small>
             {{ else }}
-            <div class="checkbox-group">
-                <label><input type="checkbox" name="roles" value="editor" {{ if hasRole .User.Roles "editor" }}checked{{ end }}> Editor</label>
-                <label><input type="checkbox" name="roles" value="viewer" {{ if hasRole .User.Roles "viewer" }}checked{{ end }}> Viewer</label>
+            <div class="checkbox-group vertical">
+                <label class="checkbox-label"><input type="checkbox" name="roles" value="editor" {{ if hasRole .User.Roles "editor" }}checked{{ end }}> Editor</label>
+                <label class="checkbox-label"><input type="checkbox" name="roles" value="viewer" {{ if hasRole .User.Roles "viewer" }}checked{{ end }}> Viewer</label>
             </div>
             {{ end }}
         </div>
