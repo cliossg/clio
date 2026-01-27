@@ -24,9 +24,9 @@
         </form>
     </nav>
     {{ end }}
+    {{ if .Error }}<div class="flash-container"><div class="alert alert-error">{{ .Error }}</div></div>{{ end }}
+    {{ if .Success }}<div class="flash-container"><div class="alert alert-success">{{ .Success }}</div></div>{{ end }}
     <div class="{{ if .AuthPage }}auth-container{{ else }}container{{ end }}">
-        {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
-        {{ if .Success }}<div class="success">{{ .Success }}</div>{{ end }}
         {{ template "content" . }}
     </div>
 </body>
