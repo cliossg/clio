@@ -2,10 +2,6 @@
 <div class="card">
     <h1>New Layout</h1>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
     <form method="POST" action="/ssg/create-layout">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">

@@ -1,13 +1,11 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-tags?site_id={{ .Site.ID }}">← Tags</a></p>
     <h1>Edit Tag</h1>
-
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
 
     <form method="POST" action="/ssg/update-tag">
         <input type="hidden" name="id" value="{{ .Tag.ID }}">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Tag.Name }}" required>
@@ -15,7 +13,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Tag</button>
-            <a href="/ssg/get-tag?id={{ .Tag.ID }}" class="btn">Cancel</a>
+            <a href="/ssg/get-tag?id={{ .Tag.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

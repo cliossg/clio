@@ -12,10 +12,6 @@
         </div>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
     <div class="content-meta">
         {{ if .Content.Draft }}<span class="badge badge-warning">Draft</span>{{ else }}<span class="badge badge-success">Published</span>{{ end }}
         {{ if .Content.Featured }}<span class="badge badge-info">Featured</span>{{ end }}

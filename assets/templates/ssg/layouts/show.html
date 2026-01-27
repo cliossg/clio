@@ -4,17 +4,14 @@
     <div class="card-header">
         <h1>{{ .Layout.Name }}</h1>
         <div>
-            <a href="/ssg/edit-layout?id={{ .Layout.ID }}" class="btn">Edit</a>
+            <a href="/ssg/edit-layout?id={{ .Layout.ID }}&site_id={{ .Site.ID }}" class="btn">Edit</a>
             <form method="POST" action="/ssg/delete-layout" style="display:inline;">
                 <input type="hidden" name="id" value="{{ .Layout.ID }}">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this layout?')">Delete</button>
             </form>
         </div>
     </div>
-
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
 
     <dl class="detail-list">
         <dt>Name</dt>

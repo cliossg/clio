@@ -4,17 +4,14 @@
     <div class="card-header">
         <h1>{{ .Image.FileName }}</h1>
         <div>
-            <a href="/ssg/edit-image?id={{ .Image.ID }}" class="btn">Edit</a>
+            <a href="/ssg/edit-image?id={{ .Image.ID }}&site_id={{ .Site.ID }}" class="btn">Edit</a>
             <form method="POST" action="/ssg/delete-image" style="display:inline;">
                 <input type="hidden" name="id" value="{{ .Image.ID }}">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this image?')">Delete</button>
             </form>
         </div>
     </div>
-
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
 
     <div class="image-display">
         <img src="{{ .Image.FilePath }}" alt="{{ .Image.AltText }}" style="max-width: 100%; height: auto;">

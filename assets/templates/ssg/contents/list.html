@@ -6,14 +6,6 @@
         <a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     {{ if .Contents }}
     <table>
         <thead>

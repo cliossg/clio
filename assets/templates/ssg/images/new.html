@@ -2,10 +2,6 @@
 <div class="card">
     <h1>Upload Image</h1>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
     <form method="POST" action="/ssg/create-image" enctype="multipart/form-data">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">

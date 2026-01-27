@@ -6,19 +6,11 @@
         <a href="/ssg/new-image?site_id={{ .Site.ID }}" class="btn">Upload Image</a>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     {{ if .Images }}
     <div class="image-grid">
         {{ range .Images }}
         <div class="image-card">
-            <a href="/ssg/get-image?id={{ .ID }}">
+            <a href="/ssg/get-image?id={{ .ID }}&site_id={{ $.Site.ID }}">
                 <div class="image-preview">
                     <img src="{{ .FilePath }}" alt="{{ .AltText }}" onerror="this.parentElement.innerHTML='<span>No Preview</span>'">
                 </div>

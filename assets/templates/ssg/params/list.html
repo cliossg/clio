@@ -6,14 +6,6 @@
         <a href="/ssg/new-param?site_id={{ .Site.ID }}" class="btn">New Parameter</a>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     {{ if .Params }}
     <table>
         <thead>
@@ -26,12 +18,12 @@
         </thead>
         <tbody>
             {{ range .Params }}
-            <tr class="clickable-row" onclick="window.location='/ssg/get-param?id={{ .ID }}'">
+            <tr class="clickable-row" onclick="window.location='/ssg/get-param?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
                 <td><code>{{ if gt (len .Value) 50 }}{{ slice .Value 0 50 }}...{{ else }}{{ .Value }}{{ end }}</code></td>
                 <td>{{ if .System }}<span class="badge">System</span>{{ else }}-{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-param?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                    <a href="/ssg/edit-param?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

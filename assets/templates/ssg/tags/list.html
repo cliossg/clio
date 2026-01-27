@@ -6,14 +6,6 @@
         <a href="/ssg/new-tag?site_id={{ .Site.ID }}" class="btn">New Tag</a>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     {{ if .Tags }}
     <table>
         <thead>
@@ -25,11 +17,11 @@
         </thead>
         <tbody>
             {{ range .Tags }}
-            <tr class="clickable-row" onclick="window.location='/ssg/get-tag?id={{ .ID }}'">
+            <tr class="clickable-row" onclick="window.location='/ssg/get-tag?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
                 <td><code>{{ .Slug }}</code></td>
                 <td>
-                    <a href="/ssg/edit-tag?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                    <a href="/ssg/edit-tag?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

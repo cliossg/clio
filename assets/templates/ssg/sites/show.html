@@ -12,14 +12,6 @@
         </div>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     <dl class="detail-list">
         <dt>Slug</dt>
         <dd><code>{{ .Site.Slug }}</code></dd>

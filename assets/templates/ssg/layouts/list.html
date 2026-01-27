@@ -6,14 +6,6 @@
         <a href="/ssg/new-layout?site_id={{ .Site.ID }}" class="btn">New Layout</a>
     </div>
 
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
-
-    {{ if .Success }}
-    <div class="alert alert-success">{{ .Success }}</div>
-    {{ end }}
-
     {{ if .Layouts }}
     <table>
         <thead>
@@ -25,11 +17,11 @@
         </thead>
         <tbody>
             {{ range .Layouts }}
-            <tr class="clickable-row" onclick="window.location='/ssg/get-layout?id={{ .ID }}'">
+            <tr class="clickable-row" onclick="window.location='/ssg/get-layout?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
                 <td>{{ if .Description }}{{ .Description }}{{ else }}<em>No description</em>{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-layout?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                    <a href="/ssg/edit-layout?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}

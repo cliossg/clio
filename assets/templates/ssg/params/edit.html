@@ -1,13 +1,11 @@
 {{ define "content" }}
 <div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-params?site_id={{ .Site.ID }}">← Parameters</a></p>
     <h1>Edit Parameter</h1>
-
-    {{ if .Error }}
-    <div class="alert alert-error">{{ .Error }}</div>
-    {{ end }}
 
     <form method="POST" action="/ssg/update-param">
         <input type="hidden" name="id" value="{{ .Param.ID }}">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Param.Name }}" required>
@@ -36,7 +34,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Parameter</button>
-            <a href="/ssg/get-param?id={{ .Param.ID }}" class="btn">Cancel</a>
+            <a href="/ssg/get-param?id={{ .Param.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>
