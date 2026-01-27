@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }} - Clio</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    {{ if .Error }}<div class="flash-container"><div class="alert alert-error">{{ .Error }}</div></div>{{ end }}
+    {{ if .Success }}<div class="flash-container"><div class="alert alert-success">{{ .Success }}</div></div>{{ end }}
+    <div class="auth-container">
+        {{ if eq .Template "login" }}{{ template "login" . }}
+        {{ else if eq .Template "change-password" }}{{ template "change-password" . }}
+        {{ end }}
+    </div>
+</body>
+</html>
