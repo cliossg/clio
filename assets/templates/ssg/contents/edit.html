@@ -2,15 +2,24 @@
 <div class="card">
     <div class="card-header">
         <h1>Edit Content</h1>
-        <span id="save-status" class="save-status"></span>
+        <div id="save-status" class="save-status">
+            <span id="save-indicator" class="htmx-indicator">Saving...</span>
+            <span id="save-text"></span>
+        </div>
     </div>
 
     {{ if .Error }}
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form id="content-form" method="POST" action="/ssg/update-content">
+    <form id="content-form" method="POST" action="/ssg/update-content"
+          hx-post="/ssg/autosave-content"
+          hx-trigger="keyup changed delay:500ms, change delay:500ms, every 30s"
+          hx-target="#save-status"
+          hx-swap="outerHTML"
+          hx-indicator="#save-indicator">
         <input type="hidden" name="id" value="{{ .Content.ID }}">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
 
         <!-- Basic Fields -->
         <div class="form-group">
@@ -86,6 +95,7 @@
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">Img</button>
                 </div>
                 <div class="editor-toolbar-group">
+                    <button type="button" class="toolbar-btn" onclick="openMetaModal()" title="SEO & Settings">Meta</button>
                     <button type="button" class="toolbar-btn" onclick="toggleZenMode()" title="Zen Mode (Alt+Z)">Zen</button>
                 </div>
             </div>
@@ -107,7 +117,7 @@
                 {{ range .ContentImages }}
                 <div class="gallery-image" onclick="insertImageAtCursor('{{ .FilePath }}', '{{ .AltText }}')" title="{{ .AltText }}">
                     <img src="/ssg/workspace/{{ $.Site.Slug }}/images/{{ .FilePath }}" alt="{{ .AltText }}">
-                    <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteContentImage('{{ .ID }}')" title="Delete">&times;</button>
+                    <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteContentImage('{{ .ContentImageID }}')" title="Delete">&times;</button>
                     <div class="overlay">{{ .AltText }}</div>
                 </div>
                 {{ else }}
@@ -119,8 +129,18 @@
 
         <!-- Tags -->
         <div class="form-group">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" name="tags" value="{{ range $i, $t := .Content.Tags }}{{ if $i }}, {{ end }}{{ $t.Name }}{{ end }}" placeholder="Comma-separated tags">
+            <label>Tags</label>
+            <div id="tags-container" class="tags-chips">
+                {{ range .Tags }}
+                <label class="tag-chip" data-tag-id="{{ .ID }}">
+                    <input type="checkbox" name="tag_ids" value="{{ .ID }}">
+                    <span>{{ .Name }}</span>
+                </label>
+                {{ else }}
+                <p class="empty-state">No tags available. <a href="/ssg/new-tag?site_id={{ $.Site.ID }}">Create one</a></p>
+                {{ end }}
+            </div>
+            <input type="hidden" id="content-tag-ids" value="{{ range $i, $t := .Content.Tags }}{{ if $i }},{{ end }}{{ $t.ID }}{{ end }}">
         </div>
 
         <!-- Publishing Options -->
@@ -188,6 +208,65 @@
     </div>
 </div>
 
+<!-- Meta/SEO Modal -->
+<div id="meta-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>SEO & Settings</h2>
+            <button type="button" class="modal-close" onclick="closeMetaModal()">&times;</button>
+        </div>
+        <form id="meta-form">
+            <input type="hidden" name="content_id" value="{{ .Content.ID }}">
+
+            <h3 style="margin-top: 0; font-size: 1rem;">SEO</h3>
+            <div class="form-group">
+                <label for="meta-description">Meta Description</label>
+                <textarea id="meta-description" name="description" rows="2" placeholder="Brief description for search engines">{{ if .Meta }}{{ .Meta.Description }}{{ end }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="meta-keywords">Keywords</label>
+                <input type="text" id="meta-keywords" name="keywords" placeholder="keyword1, keyword2, keyword3" value="{{ if .Meta }}{{ .Meta.Keywords }}{{ end }}">
+            </div>
+            <div class="form-group">
+                <label for="meta-robots">Robots</label>
+                <select id="meta-robots" name="robots">
+                    <option value="" {{ if not .Meta }}selected{{ else if eq .Meta.Robots "" }}selected{{ end }}>Default (index, follow)</option>
+                    <option value="noindex" {{ if .Meta }}{{ if eq .Meta.Robots "noindex" }}selected{{ end }}{{ end }}>No Index</option>
+                    <option value="nofollow" {{ if .Meta }}{{ if eq .Meta.Robots "nofollow" }}selected{{ end }}{{ end }}>No Follow</option>
+                    <option value="noindex, nofollow" {{ if .Meta }}{{ if eq .Meta.Robots "noindex, nofollow" }}selected{{ end }}{{ end }}>No Index, No Follow</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="meta-canonical">Canonical URL</label>
+                <input type="url" id="meta-canonical" name="canonical_url" placeholder="https://..." value="{{ if .Meta }}{{ .Meta.CanonicalURL }}{{ end }}">
+            </div>
+
+            <h3 style="font-size: 1rem;">Display Settings</h3>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="table_of_contents" {{ if .Meta }}{{ if .Meta.TableOfContents }}checked{{ end }}{{ end }}> Show Table of Contents
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="share" {{ if .Meta }}{{ if .Meta.Share }}checked{{ end }}{{ end }}> Show Share Buttons
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="comments" {{ if .Meta }}{{ if .Meta.Comments }}checked{{ end }}{{ end }}> Enable Comments
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMetaModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/js/vendor/htmx.min.js"></script>
 <script src="/static/js/vendor/marked.min.js"></script>
 <script>
 // Configuration
@@ -326,7 +405,7 @@ document.getElementById('image-upload-form').addEventListener('submit', async (e
     progressBarInner.style.width = '0%';
 
     try {
-        const response = await fetch(`/ssg/upload-content-image?content_id=${contentId}`, {
+        const response = await fetch(`/ssg/upload-content-image?content_id=${contentId}&site_id=${siteId}`, {
             method: 'POST',
             body: formData
         });
@@ -350,7 +429,7 @@ async function deleteContentImage(imageId) {
     if (!confirm('Delete this image?')) return;
 
     try {
-        const response = await fetch(`/ssg/delete-content-image?id=${imageId}`, {
+        const response = await fetch(`/ssg/delete-content-image?id=${imageId}&site_id=${siteId}`, {
             method: 'POST'
         });
 
@@ -369,7 +448,7 @@ async function removeHeaderImage() {
     if (!confirm('Remove header image?')) return;
 
     try {
-        const response = await fetch(`/ssg/remove-header-image?content_id=${contentId}`, {
+        const response = await fetch(`/ssg/remove-header-image?content_id=${contentId}&site_id=${siteId}`, {
             method: 'POST'
         });
 
@@ -382,5 +461,117 @@ async function removeHeaderImage() {
         alert('Remove error: ' + err.message);
     }
 }
+
+// Meta Modal functions
+function openMetaModal() {
+    document.getElementById('meta-modal').classList.remove('hidden');
+}
+
+function closeMetaModal() {
+    document.getElementById('meta-modal').classList.add('hidden');
+}
+
+// Meta form submission
+document.getElementById('meta-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch('/ssg/update-meta', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            closeMetaModal();
+            // Show brief success feedback
+            const btn = document.querySelector('.toolbar-btn[onclick="openMetaModal()"]');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 1500);
+            }
+        } else {
+            alert('Failed to save meta settings. Please try again.');
+        }
+    } catch (err) {
+        alert('Error saving meta: ' + err.message);
+    }
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeMetaModal();
+        closeUploadModal();
+    }
+});
+
+// Close modal on overlay click
+document.getElementById('meta-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeMetaModal();
+    }
+});
+
+// Tag chips initialization and handling
+(function() {
+    const contentTagIds = document.getElementById('content-tag-ids').value.split(',').filter(id => id);
+    const tagChips = document.querySelectorAll('.tag-chip');
+
+    tagChips.forEach(chip => {
+        const checkbox = chip.querySelector('input[type="checkbox"]');
+        const tagId = chip.dataset.tagId;
+
+        // Initialize selection state
+        if (contentTagIds.includes(tagId)) {
+            checkbox.checked = true;
+            chip.classList.add('selected');
+        }
+
+        // Toggle on click
+        chip.addEventListener('click', function(e) {
+            if (e.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            chip.classList.toggle('selected', checkbox.checked);
+        });
+    });
+})();
+
+// Autosave time indicator
+(function() {
+    let lastSavedAt = null;
+
+    function updateSaveTime() {
+        if (!lastSavedAt) return;
+        const seconds = Math.floor((Date.now() / 1000) - lastSavedAt);
+        const saveText = document.getElementById('save-text');
+        if (saveText) {
+            if (seconds < 5) {
+                saveText.textContent = 'Saved just now';
+            } else if (seconds < 60) {
+                saveText.textContent = `Saved ${seconds}s ago`;
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                saveText.textContent = `Saved ${minutes}m ago`;
+            }
+        }
+    }
+
+    // Update timestamp when HTMX swaps content
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+        if (e.detail.target.id === 'save-status') {
+            const status = document.getElementById('save-status');
+            if (status && status.dataset.savedAt) {
+                lastSavedAt = parseInt(status.dataset.savedAt);
+            }
+        }
+    });
+
+    // Update display every second
+    setInterval(updateSaveTime, 1000);
+})();
 </script>
 {{ end }}

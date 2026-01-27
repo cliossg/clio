@@ -81,8 +81,17 @@
 
         <!-- Tags -->
         <div class="form-group">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" name="tags" placeholder="Comma-separated tags (e.g., golang, web, tutorial)">
+            <label>Tags</label>
+            <div id="tags-container" class="tags-chips">
+                {{ range .Tags }}
+                <label class="tag-chip" data-tag-id="{{ .ID }}">
+                    <input type="checkbox" name="tag_ids" value="{{ .ID }}">
+                    <span>{{ .Name }}</span>
+                </label>
+                {{ else }}
+                <p class="empty-state">No tags available. <a href="/ssg/new-tag?site_id={{ $.Site.ID }}">Create one</a></p>
+                {{ end }}
+            </div>
         </div>
 
         <!-- Publishing Options -->
@@ -184,5 +193,17 @@ function insertMarkdown(before, after) {
     bodyTextarea.selectionEnd = start + before.length + selected.length;
     updatePreview();
 }
+
+// Tag chips handling
+document.querySelectorAll('.tag-chip').forEach(chip => {
+    const checkbox = chip.querySelector('input[type="checkbox"]');
+
+    chip.addEventListener('click', function(e) {
+        if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+        }
+        chip.classList.toggle('selected', checkbox.checked);
+    });
+});
 </script>
 {{ end }}

@@ -88,6 +88,19 @@ JOIN image i ON ci.image_id = i.id
 WHERE ci.content_id = ?
 ORDER BY ci.is_header DESC, ci.order_num;
 
+-- name: GetContentImageWithDetails :one
+SELECT
+    ci.id as content_image_id,
+    ci.content_id,
+    ci.image_id,
+    ci.is_header,
+    i.id,
+    i.site_id,
+    i.file_path
+FROM content_images ci
+JOIN image i ON ci.image_id = i.id
+WHERE ci.id = ?;
+
 -- name: DeleteContentImage :exec
 DELETE FROM content_images WHERE id = ?;
 

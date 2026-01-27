@@ -230,6 +230,45 @@ func (q *Queries) DeleteSectionImage(ctx context.Context, id string) error {
 	return err
 }
 
+const getContentImageWithDetails = `-- name: GetContentImageWithDetails :one
+SELECT
+    ci.id as content_image_id,
+    ci.content_id,
+    ci.image_id,
+    ci.is_header,
+    i.id,
+    i.site_id,
+    i.file_path
+FROM content_images ci
+JOIN image i ON ci.image_id = i.id
+WHERE ci.id = ?
+`
+
+type GetContentImageWithDetailsRow struct {
+	ContentImageID string        `json:"content_image_id"`
+	ContentID      string        `json:"content_id"`
+	ImageID        string        `json:"image_id"`
+	IsHeader       sql.NullInt64 `json:"is_header"`
+	ID             string        `json:"id"`
+	SiteID         string        `json:"site_id"`
+	FilePath       string        `json:"file_path"`
+}
+
+func (q *Queries) GetContentImageWithDetails(ctx context.Context, id string) (GetContentImageWithDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getContentImageWithDetails, id)
+	var i GetContentImageWithDetailsRow
+	err := row.Scan(
+		&i.ContentImageID,
+		&i.ContentID,
+		&i.ImageID,
+		&i.IsHeader,
+		&i.ID,
+		&i.SiteID,
+		&i.FilePath,
+	)
+	return i, err
+}
+
 const getContentImagesByContentID = `-- name: GetContentImagesByContentID :many
 SELECT id, content_id, image_id, is_header, is_featured, order_num, created_at FROM content_images WHERE content_id = ? ORDER BY order_num
 `

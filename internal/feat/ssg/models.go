@@ -326,6 +326,13 @@ type ContentImageWithDetails struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// ContentImageDetails represents minimal info for deletion.
+type ContentImageDetails struct {
+	ContentImageID uuid.UUID `json:"content_image_id"`
+	ImageID        uuid.UUID `json:"image_id"`
+	FilePath       string    `json:"file_path"`
+}
+
 // SectionImage represents a section-image relationship.
 type SectionImage struct {
 	ID         uuid.UUID `json:"id"`

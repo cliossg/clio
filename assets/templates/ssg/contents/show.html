@@ -3,7 +3,7 @@
     <div class="card-header">
         <h1>{{ .Content.Heading }}</h1>
         <div>
-            <a href="/ssg/edit-content?id={{ .Content.ID }}" class="btn">Edit</a>
+            <a href="/ssg/edit-content?id={{ .Content.ID }}&site_id={{ .Site.ID }}" class="btn">Edit</a>
             <form method="POST" action="/ssg/delete-content" style="display:inline;">
                 <input type="hidden" name="id" value="{{ .Content.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this content?')">Delete</button>

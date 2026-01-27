@@ -79,11 +79,17 @@ type Service interface {
 	GetImage(ctx context.Context, id uuid.UUID) (*Image, error)
 	GetImages(ctx context.Context, siteID uuid.UUID) ([]*Image, error)
 	GetContentImagesWithDetails(ctx context.Context, contentID uuid.UUID) ([]*ContentImageWithDetails, error)
+	GetContentImageDetails(ctx context.Context, contentImageID uuid.UUID) (*ContentImageDetails, error)
 	LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error
 	UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error
 	UnlinkHeaderImageFromContent(ctx context.Context, contentID uuid.UUID) error
 	UpdateImage(ctx context.Context, image *Image) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error
+
+	// Meta operations
+	GetMetaByContentID(ctx context.Context, contentID uuid.UUID) (*Meta, error)
+	CreateMeta(ctx context.Context, meta *Meta) error
+	UpdateMeta(ctx context.Context, meta *Meta) error
 }
 
 // DBProvider provides access to the database.
@@ -998,6 +1004,21 @@ func (s *service) LinkImageToContent(ctx context.Context, contentID, imageID uui
 	return nil
 }
 
+func (s *service) GetContentImageDetails(ctx context.Context, contentImageID uuid.UUID) (*ContentImageDetails, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetContentImageWithDetails(ctx, contentImageID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get content image details: %w", err)
+	}
+
+	return &ContentImageDetails{
+		ContentImageID: uuid.MustParse(row.ContentImageID),
+		ImageID:        uuid.MustParse(row.ImageID),
+		FilePath:       row.FilePath,
+	}, nil
+}
+
 func (s *service) UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error {
 	s.ensureQueries()
 
@@ -1058,6 +1079,81 @@ func (s *service) DeleteImage(ctx context.Context, id uuid.UUID) error {
 	err := s.queries.DeleteImage(ctx, id.String())
 	if err != nil {
 		return fmt.Errorf("cannot delete image: %w", err)
+	}
+
+	return nil
+}
+
+// --- Meta Operations ---
+
+func (s *service) GetMetaByContentID(ctx context.Context, contentID uuid.UUID) (*Meta, error) {
+	s.ensureQueries()
+
+	sqlcMeta, err := s.queries.GetMetaByContentID(ctx, contentID.String())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No meta yet, not an error
+		}
+		return nil, fmt.Errorf("cannot get meta: %w", err)
+	}
+
+	return metaFromSQLC(sqlcMeta), nil
+}
+
+func (s *service) CreateMeta(ctx context.Context, meta *Meta) error {
+	s.ensureQueries()
+
+	params := sqlc.CreateMetaParams{
+		ID:              meta.ID.String(),
+		SiteID:          meta.SiteID.String(),
+		ShortID:         nullString(meta.ShortID),
+		ContentID:       meta.ContentID.String(),
+		Summary:         nullString(meta.Summary),
+		Excerpt:         nullString(meta.Excerpt),
+		Description:     nullString(meta.Description),
+		Keywords:        nullString(meta.Keywords),
+		Robots:          nullString(meta.Robots),
+		CanonicalUrl:    nullString(meta.CanonicalURL),
+		Sitemap:         nullString(meta.Sitemap),
+		TableOfContents: nullInt(boolToInt(meta.TableOfContents)),
+		Share:           nullInt(boolToInt(meta.Share)),
+		Comments:        nullInt(boolToInt(meta.Comments)),
+		CreatedBy:       nullString(meta.CreatedBy.String()),
+		UpdatedBy:       nullString(meta.UpdatedBy.String()),
+		CreatedAt:       nullTime(&meta.CreatedAt),
+		UpdatedAt:       nullTime(&meta.UpdatedAt),
+	}
+
+	_, err := s.queries.CreateMeta(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot create meta: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) UpdateMeta(ctx context.Context, meta *Meta) error {
+	s.ensureQueries()
+
+	params := sqlc.UpdateMetaParams{
+		Summary:         nullString(meta.Summary),
+		Excerpt:         nullString(meta.Excerpt),
+		Description:     nullString(meta.Description),
+		Keywords:        nullString(meta.Keywords),
+		Robots:          nullString(meta.Robots),
+		CanonicalUrl:    nullString(meta.CanonicalURL),
+		Sitemap:         nullString(meta.Sitemap),
+		TableOfContents: nullInt(boolToInt(meta.TableOfContents)),
+		Share:           nullInt(boolToInt(meta.Share)),
+		Comments:        nullInt(boolToInt(meta.Comments)),
+		UpdatedBy:       nullString(meta.UpdatedBy.String()),
+		UpdatedAt:       nullTime(&meta.UpdatedAt),
+		ID:              meta.ID.String(),
+	}
+
+	_, err := s.queries.UpdateMeta(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot update meta: %w", err)
 	}
 
 	return nil

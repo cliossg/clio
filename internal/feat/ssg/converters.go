@@ -372,6 +372,64 @@ func imageFromSQLC(i sqlc.Image) *Image {
 	return image
 }
 
+// Meta converter
+
+func metaFromSQLC(m sqlc.Meta) *Meta {
+	meta := &Meta{
+		ID:        parseUUID(m.ID),
+		SiteID:    parseUUID(m.SiteID),
+		ContentID: parseUUID(m.ContentID),
+	}
+
+	if m.ShortID.Valid {
+		meta.ShortID = m.ShortID.String
+	}
+	if m.Summary.Valid {
+		meta.Summary = m.Summary.String
+	}
+	if m.Excerpt.Valid {
+		meta.Excerpt = m.Excerpt.String
+	}
+	if m.Description.Valid {
+		meta.Description = m.Description.String
+	}
+	if m.Keywords.Valid {
+		meta.Keywords = m.Keywords.String
+	}
+	if m.Robots.Valid {
+		meta.Robots = m.Robots.String
+	}
+	if m.CanonicalUrl.Valid {
+		meta.CanonicalURL = m.CanonicalUrl.String
+	}
+	if m.Sitemap.Valid {
+		meta.Sitemap = m.Sitemap.String
+	}
+	if m.TableOfContents.Valid {
+		meta.TableOfContents = m.TableOfContents.Int64 == 1
+	}
+	if m.Share.Valid {
+		meta.Share = m.Share.Int64 == 1
+	}
+	if m.Comments.Valid {
+		meta.Comments = m.Comments.Int64 == 1
+	}
+	if m.CreatedBy.Valid {
+		meta.CreatedBy = parseUUID(m.CreatedBy.String)
+	}
+	if m.UpdatedBy.Valid {
+		meta.UpdatedBy = parseUUID(m.UpdatedBy.String)
+	}
+	if m.CreatedAt.Valid {
+		meta.CreatedAt = m.CreatedAt.Time
+	}
+	if m.UpdatedAt.Valid {
+		meta.UpdatedAt = m.UpdatedAt.Time
+	}
+
+	return meta
+}
+
 // Time helper
 func timeFromNull(t interface{ Time() (time.Time, bool) }) time.Time {
 	if t, ok := t.Time(); ok {

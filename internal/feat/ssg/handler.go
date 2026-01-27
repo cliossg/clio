@@ -3,6 +3,7 @@ package ssg
 import (
 	"context"
 	"embed"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
@@ -59,6 +61,9 @@ func (h *Handler) Start(ctx context.Context) error {
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	h.log.Info("Registering SSG routes")
 
+	// Serve workspace images (public, no auth required for preview)
+	r.Get("/ssg/workspace/{slug}/images/{filename}", h.HandleServeWorkspaceImage)
+
 	r.Group(func(r chi.Router) {
 		r.Use(h.sessionMw)
 
@@ -91,6 +96,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Get("/ssg/get-content", h.HandleShowContent)
 			r.Get("/ssg/edit-content", h.HandleEditContent)
 			r.Post("/ssg/update-content", h.HandleUpdateContent)
+			r.Post("/ssg/autosave-content", h.HandleAutosaveContent)
 			r.Post("/ssg/delete-content", h.HandleDeleteContent)
 
 			// Layouts
@@ -134,6 +140,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Post("/ssg/delete-content-image", h.HandleDeleteContentImage)
 			r.Post("/ssg/remove-header-image", h.HandleRemoveHeaderImage)
 
+			// Meta (SEO/Settings)
+			r.Post("/ssg/update-meta", h.HandleUpdateMeta)
+
 			// Generation
 			r.Post("/ssg/generate-markdown", h.HandleGenerateMarkdown)
 			r.Post("/ssg/generate-html", h.HandleGenerateHTML)
@@ -164,6 +173,7 @@ type PageData struct {
 	Images        []*Image
 	HeaderImage   *ContentImageWithDetails
 	ContentImages []*ContentImageWithDetails
+	Meta          *Meta
 	Error         string
 	Success       string
 	CSRFToken     string
@@ -751,7 +761,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String(), http.StatusSeeOther)
+	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
 }
 
 func (h *Handler) HandleShowContent(w http.ResponseWriter, r *http.Request) {
@@ -820,6 +830,9 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Get meta for SEO/settings
+	meta, _ := h.service.GetMetaByContentID(r.Context(), contentID)
+
 	h.render(w, "ssg/contents/edit", PageData{
 		Title:         "Edit " + content.Heading,
 		Site:          site,
@@ -828,6 +841,7 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 		Tags:          tags,
 		HeaderImage:   headerImage,
 		ContentImages: contentImages,
+		Meta:          meta,
 	})
 }
 
@@ -907,7 +921,75 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String(), http.StatusSeeOther)
+	http.Redirect(w, r, "/ssg/get-content?id="+content.ID.String()+"&site_id="+site.ID.String(), http.StatusSeeOther)
+}
+
+func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<div id="save-status" class="save-status error">Error parsing form</div>`))
+		return
+	}
+
+	contentID, err := uuid.Parse(r.FormValue("id"))
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<div id="save-status" class="save-status error">Invalid content ID</div>`))
+		return
+	}
+
+	content, err := h.service.GetContent(r.Context(), contentID)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<div id="save-status" class="save-status error">Content not found</div>`))
+		return
+	}
+
+	content.Heading = r.FormValue("heading")
+	content.Summary = r.FormValue("summary")
+	content.Body = r.FormValue("body")
+	content.Draft = r.FormValue("draft") == "on"
+	content.Featured = r.FormValue("featured") == "on"
+	content.Series = r.FormValue("series")
+	content.Kind = r.FormValue("kind")
+
+	if sectionID := r.FormValue("section_id"); sectionID != "" {
+		if id, err := uuid.Parse(sectionID); err == nil {
+			content.SectionID = id
+		}
+	}
+
+	if seriesOrder := r.FormValue("series_order"); seriesOrder != "" {
+		if order, err := strconv.Atoi(seriesOrder); err == nil {
+			content.SeriesOrder = order
+		}
+	}
+
+	userIDStr := middleware.GetUserID(r.Context())
+	if userIDStr != "" {
+		if userID, err := uuid.Parse(userIDStr); err == nil {
+			content.UpdatedBy = userID
+		}
+	}
+
+	if err := h.service.UpdateContent(r.Context(), content); err != nil {
+		h.log.Errorf("Autosave failed: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<div id="save-status" class="save-status error">Save failed</div>`))
+		return
+	}
+
+	_ = h.service.RemoveAllTagsFromContent(r.Context(), content.ID)
+	tagIDs := r.Form["tag_ids"]
+	for _, tagIDStr := range tagIDs {
+		if tagID, err := uuid.Parse(tagIDStr); err == nil {
+			_ = h.service.AddTagToContentByID(r.Context(), content.ID, tagID)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	timestamp := time.Now().Unix()
+	w.Write([]byte(fmt.Sprintf(`<div id="save-status" class="save-status saved" data-saved-at="%d"><span id="save-indicator" class="htmx-indicator">Saving...</span><span id="save-text">Saved just now</span></div>`, timestamp)))
 }
 
 func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {
@@ -1806,6 +1888,37 @@ func (h *Handler) HandleDeleteImage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ssg/list-images?site_id="+site.ID.String(), http.StatusSeeOther)
 }
 
+// --- Workspace File Handlers ---
+
+// HandleServeWorkspaceImage serves images from the workspace directory.
+func (h *Handler) HandleServeWorkspaceImage(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+	filename := chi.URLParam(r, "filename")
+
+	if slug == "" || filename == "" {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	// Prevent directory traversal
+	if strings.Contains(slug, "..") || strings.Contains(filename, "..") {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	// Build the file path
+	filePath := filepath.Join(h.workspace.GetImagesPath(slug), filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		http.Error(w, "Image not found", http.StatusNotFound)
+		return
+	}
+
+	// Serve the file
+	http.ServeFile(w, r, filePath)
+}
+
 // --- Content Image Handlers ---
 
 func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Request) {
@@ -1909,19 +2022,45 @@ func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *Handler) HandleDeleteContentImage(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		http.Error(w, "Site context required", http.StatusBadRequest)
+		return
+	}
+
 	contentImageID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
 		http.Error(w, "Invalid content image ID", http.StatusBadRequest)
 		return
 	}
 
+	// Get image details before deleting
+	imageDetails, err := h.service.GetContentImageDetails(r.Context(), contentImageID)
+	if err != nil {
+		h.log.Errorf("Cannot get content image details: %v", err)
+		http.Error(w, "Cannot find content image", http.StatusNotFound)
+		return
+	}
+
+	// Delete the content_images link
 	if err := h.service.UnlinkImageFromContent(r.Context(), contentImageID); err != nil {
 		h.log.Errorf("Cannot delete content image link: %v", err)
 		http.Error(w, "Cannot delete content image", http.StatusInternalServerError)
 		return
 	}
 
-	h.log.Infof("Content image link deleted: %s", contentImageID)
+	// Delete the image record
+	if err := h.service.DeleteImage(r.Context(), imageDetails.ImageID); err != nil {
+		h.log.Errorf("Cannot delete image record: %v", err)
+	}
+
+	// Delete the physical file
+	filePath := filepath.Join(h.workspace.GetImagesPath(site.Slug), imageDetails.FilePath)
+	if err := os.Remove(filePath); err != nil {
+		h.log.Errorf("Cannot delete image file: %v", err)
+	}
+
+	h.log.Infof("Content image fully deleted: %s", contentImageID)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -1939,6 +2078,77 @@ func (h *Handler) HandleRemoveHeaderImage(w http.ResponseWriter, r *http.Request
 	}
 
 	h.log.Infof("Header image removed from content: %s", contentID)
+	w.WriteHeader(http.StatusOK)
+}
+
+// --- Meta Handlers ---
+
+func (h *Handler) HandleUpdateMeta(w http.ResponseWriter, r *http.Request) {
+	site := getSiteFromContext(r.Context())
+	if site == nil {
+		http.Error(w, "Site context required", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	contentID, err := uuid.Parse(r.FormValue("content_id"))
+	if err != nil {
+		http.Error(w, "Invalid content ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get existing meta or create new one
+	meta, _ := h.service.GetMetaByContentID(r.Context(), contentID)
+	isNew := meta == nil
+
+	if isNew {
+		meta = &Meta{
+			ID:        uuid.New(),
+			SiteID:    site.ID,
+			ContentID: contentID,
+			CreatedAt: time.Now(),
+		}
+	}
+
+	// Update fields from form
+	meta.Description = r.FormValue("description")
+	meta.Keywords = r.FormValue("keywords")
+	meta.Robots = r.FormValue("robots")
+	meta.CanonicalURL = r.FormValue("canonical_url")
+	meta.TableOfContents = r.FormValue("table_of_contents") == "on"
+	meta.Share = r.FormValue("share") == "on"
+	meta.Comments = r.FormValue("comments") == "on"
+	meta.UpdatedAt = time.Now()
+
+	// Get user ID from context
+	userIDStr := middleware.GetUserID(r.Context())
+	if userIDStr != "" {
+		if userID, err := uuid.Parse(userIDStr); err == nil {
+			meta.UpdatedBy = userID
+			if isNew {
+				meta.CreatedBy = userID
+			}
+		}
+	}
+
+	var saveErr error
+	if isNew {
+		saveErr = h.service.CreateMeta(r.Context(), meta)
+	} else {
+		saveErr = h.service.UpdateMeta(r.Context(), meta)
+	}
+
+	if saveErr != nil {
+		h.log.Errorf("Cannot save meta: %v", saveErr)
+		http.Error(w, "Cannot save meta", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Infof("Meta updated for content: %s", contentID)
 	w.WriteHeader(http.StatusOK)
 }
 

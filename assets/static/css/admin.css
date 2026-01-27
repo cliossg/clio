@@ -341,6 +341,39 @@ h1, h2, h3 {
     border-radius: 4px;
 }
 
+/* Tag Chips (for forms) */
+.tags-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    background: var(--white-warm-dark);
+    color: var(--navy-deep);
+    border: 1px solid var(--stone-beige);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tag-chip:hover {
+    border-color: var(--blue-intense);
+}
+
+.tag-chip.selected {
+    background: var(--blue-light);
+    border-color: var(--blue-intense);
+}
+
+.tag-chip input[type="checkbox"] {
+    display: none;
+}
+
 /* Content Meta */
 .content-meta {
     display: flex;
@@ -599,6 +632,20 @@ button.nav-card {
 
 .save-status.error {
     color: #c44536;
+}
+
+/* HTMX Indicator */
+.htmx-indicator {
+    display: none;
+    margin-right: 0.5rem;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline;
+}
+
+.htmx-request #save-text {
+    display: none;
 }
 
 /* Image Gallery for Editor */

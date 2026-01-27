@@ -48,6 +48,7 @@ type Querier interface {
 	GetContentBySectionID(ctx context.Context, sectionID sql.NullString) ([]Content, error)
 	GetContentBySiteID(ctx context.Context, siteID string) ([]Content, error)
 	GetContentForTag(ctx context.Context, tagID string) ([]Content, error)
+	GetContentImageWithDetails(ctx context.Context, id string) (GetContentImageWithDetailsRow, error)
 	GetContentImagesByContentID(ctx context.Context, contentID string) ([]ContentImage, error)
 	GetContentImagesWithDetails(ctx context.Context, contentID string) ([]GetContentImagesWithDetailsRow, error)
 	GetContentWithMeta(ctx context.Context, id string) (GetContentWithMetaRow, error)

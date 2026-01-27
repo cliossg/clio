@@ -11,11 +11,15 @@ type contextKey string
 
 const siteContextKey contextKey = "site"
 
-// SiteContextMiddleware creates a middleware that loads the site from query param and puts it in context.
+// SiteContextMiddleware creates a middleware that loads the site from query param or form and puts it in context.
 func SiteContextMiddleware(service Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			siteIDStr := r.URL.Query().Get("site_id")
+			if siteIDStr == "" {
+				_ = r.ParseForm()
+				siteIDStr = r.FormValue("site_id")
+			}
 			if siteIDStr == "" {
 				http.Error(w, "site_id query param required", http.StatusBadRequest)
 				return
