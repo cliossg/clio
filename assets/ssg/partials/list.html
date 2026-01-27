@@ -1,0 +1,41 @@
+{{ define "list.html" }}
+<div class="site-container">
+    <div class="list-grid">
+        {{ range .Contents }}
+        <div class="list-card">
+            <a href="{{ .URL }}" class="list-card-link">
+                {{ if .HeaderImageURL }}
+                <img class="list-card-image" src="{{ .HeaderImageURL }}" alt="{{ .Heading }}">
+                {{ else }}
+                <div class="list-card-image-placeholder"></div>
+                {{ end }}
+                <div class="list-card-content">
+                    <h2 class="list-card-title">{{ .Heading }}</h2>
+                    <p class="list-card-excerpt">{{ .Summary }}</p>
+                    <div class="list-card-meta">
+                        {{ if .PublishedAt }}
+                        <span>{{ .PublishedAt.Format "January 2, 2006" }}</span>
+                        {{ end }}
+                        {{ if and .SectionName (ne .SectionName "/ (root)") }}
+                        <span class="list-card-section">{{ .SectionName }}</span>
+                        {{ end }}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+
+    {{ if .IsPaginated }}
+    <div class="pagination">
+        {{ if .HasPrev }}
+        <a href="{{ .PrevURL }}" class="pagination-link">&larr; Previous</a>
+        {{ end }}
+        <span class="pagination-info">Page {{ .CurrentPage }} of {{ .TotalPages }}</span>
+        {{ if .HasNext }}
+        <a href="{{ .NextURL }}" class="pagination-link">Next &rarr;</a>
+        {{ end }}
+    </div>
+    {{ end }}
+</div>
+{{ end }}

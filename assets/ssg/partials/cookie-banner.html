@@ -1,0 +1,17 @@
+{{ define "cookie-banner.html" }}
+{{ if .Params.analytics_id }}
+<div id="cookie-banner" class="cookie-banner hidden">
+    <p>This site uses cookies to analyze traffic. By continuing to use this site, you accept our use of cookies.</p>
+    <button onclick="acceptCookies()">Accept</button>
+</div>
+<script>
+    if (!localStorage.getItem('cookiesAccepted')) {
+        document.getElementById('cookie-banner').classList.remove('hidden');
+    }
+    function acceptCookies() {
+        localStorage.setItem('cookiesAccepted', 'true');
+        document.getElementById('cookie-banner').classList.add('hidden');
+    }
+</script>
+{{ end }}
+{{ end }}

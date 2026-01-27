@@ -80,13 +80,10 @@
                     <span>Export content to .md files</span>
                 </button>
             </form>
-            <form method="POST" action="/ssg/generate-html" class="nav-card-form">
-                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
-                <button type="submit" class="nav-card">
-                    <strong>Generate HTML</strong>
-                    <span>Build static site</span>
-                </button>
-            </form>
+            <a href="http://{{ .Site.Slug }}.localhost:3000/" target="_blank" class="nav-card">
+                <strong>Preview</strong>
+                <span>Live preview with auto-generation</span>
+            </a>
             <form method="POST" action="/ssg/publish" class="nav-card-form">
                 <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">

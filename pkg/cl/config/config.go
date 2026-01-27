@@ -40,6 +40,7 @@ type AuthConfig struct {
 
 type SSGConfig struct {
 	SitesBasePath string `yaml:"sites_base_path"`
+	PreviewAddr   string `yaml:"preview_addr"`
 }
 
 type CredentialsConfig struct {
@@ -72,7 +73,7 @@ func Load() *Config {
 		Database: DatabaseConfig{Path: dbPath},
 		Log:      LogConfig{Level: "info"},
 		Auth:     AuthConfig{SessionTTL: "720h"}, // 30 days
-		SSG:      SSGConfig{SitesBasePath: sitesPath},
+		SSG:      SSGConfig{SitesBasePath: sitesPath, PreviewAddr: ":3000"},
 	}
 
 	data, err := os.ReadFile("config.yaml")

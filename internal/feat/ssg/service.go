@@ -103,6 +103,9 @@ type Service interface {
 	UpdateContributor(ctx context.Context, contributor *Contributor) error
 	DeleteContributor(ctx context.Context, id uuid.UUID) error
 	SetContributorProfile(ctx context.Context, contributorID, profileID uuid.UUID, updatedBy string) error
+
+	// HTML generation
+	GenerateHTMLForSite(ctx context.Context, siteSlug string) error
 }
 
 // DBProvider provides access to the database.
@@ -113,14 +116,16 @@ type DBProvider interface {
 type service struct {
 	dbProvider DBProvider
 	queries    *sqlc.Queries
+	htmlGen    *HTMLGenerator
 	cfg        *config.Config
 	log        logger.Logger
 }
 
 // NewService creates a new SSG service.
-func NewService(dbProvider DBProvider, cfg *config.Config, log logger.Logger) Service {
+func NewService(dbProvider DBProvider, htmlGen *HTMLGenerator, cfg *config.Config, log logger.Logger) Service {
 	return &service{
 		dbProvider: dbProvider,
+		htmlGen:    htmlGen,
 		cfg:        cfg,
 		log:        log,
 	}
@@ -1464,4 +1469,46 @@ func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 		CreatedAt:   row.CreatedAt,
 		UpdatedAt:   row.UpdatedAt,
 	}, nil
+}
+
+func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) error {
+	site, err := s.GetSiteBySlug(ctx, siteSlug)
+	if err != nil {
+		return fmt.Errorf("cannot get site: %w", err)
+	}
+
+	contents, err := s.GetAllContentWithMeta(ctx, site.ID)
+	if err != nil {
+		return fmt.Errorf("cannot get contents: %w", err)
+	}
+
+	for _, c := range contents {
+		tags, err := s.GetTagsForContent(ctx, c.ID)
+		if err == nil {
+			c.Tags = tags
+		}
+		if c.ContributorID != nil {
+			contributor, err := s.GetContributor(ctx, *c.ContributorID)
+			if err == nil {
+				c.Contributor = contributor
+			}
+		}
+	}
+
+	sections, err := s.GetSections(ctx, site.ID)
+	if err != nil {
+		return fmt.Errorf("cannot get sections: %w", err)
+	}
+
+	params, err := s.GetParams(ctx, site.ID)
+	if err != nil {
+		params = []*Param{}
+	}
+
+	_, err = s.htmlGen.GenerateHTML(ctx, site, contents, sections, params)
+	if err != nil {
+		return fmt.Errorf("cannot generate HTML: %w", err)
+	}
+
+	return nil
 }

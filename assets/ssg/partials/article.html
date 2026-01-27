@@ -1,0 +1,51 @@
+{{ define "article.html" }}
+<article class="article">
+    <div class="hero-wrapper">
+        {{ if .Content.HeaderImageURL }}
+        <img class="hero-image" src="{{ .Content.HeaderImageURL }}" alt="{{ .Content.Heading }}">
+        {{ else }}
+        <div class="hero-image-gradient"></div>
+        {{ end }}
+        <div class="hero-title-box">
+            <h1 class="hero-title">{{ .Content.Heading }}</h1>
+            {{ if .Content.Summary }}
+            <p class="hero-subtitle">{{ .Content.Summary }}</p>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="site-container">
+        <header class="article-header">
+            <div class="article-meta">
+                <div class="article-byline">
+                    {{ if .Content.PublishedAt }}
+                    <span>{{ .Content.PublishedAt.Format "January 2, 2006" }}</span>
+                    {{ end }}
+                    {{ if and .Content.Contributor .Content.PublishedAt }}
+                    <span class="article-separator">·</span>
+                    {{ end }}
+                    {{ if .Content.Contributor }}
+                    <span class="article-author">@{{ .Content.Contributor.Handle }}</span>
+                    {{ end }}
+                </div>
+                <div class="article-tags">
+                    {{ range .Content.Tags }}
+                    <span class="tag">{{ .Name }}</span>
+                    {{ end }}
+                    {{ if .Section }}
+                    <a href="/{{ .Section.Path }}/" class="tag tag-section">{{ .Section.Name }}</a>
+                    {{ end }}
+                </div>
+            </div>
+        </header>
+
+        <div class="article-content prose">
+            {{ .Content.HTMLBody }}
+        </div>
+
+        <nav class="article-nav">
+            <a href="/" class="article-nav-link">&larr; Back to home</a>
+        </nav>
+    </div>
+</article>
+{{ end }}

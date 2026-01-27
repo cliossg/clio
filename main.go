@@ -28,6 +28,9 @@ var templatesFS embed.FS
 //go:embed assets/static
 var staticFS embed.FS
 
+//go:embed assets/ssg
+var ssgAssetsFS embed.FS
+
 func main() {
 	ctx := context.Background()
 
@@ -43,7 +46,9 @@ func main() {
 
 	authService := auth.NewService(db, cfg, log)
 	profileService := profile.NewService(db, cfg, log)
-	ssgService := ssg.NewService(db, cfg, log)
+	ssgWorkspace := ssg.NewWorkspace(cfg.SSG.SitesBasePath)
+	ssgHTMLGen := ssg.NewHTMLGenerator(ssgWorkspace, ssgAssetsFS)
+	ssgService := ssg.NewService(db, ssgHTMLGen, cfg, log)
 
 	optionalSessionMw := middleware.OptionalSession(authService)
 	requiredSessionMw := middleware.Session(authService)
@@ -51,7 +56,8 @@ func main() {
 
 	authHandler := auth.NewHandler(authService, profileService, optionalSessionMw, templatesFS, cfg, log)
 	profileHandler := profile.NewHandler(profileService, authHandler, requiredSessionMw, templatesFS, cfg, log)
-	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, cfg, log)
+	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, ssgAssetsFS, cfg, log)
+	previewServer := ssg.NewPreviewServer(ssgService, cfg, log)
 
 	authSeeder := auth.NewSeeder(authService, profileService, templatesFS, log)
 	if cfg.Credentials.Path != "" {
@@ -65,7 +71,7 @@ func main() {
 
 	fileServer := web.NewFileServer(staticFS, log)
 
-	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, authHandler, profileHandler, ssgHandler, fileServer}
+	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, authHandler, profileHandler, ssgHandler, previewServer, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {

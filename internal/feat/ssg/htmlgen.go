@@ -8,6 +8,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -125,6 +127,7 @@ func (g *HTMLGenerator) parseTemplates() (*template.Template, error) {
 		"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		"add":      func(a, b int) int { return a + b },
 		"subtract": func(a, b int) int { return a - b },
+		"now":      func() time.Time { return time.Now() },
 	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(g.assetsFS,
@@ -171,14 +174,9 @@ func (g *HTMLGenerator) copyStaticAssets(htmlPath string) error {
 
 // buildMenu builds the navigation menu from sections.
 func (g *HTMLGenerator) buildMenu(sections []*Section, mode string) []*Section {
-	if mode == "blog" {
-		// In blog mode, hide section menu
-		return nil
-	}
-
 	var menu []*Section
 	for _, s := range sections {
-		if s.Name != "root" && s.Path != "/" && s.Path != "" {
+		if s.Name != "/ (root)" && s.Path != "/" && s.Path != "" {
 			menu = append(menu, s)
 		}
 	}
@@ -215,7 +213,7 @@ func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath stri
 		Sections:  sections,
 		Menu:      menu,
 		IsIndex:   false,
-		AssetPath: g.getAssetPath(content.SectionPath),
+		AssetPath: g.getAssetPath(),
 		Params:    params,
 	}
 
@@ -237,13 +235,18 @@ func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath stri
 
 // renderIndexPages renders index pages with pagination.
 func (g *HTMLGenerator) renderIndexPages(tmpl *template.Template, htmlPath string, site *Site, contents []*Content, sections []*Section, menu []*Section, params map[string]string) (int, error) {
-	pageSize := 10
+	pageSize := 9
+	if v, ok := params["ssg.index.maxitems"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			pageSize = n
+		}
+	}
 	count := 0
 
-	// Filter non-draft content
+	// Filter non-draft articles (exclude pages from index listings)
 	var publishedContents []*Content
 	for _, c := range contents {
-		if !c.Draft {
+		if !c.Draft && c.Kind != "page" {
 			publishedContents = append(publishedContents, c)
 		}
 	}
@@ -254,8 +257,12 @@ func (g *HTMLGenerator) renderIndexPages(tmpl *template.Template, htmlPath strin
 	}
 	count++
 
-	// Render section indices
+	// Render section indices (skip root section to avoid overwriting main index)
 	for _, section := range sections {
+		if section.Path == "" || section.Path == "/" {
+			continue
+		}
+
 		var sectionContents []*Content
 		for _, c := range publishedContents {
 			if c.SectionID == section.ID {
@@ -301,9 +308,18 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 			})
 		}
 
+		var currentSection *Section
+		for _, s := range sections {
+			if s.Path == indexPath {
+				currentSection = s
+				break
+			}
+		}
+
 		data := SSGPageData{
 			Site:        site,
 			Contents:    renderedContents,
+			Section:     currentSection,
 			Sections:    sections,
 			Menu:        menu,
 			IsIndex:     true,
@@ -312,7 +328,7 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 			TotalPages:  totalPages,
 			HasPrev:     page > 1,
 			HasNext:     page < totalPages,
-			AssetPath:   g.getAssetPath(indexPath),
+			AssetPath:   g.getAssetPath(),
 			Params:      params,
 		}
 
@@ -346,9 +362,6 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 
 // getContentURL returns the URL for a content item.
 func (g *HTMLGenerator) getContentURL(content *Content, mode string) string {
-	if mode == "blog" {
-		return "/" + content.Slug() + "/"
-	}
 	if content.SectionPath == "" || content.SectionPath == "/" {
 		return "/" + content.Slug() + "/"
 	}
@@ -369,23 +382,8 @@ func (g *HTMLGenerator) getPaginationURL(indexPath string, page int) string {
 	return fmt.Sprintf("/%s/page/%d/", indexPath, page)
 }
 
-// getAssetPath returns the relative path to assets from a content path.
-func (g *HTMLGenerator) getAssetPath(contentPath string) string {
-	if contentPath == "" || contentPath == "/" {
-		return "./"
-	}
-	// Count depth and return appropriate number of ../
-	depth := 1
-	for _, ch := range contentPath {
-		if ch == '/' {
-			depth++
-		}
-	}
-	path := ""
-	for i := 0; i < depth; i++ {
-		path += "../"
-	}
-	return path
+func (g *HTMLGenerator) getAssetPath() string {
+	return "/"
 }
 
 // HTMLGeneratorService provides HTML generation functionality for the service layer.

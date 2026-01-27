@@ -1,6 +1,7 @@
 package ssg
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -8,65 +9,106 @@ import (
 
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
-	"github.com/go-chi/chi/v5"
 )
 
-// PreviewHandler serves static HTML files for site preview.
-// URL format: /preview/{siteSlug}/*
-type PreviewHandler struct {
+type PreviewServer struct {
+	service   Service
 	workspace *Workspace
+	server    *http.Server
 	cfg       *config.Config
 	log       logger.Logger
 }
 
-// NewPreviewHandler creates a new preview handler.
-func NewPreviewHandler(cfg *config.Config, log logger.Logger) *PreviewHandler {
-	return &PreviewHandler{
+func NewPreviewServer(service Service, cfg *config.Config, log logger.Logger) *PreviewServer {
+	return &PreviewServer{
+		service:   service,
 		workspace: NewWorkspace(cfg.SSG.SitesBasePath),
 		cfg:       cfg,
 		log:       log,
 	}
 }
 
-// RegisterRoutes registers preview routes.
-func (h *PreviewHandler) RegisterRoutes(r chi.Router) {
-	h.log.Info("Registering preview routes")
-	r.Get("/preview/{siteSlug}/*", h.ServePreview)
-	r.Get("/preview/{siteSlug}", h.ServePreview)
+func (s *PreviewServer) Start(ctx context.Context) error {
+	s.server = &http.Server{
+		Addr:    s.cfg.SSG.PreviewAddr,
+		Handler: s,
+	}
+
+	go func() {
+		s.log.Infof("Preview server listening on %s (subdomain mode: <site>.localhost%s)", s.cfg.SSG.PreviewAddr, s.cfg.SSG.PreviewAddr)
+		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.log.Errorf("Preview server error: %v", err)
+		}
+	}()
+
+	return nil
 }
 
-// ServePreview serves static files from the generated HTML directory.
-func (h *PreviewHandler) ServePreview(w http.ResponseWriter, r *http.Request) {
-	siteSlug := chi.URLParam(r, "siteSlug")
+func (s *PreviewServer) Stop(ctx context.Context) error {
+	if s.server != nil {
+		s.log.Info("Stopping preview server")
+		return s.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+func (s *PreviewServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	siteSlug := s.extractSiteSlug(r.Host)
 	if siteSlug == "" {
-		http.Error(w, "Site slug required", http.StatusBadRequest)
+		http.Error(w, "Invalid host. Use <site>.localhost:3000", http.StatusBadRequest)
 		return
 	}
 
-	// Get the path after /preview/{siteSlug}/
-	requestPath := chi.URLParam(r, "*")
-	if requestPath == "" {
-		requestPath = "index.html"
+	if err := s.service.GenerateHTMLForSite(r.Context(), siteSlug); err != nil {
+		s.log.Errorf("Failed to generate HTML for site %s: %v", siteSlug, err)
 	}
 
-	// Get site HTML path
-	htmlPath := h.workspace.GetHTMLPath(siteSlug)
+	requestPath := r.URL.Path
+	if requestPath == "/" || requestPath == "" {
+		requestPath = "/index.html"
+	}
 
-	// Build full file path
+	if strings.HasPrefix(requestPath, "/static/") {
+		s.serveStatic(w, r, siteSlug, requestPath)
+		return
+	}
+
+	if strings.HasPrefix(requestPath, "/images/") {
+		s.serveImage(w, r, siteSlug, strings.TrimPrefix(requestPath, "/images/"))
+		return
+	}
+
+	s.serveHTML(w, r, siteSlug, requestPath)
+}
+
+func (s *PreviewServer) extractSiteSlug(host string) string {
+	host = strings.Split(host, ":")[0]
+
+	if !strings.HasSuffix(host, ".localhost") {
+		return ""
+	}
+
+	slug := strings.TrimSuffix(host, ".localhost")
+	if slug == "" || slug == "localhost" {
+		return ""
+	}
+
+	return slug
+}
+
+func (s *PreviewServer) serveHTML(w http.ResponseWriter, r *http.Request, siteSlug, requestPath string) {
+	htmlPath := s.workspace.GetHTMLPath(siteSlug)
 	fullPath := filepath.Join(htmlPath, requestPath)
 
-	// Security check: prevent directory traversal
 	cleanPath := filepath.Clean(fullPath)
 	if !strings.HasPrefix(cleanPath, filepath.Clean(htmlPath)) {
 		http.Error(w, "Invalid path", http.StatusForbidden)
 		return
 	}
 
-	// Check if file exists
 	info, err := os.Stat(cleanPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Try with index.html for directory-style URLs
 			indexPath := filepath.Join(cleanPath, "index.html")
 			if _, err := os.Stat(indexPath); err == nil {
 				cleanPath = indexPath
@@ -79,7 +121,6 @@ func (h *PreviewHandler) ServePreview(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if info.IsDir() {
-		// Serve index.html for directories
 		cleanPath = filepath.Join(cleanPath, "index.html")
 		if _, err := os.Stat(cleanPath); err != nil {
 			http.NotFound(w, r)
@@ -87,45 +128,37 @@ func (h *PreviewHandler) ServePreview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.log.Debugf("Serving preview: %s -> %s", requestPath, cleanPath)
 	http.ServeFile(w, r, cleanPath)
 }
 
-// ServeImages serves images from the workspace images directory.
-// URL format: /preview/{siteSlug}/images/*
-func (h *PreviewHandler) RegisterImageRoutes(r chi.Router) {
-	r.Get("/siteimages/{siteSlug}/*", h.ServeImage)
-}
+func (s *PreviewServer) serveStatic(w http.ResponseWriter, r *http.Request, siteSlug, requestPath string) {
+	htmlPath := s.workspace.GetHTMLPath(siteSlug)
+	fullPath := filepath.Join(htmlPath, requestPath)
 
-// ServeImage serves image files from the site's images directory.
-func (h *PreviewHandler) ServeImage(w http.ResponseWriter, r *http.Request) {
-	siteSlug := chi.URLParam(r, "siteSlug")
-	if siteSlug == "" {
-		http.Error(w, "Site slug required", http.StatusBadRequest)
+	cleanPath := filepath.Clean(fullPath)
+	if !strings.HasPrefix(cleanPath, filepath.Clean(htmlPath)) {
+		http.Error(w, "Invalid path", http.StatusForbidden)
 		return
 	}
 
-	// Get the path after /siteimages/{siteSlug}/
-	requestPath := chi.URLParam(r, "*")
-	if requestPath == "" {
+	if _, err := os.Stat(cleanPath); err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	// Get site images path
-	imagesPath := h.workspace.GetImagesPath(siteSlug)
+	http.ServeFile(w, r, cleanPath)
+}
 
-	// Build full file path
-	fullPath := filepath.Join(imagesPath, requestPath)
+func (s *PreviewServer) serveImage(w http.ResponseWriter, r *http.Request, siteSlug, imagePath string) {
+	imagesPath := s.workspace.GetImagesPath(siteSlug)
+	fullPath := filepath.Join(imagesPath, imagePath)
 
-	// Security check: prevent directory traversal
 	cleanPath := filepath.Clean(fullPath)
 	if !strings.HasPrefix(cleanPath, filepath.Clean(imagesPath)) {
 		http.Error(w, "Invalid path", http.StatusForbidden)
 		return
 	}
 
-	// Check if file exists
 	if _, err := os.Stat(cleanPath); err != nil {
 		http.NotFound(w, r)
 		return

@@ -46,7 +46,7 @@ func (s *Seeder) Start(ctx context.Context) error {
 }
 
 func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
-	site := NewSite("Demo Site", "demo", "blog")
+	site := NewSite("Demo", "demo", "blog")
 	if err := s.service.CreateSite(ctx, site); err != nil {
 		return nil, err
 	}
@@ -57,10 +57,20 @@ func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
 		return nil, err
 	}
 
-	// Create blog section
-	blog := NewSection(site.ID, "Blog", "Blog posts and articles", "blog")
-	if err := s.service.CreateSection(ctx, blog); err != nil {
-		return nil, err
+	// Create content sections
+	sections := []struct {
+		name, description, path string
+	}{
+		{"Coding", "Programming tutorials and tech articles", "coding"},
+		{"Essays", "Personal essays and reflections", "essays"},
+		{"Food", "Recipes and culinary adventures", "food"},
+	}
+
+	for _, sec := range sections {
+		section := NewSection(site.ID, sec.name, sec.description, sec.path)
+		if err := s.service.CreateSection(ctx, section); err != nil {
+			return nil, err
+		}
 	}
 
 	// Seed default params
@@ -68,7 +78,32 @@ func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
 		return nil, err
 	}
 
+	// Seed contributors
+	if err := s.seedContributors(ctx, site.ID); err != nil {
+		return nil, err
+	}
+
 	return site, nil
+}
+
+func (s *Seeder) seedContributors(ctx context.Context, siteID uuid.UUID) error {
+	contributors := []struct {
+		handle, name, surname, bio, role string
+	}{
+		{"johndoe", "John", "Doe", "Senior software engineer and Go enthusiast", "editor"},
+		{"janesmith", "Jane", "Smith", "Technical writer and documentation specialist", "author"},
+	}
+
+	for _, c := range contributors {
+		contributor := NewContributor(siteID, c.handle, c.name, c.surname)
+		contributor.Bio = c.bio
+		contributor.Role = c.role
+		if err := s.service.CreateContributor(ctx, contributor); err != nil {
+			return fmt.Errorf("cannot create contributor %s: %w", c.handle, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error {
@@ -79,7 +114,9 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		refKey      string
 		system      bool
 	}{
-		{"Index max items", "Maximum items shown on index pages", "10", "ssg.index.maxitems", true},
+		{"site_description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", false},
+		{"hero_image", "Hero image filename", "", "hero_image", false},
+		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", true},
 		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", true},
 		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", true},
 		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", true},
@@ -112,75 +149,185 @@ func (s *Seeder) seedDemoContent(ctx context.Context, site *Site) error {
 		return err
 	}
 
-	var rootSection, blogSection *Section
+	sectionMap := make(map[string]*Section)
 	for _, sec := range sections {
-		if sec.Path == "" {
-			rootSection = sec
-		} else if sec.Path == "blog" {
-			blogSection = sec
-		}
+		sectionMap[sec.Path] = sec
 	}
 
-	if rootSection == nil || blogSection == nil {
-		return fmt.Errorf("sections not found")
+	contributors, err := s.service.GetContributors(ctx, site.ID)
+	if err != nil {
+		return err
+	}
+
+	contributorMap := make(map[string]*Contributor)
+	for _, c := range contributors {
+		contributorMap[c.Handle] = c
 	}
 
 	now := time.Now()
 
 	// Home page
-	home := &Content{
-		ID:        uuid.New(),
-		SiteID:    site.ID,
-		SectionID: rootSection.ID,
-		ShortID:   uuid.New().String()[:8],
-		Kind:      "page",
-		Heading:   "Welcome to Clio",
-		Body:      "# Welcome to Clio\n\nClio is a static site generator with a built-in admin interface.\n\n## Features\n\n- Markdown content editing\n- Live preview\n- Image management\n- Multiple sections\n- Tags and categories\n\nStart creating content using the admin panel.",
-		Summary:   "Welcome page for the demo site",
-		Draft:     false,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	if err := s.service.CreateContent(ctx, home); err != nil {
-		return err
-	}
-
-	// Blog posts
-	posts := []struct {
-		heading string
-		body    string
-		summary string
-	}{
-		{
-			heading: "Getting Started with Clio",
-			body:    "# Getting Started with Clio\n\nClio makes it easy to create and manage your static site.\n\n## Creating Content\n\n1. Navigate to **Contents** in the admin panel\n2. Click **New Content**\n3. Write your content in Markdown\n4. Save and preview\n\n## Generating Your Site\n\nOnce you're happy with your content:\n\n1. Go to your site dashboard\n2. Click **Generate HTML**\n3. Your static site is ready!\n\nHappy writing!",
-			summary: "Learn how to create your first content with Clio",
-		},
-		{
-			heading: "Markdown Tips and Tricks",
-			body:    "# Markdown Tips and Tricks\n\nMarkdown is a lightweight markup language that's easy to learn.\n\n## Basic Formatting\n\n- **Bold**: `**text**`\n- *Italic*: `*text*`\n- `Code`: `` `code` ``\n\n## Lists\n\n```markdown\n- Item 1\n- Item 2\n  - Nested item\n```\n\n## Links and Images\n\n```markdown\n[Link text](url)\n![Alt text](image-url)\n```\n\n## Code Blocks\n\nUse triple backticks for code blocks with syntax highlighting.",
-			summary: "Essential Markdown formatting for your content",
-		},
-	}
-
-	for i, p := range posts {
-		pubTime := now.Add(time.Duration(-i) * 24 * time.Hour)
-		post := &Content{
-			ID:          uuid.New(),
-			SiteID:      site.ID,
-			SectionID:   blogSection.ID,
-			ShortID:     uuid.New().String()[:8],
-			Kind:        "article",
-			Heading:     p.heading,
-			Body:        p.body,
-			Summary:     p.summary,
-			Draft:       false,
-			PublishedAt: &pubTime,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+	if rootSection := sectionMap[""]; rootSection != nil {
+		home := &Content{
+			ID:        uuid.New(),
+			SiteID:    site.ID,
+			SectionID: rootSection.ID,
+			ShortID:   uuid.New().String()[:8],
+			Kind:      "page",
+			Heading:   "Welcome to Clio",
+			Body:      "Clio is a static site generator with a built-in admin interface.\n\n## Features\n\n- Markdown content editing\n- Live preview\n- Image management\n- Multiple sections\n- Tags and categories\n\nStart creating content using the admin panel.",
+			Summary:   "Welcome page for the demo site",
+			Draft:     false,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
-		if err := s.service.CreateContent(ctx, post); err != nil {
+		if err := s.service.CreateContent(ctx, home); err != nil {
 			return err
+		}
+	}
+
+	type postData struct {
+		heading     string
+		body        string
+		summary     string
+		tags        []string
+		contributor string
+	}
+
+	codingPosts := []postData{
+		{
+			heading:     "Getting Started with Go",
+			contributor: "johndoe",
+			body:    "Go is a statically typed, compiled language designed for simplicity and efficiency.\n\n## Why Go?\n\n- Fast compilation\n- Built-in concurrency with goroutines\n- Simple and clean syntax\n- Excellent standard library\n\n## Hello World\n\n```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello, World!\")\n}\n```\n\n## Next Steps\n\nExplore the standard library and build your first web server!",
+			summary: "A beginner's guide to the Go programming language",
+			tags:    []string{"golang", "tutorial"},
+		},
+		{
+			heading: "Understanding Git Branching",
+			body:    "Branching is one of Git's most powerful features.\n\n## Creating a Branch\n\n```bash\ngit checkout -b feature/new-feature\n```\n\n## Common Workflows\n\n1. **Feature branches**: Create a branch for each feature\n2. **Main branch**: Keep it stable and deployable\n3. **Merge often**: Avoid long-lived branches\n\n## Best Practices\n\n- Use descriptive branch names\n- Delete merged branches\n- Review before merging",
+			summary: "Master Git branching for better collaboration",
+			tags:    []string{"git", "devops"},
+		},
+		{
+			heading: "Building REST APIs",
+			body:    "REST APIs are the backbone of modern web applications.\n\n## Key Principles\n\n- **Stateless**: Each request contains all needed information\n- **Resource-based**: URLs represent resources\n- **HTTP methods**: GET, POST, PUT, DELETE\n\n## Example Endpoint\n\n```\nGET /api/users/:id\nPOST /api/users\nPUT /api/users/:id\nDELETE /api/users/:id\n```\n\n## Response Codes\n\n- 200: Success\n- 201: Created\n- 404: Not Found\n- 500: Server Error",
+			summary: "Learn the fundamentals of REST API design",
+			tags:    []string{"api", "backend"},
+		},
+		{
+			heading: "Introduction to Docker",
+			body:    "Docker simplifies application deployment through containerization.\n\n## What is a Container?\n\nA container packages your application with all its dependencies into a single unit.\n\n## Basic Commands\n\n```bash\ndocker build -t myapp .\ndocker run -p 8080:8080 myapp\ndocker ps\n```\n\n## Dockerfile\n\n```dockerfile\nFROM golang:1.21\nWORKDIR /app\nCOPY . .\nRUN go build -o main .\nCMD [\"./main\"]\n```\n\n## Benefits\n\n- Consistent environments\n- Easy scaling\n- Fast deployment",
+			summary: "Get started with containerization using Docker",
+			tags:    []string{"docker", "devops"},
+		},
+	}
+
+	essaysPosts := []postData{
+		{
+			heading: "The Art of Simplicity",
+			body:    "In a world of increasing complexity, simplicity becomes a superpower.\n\n## Less is More\n\nWe often add features, options, and complexity without questioning whether they're necessary. The best solutions are often the simplest ones.\n\n## Practical Simplicity\n\n- Remove what doesn't add value\n- Focus on the essential\n- Embrace constraints\n\n## The Paradox\n\nAchieving simplicity is hard work. It requires deep understanding and the courage to say no.",
+			summary: "Reflections on the power of keeping things simple",
+			tags:    []string{"philosophy", "productivity"},
+		},
+		{
+			heading:     "Learning in Public",
+			contributor: "janesmith",
+			body:        "Sharing your learning journey can accelerate your growth.\n\n## Why Share?\n\n- Teaching reinforces learning\n- Build connections with others\n- Create a record of progress\n- Help others on similar paths\n\n## How to Start\n\n1. Write about what you learned today\n2. Share your mistakes and lessons\n3. Be authentic and humble\n\n## The Fear\n\nYes, you might be wrong sometimes. That's okay. Growth requires vulnerability.",
+			summary:     "Why sharing your learning journey matters",
+			tags:        []string{"learning", "growth"},
+		},
+		{
+			heading: "Digital Minimalism",
+			body:    "Our relationship with technology deserves intentional design.\n\n## The Problem\n\n- Constant notifications\n- Endless scrolling\n- Attention fragmentation\n\n## A Different Approach\n\nBe intentional about technology use:\n\n1. Define your values\n2. Choose tools that support them\n3. Set boundaries\n\n## Practical Steps\n\n- Turn off non-essential notifications\n- Schedule technology-free time\n- Curate your digital environment",
+			summary: "Finding balance in our relationship with technology",
+			tags:    []string{"technology", "minimalism"},
+		},
+		{
+			heading: "The Value of Boredom",
+			body:    "We've forgotten how to be bored, and it's costing us.\n\n## The Lost Art\n\nBoredom used to be unavoidable. Now we fill every moment with stimulation.\n\n## What We Lose\n\n- Creativity needs empty space\n- Self-reflection requires silence\n- Ideas need room to breathe\n\n## Reclaiming Boredom\n\n1. Leave your phone behind sometimes\n2. Sit without entertainment\n3. Let your mind wander\n\n## The Gift\n\nBoredom is not the enemy. It's the doorway to deeper thinking.",
+			summary: "Why we need more empty space in our minds",
+			tags:    []string{"mindfulness", "creativity"},
+		},
+	}
+
+	foodPosts := []postData{
+		{
+			heading: "Perfect Scrambled Eggs",
+			body:    "The secret to great scrambled eggs is patience and low heat.\n\n## Ingredients\n\n- 3 eggs\n- 1 tbsp butter\n- Salt and pepper\n- Fresh chives (optional)\n\n## Method\n\n1. Crack eggs into a cold pan with butter\n2. Place on low heat, stirring constantly\n3. Remove from heat while still slightly wet\n4. Season and serve immediately\n\n## The Secret\n\nNever rush scrambled eggs. Low and slow is the way.",
+			summary: "Master the technique for creamy scrambled eggs",
+			tags:    []string{"breakfast", "basics"},
+		},
+		{
+			heading: "Homemade Pasta Basics",
+			body:    "Fresh pasta is simpler than you think.\n\n## Basic Dough\n\n- 100g flour per egg\n- Pinch of salt\n- Knead until smooth\n\n## The Process\n\n1. Make a well in the flour\n2. Add eggs and mix\n3. Knead for 10 minutes\n4. Rest for 30 minutes\n5. Roll and cut\n\n## Tips\n\n- Use semolina flour for better texture\n- Don't skip the resting time\n- Fresh pasta cooks in 2-3 minutes",
+			summary: "Learn to make fresh pasta from scratch",
+			tags:    []string{"italian", "basics"},
+		},
+		{
+			heading:     "The Perfect Cup of Coffee",
+			contributor: "johndoe",
+			body:        "Great coffee starts with understanding the basics.\n\n## Key Variables\n\n- **Grind size**: Match to your brew method\n- **Water temperature**: 195-205°F (90-96°C)\n- **Ratio**: Start with 1:15 coffee to water\n- **Freshness**: Use beans within 2 weeks of roasting\n\n## Pour Over Method\n\n1. Bloom with twice the coffee weight in water\n2. Wait 30 seconds\n3. Pour in slow circles\n4. Total brew time: 3-4 minutes\n\n## Experiment\n\nAdjust one variable at a time to find your perfect cup.",
+			summary:     "Variables and techniques for better coffee at home",
+			tags:        []string{"coffee", "brewing"},
+		},
+		{
+			heading: "Sourdough Bread Basics",
+			body:    "Sourdough is both simple and complex. Here's how to start.\n\n## The Starter\n\nA sourdough starter is a living culture of flour and water.\n\n## Feeding Schedule\n\n1. Discard half the starter\n2. Add equal parts flour and water\n3. Wait 12-24 hours\n4. Repeat daily\n\n## Basic Recipe\n\n- 500g flour\n- 350g water\n- 100g active starter\n- 10g salt\n\n## The Process\n\nMix, fold, proof, shape, cold proof overnight, bake at 450°F with steam.\n\n## Patience\n\nGood bread takes time. Embrace the slow process.",
+			summary: "Start your sourdough journey with these fundamentals",
+			tags:    []string{"baking", "fermentation"},
+		},
+	}
+
+	type categoryData struct {
+		section string
+		posts   []postData
+	}
+
+	allPosts := []categoryData{
+		{"coding", codingPosts},
+		{"essays", essaysPosts},
+		{"food", foodPosts},
+	}
+
+	postIndex := 0
+	for _, category := range allPosts {
+		section := sectionMap[category.section]
+		if section == nil {
+			continue
+		}
+
+		for _, p := range category.posts {
+			pubTime := now.Add(time.Duration(-postIndex) * 24 * time.Hour)
+			post := &Content{
+				ID:          uuid.New(),
+				SiteID:      site.ID,
+				SectionID:   section.ID,
+				ShortID:     uuid.New().String()[:8],
+				Kind:        "article",
+				Heading:     p.heading,
+				Body:        p.body,
+				Summary:     p.summary,
+				Draft:       false,
+				PublishedAt: &pubTime,
+				CreatedAt:   now,
+				UpdatedAt:   now,
+			}
+			if p.contributor != "" {
+				if c, ok := contributorMap[p.contributor]; ok {
+					post.ContributorID = &c.ID
+				}
+			}
+			if err := s.service.CreateContent(ctx, post); err != nil {
+				return err
+			}
+
+			for _, tagName := range p.tags {
+				if err := s.service.AddTagToContent(ctx, post.ID, tagName, site.ID); err != nil {
+					s.log.Infof("Cannot add tag %s to content: %v", tagName, err)
+				}
+			}
+
+			postIndex++
 		}
 	}
 

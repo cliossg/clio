@@ -1,40 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {{ if .Params.analytics_id }}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ .Params.analytics_id }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ .Params.analytics_id }}');
+    </script>
+    {{ end }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{if .IsIndex}}{{if .Params.site_title}}{{.Params.site_title}}{{else}}Index{{end}}{{else}}{{.Content.Heading}}{{end}}</title>
-    <link rel="stylesheet" href="{{.AssetPath}}static/css/style.css">
+    {{ if .IsIndex }}
+    <title>{{ .Site.Name }}</title>
+    <meta name="description" content="{{ .Params.site_description }}">
+    {{ else }}
+    <title>{{ .Content.Heading }} - {{ .Site.Name }}</title>
+    <meta name="description" content="{{ .Content.Summary }}">
+    {{ end }}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="{{ .AssetPath }}static/css/styles.css" rel="stylesheet">
+    <link rel="icon" href="{{ .AssetPath }}favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <header class="site-header">
-        <nav class="site-nav">
-            <div class="container">
-                <a class="site-logo" href="/">{{if .Params.site_title}}{{.Params.site_title}}{{else}}{{.Site.Name}}{{end}}</a>
-                <div class="nav-links">
-                    <a href="/">Home</a>
-                    {{range .Menu}}
-                    <a href="/{{.Path}}/">{{.Name}}</a>
-                    {{end}}
-                </div>
-            </div>
-        </nav>
-    </header>
-
-    <main class="site-main">
-        <div class="container">
-            {{if .IsIndex}}
-                {{template "index" .}}
-            {{else}}
-                {{template "content" .}}
-            {{end}}
+    <nav>
+        <div class="site-container" style="padding: 0;">
+            <a href="/">{{ .Site.Name }}</a>
+            {{ $currentSection := .Section }}
+            {{ range .Menu }}
+            <a href="/{{ .Path }}/"{{ if and $currentSection (eq $currentSection.Path .Path) }} class="active"{{ end }}>{{ .Name }}</a>
+            {{ end }}
         </div>
-    </main>
+    </nav>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>&copy; {{.Site.Name}}. Generated with Clio.</p>
-        </div>
+    {{ if .IsIndex }}
+    {{ template "hero.html" . }}
+    {{ template "list.html" . }}
+    {{ else }}
+    {{ template "article.html" . }}
+    {{ end }}
+
+    <footer>
+        <p>&copy; {{ now.Year }} {{ .Site.Name }}</p>
+        <span class="generator">Generated with <a href="https://github.com/cliossg/clio">Clio</a></span>
     </footer>
+
+    {{ template "cookie-banner.html" . }}
 </body>
 </html>

@@ -40,24 +40,26 @@ type Handler struct {
 	sessionMw      func(http.Handler) http.Handler
 	userNameFn     func(context.Context) string
 	userRolesFn    func(context.Context) string
-	assetsFS       embed.FS
+	templatesFS    embed.FS
+	ssgAssetsFS    embed.FS
 	cfg            *config.Config
 	log            logger.Logger
 }
 
-func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	return &Handler{
 		service:        service,
 		profileService: profileService,
 		workspace:      workspace,
 		generator:      NewGenerator(workspace),
-		htmlGen:        NewHTMLGenerator(workspace, assetsFS),
+		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
 		userNameFn:     userNameFn,
 		userRolesFn:    userRolesFn,
-		assetsFS:       assetsFS,
+		templatesFS:    templatesFS,
+		ssgAssetsFS:    ssgAssetsFS,
 		cfg:            cfg,
 		log:            log,
 	}
@@ -366,7 +368,7 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName st
 		data.CurrentUserRoles = h.userRolesFn(r.Context())
 	}
 
-	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
+	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.templatesFS,
 		"assets/templates/base.html",
 		"assets/templates/"+templateName+".html",
 	)

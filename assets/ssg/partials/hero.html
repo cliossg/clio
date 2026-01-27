@@ -1,0 +1,11 @@
+{{ define "hero.html" }}
+<div class="hero-wrapper boxed">
+    {{ if .Params.hero_image }}
+    <img class="hero-image" src="{{ .AssetPath }}{{ .Params.hero_image }}" alt="{{ .Site.Name }}">
+    {{ end }}
+    <div class="hero-title-box">
+        <h1 class="hero-title">{{ .Site.Name }}</h1>
+        <p class="hero-subtitle">{{ .Params.site_description }}</p>
+    </div>
+</div>
+{{ end }}
