@@ -43,7 +43,7 @@ func (h *Handler) Start(ctx context.Context) error {
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
 		"assets/templates/*.html",
-		"assets/templates/*/*.html",
+		"assets/templates/auth/*.html",
 	)
 	if err != nil {
 		return err
