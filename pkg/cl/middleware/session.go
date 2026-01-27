@@ -51,21 +51,21 @@ func OptionalSession(validator SessionValidator) func(http.Handler) http.Handler
 }
 
 // Session validates session cookies and injects user context.
-// If the session is invalid, it clears the cookie and redirects to /login.
+// If the session is invalid, it clears the cookie and redirects to /signin.
 // Use this for routes that REQUIRE authentication.
 func Session(validator SessionValidator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(SessionCookieName)
 			if err != nil {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				http.Redirect(w, r, "/signin", http.StatusSeeOther)
 				return
 			}
 
 			userID, err := validator.ValidateSession(r.Context(), cookie.Value)
 			if err != nil {
 				ClearSessionCookie(w)
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				http.Redirect(w, r, "/signin", http.StatusSeeOther)
 				return
 			}
 
