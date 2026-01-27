@@ -63,7 +63,47 @@ func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
 		return nil, err
 	}
 
+	// Seed default params
+	if err := s.seedDefaultParams(ctx, site.ID); err != nil {
+		return nil, err
+	}
+
 	return site, nil
+}
+
+func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error {
+	defaults := []struct {
+		name        string
+		description string
+		value       string
+		refKey      string
+		system      bool
+	}{
+		{"Index max items", "Maximum items shown on index pages", "10", "ssg.index.maxitems", true},
+		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", true},
+		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", true},
+		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", true},
+		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", false},
+		{"Publish branch", "Git branch for publishing", "gh-pages", "ssg.publish.branch", false},
+		{"Pages subdirectory", "Subdirectory for GitHub Pages", "", "ssg.publish.pages.subdir", false},
+		{"Publish auth method", "Authentication method (token, ssh)", "token", "ssg.publish.auth.method", false},
+		{"Publish auth token", "Authentication token for publishing", "", "ssg.publish.auth.token", false},
+		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.publish.commit.user.name", false},
+		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.publish.commit.user.email", false},
+		{"Commit message", "Default commit message", "Update site content", "ssg.publish.commit.message", false},
+	}
+
+	for _, d := range defaults {
+		param := NewParam(siteID, d.name, d.value)
+		param.Description = d.description
+		param.RefKey = d.refKey
+		param.System = d.system
+		if err := s.service.CreateParam(ctx, param); err != nil {
+			return fmt.Errorf("cannot create param %s: %w", d.name, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Seeder) seedDemoContent(ctx context.Context, site *Site) error {
