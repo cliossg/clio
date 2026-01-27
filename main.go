@@ -55,12 +55,14 @@ func main() {
 		authSeeder.SetCredentialsPath(cfg.Credentials.Path)
 	}
 
+	ssgSeeder := ssg.NewSeeder(ssgService, log)
+
 	router := chi.NewRouter()
 	middleware.DefaultStack(router)
 
 	fileServer := web.NewFileServer(staticFS, log)
 
-	deps := []any{db, authService, ssgService, authSeeder, authHandler, ssgHandler, fileServer}
+	deps := []any{db, authService, ssgService, authSeeder, ssgSeeder, authHandler, ssgHandler, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {
