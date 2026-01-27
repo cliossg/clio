@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+
+	"github.com/cliossg/clio/pkg/cl/logger"
 )
 
 type contextKey string
@@ -12,7 +14,7 @@ type contextKey string
 const siteContextKey contextKey = "site"
 
 // SiteContextMiddleware creates a middleware that loads the site from query param or form and puts it in context.
-func SiteContextMiddleware(service Service) func(http.Handler) http.Handler {
+func SiteContextMiddleware(service Service, log logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			siteIDStr := r.URL.Query().Get("site_id")
@@ -21,18 +23,21 @@ func SiteContextMiddleware(service Service) func(http.Handler) http.Handler {
 				siteIDStr = r.FormValue("site_id")
 			}
 			if siteIDStr == "" {
+				log.Errorf("site_id query param required: %s %s", r.Method, r.URL.Path)
 				http.Error(w, "site_id query param required", http.StatusBadRequest)
 				return
 			}
 
 			siteID, err := uuid.Parse(siteIDStr)
 			if err != nil {
+				log.Errorf("Invalid site_id '%s': %v", siteIDStr, err)
 				http.Error(w, "Invalid site_id", http.StatusBadRequest)
 				return
 			}
 
 			site, err := service.GetSite(r.Context(), siteID)
 			if err != nil {
+				log.Errorf("Site not found for id=%s: %v", siteID, err)
 				http.Error(w, "Site not found", http.StatusNotFound)
 				return
 			}
