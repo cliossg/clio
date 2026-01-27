@@ -19,9 +19,13 @@
         <a href="/ssg/list-params?site_id={{ .Site.ID }}">Params</a>
         <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
         {{ end }}
-        <form action="/signout" method="POST" style="display: inline; float: right;">
-            <button type="submit" class="btn" style="background: transparent; padding: 0;">Sign Out</button>
-        </form>
+        <a href="/admin/list-users">Users</a>
+        <span style="float: right;">
+            {{ if .CurrentUserName }}{{ .CurrentUserName }} &middot; {{ end }}
+            <form action="/signout" method="POST" style="display: inline;">
+                <button type="submit" class="btn" style="background: transparent; padding: 0;">Sign Out</button>
+            </form>
+        </span>
     </nav>
     {{ end }}
     {{ if .Error }}<div class="flash-container"><div class="alert alert-error">{{ .Error }}</div></div>{{ end }}

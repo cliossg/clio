@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/admin/list-users">&larr; Users</a></p>
+    <div class="card-header">
+        <h1>{{ .User.Name }}</h1>
+        <div>
+            <a href="/admin/edit-user?id={{ .User.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/admin/delete-user" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .User.ID }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this user?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <dl class="detail-list">
+        <dt>Email</dt>
+        <dd>{{ .User.Email }}</dd>
+
+        <dt>Name</dt>
+        <dd>{{ .User.Name }}</dd>
+
+        <dt>Status</dt>
+        <dd>{{ .User.Status }}</dd>
+
+        <dt>Must Change Password</dt>
+        <dd>{{ if .User.MustChangePassword }}Yes{{ else }}No{{ end }}</dd>
+
+        <dt>Created</dt>
+        <dd>{{ .User.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .User.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+</div>
+{{ end }}

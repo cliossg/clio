@@ -1,0 +1,35 @@
+{{ define "content" }}
+<div class="card">
+    <h1>New User</h1>
+
+    <form method="POST" action="/admin/create-user">
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="text" id="password" name="password" value="{{ .GeneratedPass }}" required>
+            <small>Share this password with the user securely.</small>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="must_change_password" checked>
+                Must change password on first sign in
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create User</button>
+            <a href="/admin/list-users" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

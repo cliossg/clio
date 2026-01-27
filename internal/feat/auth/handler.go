@@ -2,9 +2,12 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
+	"encoding/base64"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
@@ -71,6 +74,15 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.handleHome)
 		r.Get("/change-password", h.HandleChangePassword)
 		r.Post("/change-password", h.HandleChangePassword)
+
+		// Users CRUD
+		r.Get("/admin/list-users", h.HandleListUsers)
+		r.Get("/admin/new-user", h.HandleNewUser)
+		r.Post("/admin/create-user", h.HandleCreateUser)
+		r.Get("/admin/get-user", h.HandleShowUser)
+		r.Get("/admin/edit-user", h.HandleEditUser)
+		r.Post("/admin/update-user", h.HandleUpdateUser)
+		r.Post("/admin/delete-user", h.HandleDeleteUser)
 	})
 }
 
@@ -353,4 +365,233 @@ func (h *Handler) GetCurrentUser(ctx context.Context) (*User, error) {
 	}
 
 	return h.service.GetUser(ctx, userID)
+}
+
+// GetUserName returns the current user's display name from context.
+func (h *Handler) GetUserName(ctx context.Context) string {
+	user, err := h.GetCurrentUser(ctx)
+	if err != nil {
+		return ""
+	}
+	if user.Name != "" {
+		return user.Name
+	}
+	return user.Email
+}
+
+// --- Users CRUD ---
+
+// AdminPageData holds data for admin pages.
+type AdminPageData struct {
+	Title           string
+	HideNav         bool
+	AuthPage        bool
+	Site            interface{}
+	Error           string
+	Success         string
+	User            *User
+	Users           []*User
+	GeneratedPass   string
+	CurrentUserName string
+}
+
+func (h *Handler) renderAdmin(w http.ResponseWriter, r *http.Request, templateName string, data AdminPageData) {
+	funcMap := render.MergeFuncMaps(render.FuncMap(), template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+	})
+
+	if data.CurrentUserName == "" {
+		if user, err := h.GetCurrentUser(r.Context()); err == nil {
+			data.CurrentUserName = user.Name
+			if data.CurrentUserName == "" {
+				data.CurrentUserName = user.Email
+			}
+		}
+	}
+
+	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
+		"assets/templates/base.html",
+		"assets/templates/"+templateName+".html",
+	)
+	if err != nil {
+		h.log.Errorf("Template parse error for %s: %v", templateName, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
+		h.log.Errorf("Template execute error for %s: %v", templateName, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+func generatePassword(length int) string {
+	b := make([]byte, length)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)[:length]
+}
+
+func (h *Handler) HandleListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.service.ListUsers(r.Context())
+	if err != nil {
+		h.log.Errorf("Cannot list users: %v", err)
+		h.renderAdmin(w, r, "admin/users/list", AdminPageData{
+			Title: "Users",
+			Error: "Cannot load users",
+		})
+		return
+	}
+
+	h.renderAdmin(w, r, "admin/users/list", AdminPageData{
+		Title: "Users",
+		Users: users,
+	})
+}
+
+func (h *Handler) HandleNewUser(w http.ResponseWriter, r *http.Request) {
+	h.renderAdmin(w, r, "admin/users/new", AdminPageData{
+		Title:         "New User",
+		GeneratedPass: generatePassword(12),
+	})
+}
+
+func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	name := r.FormValue("name")
+	password := r.FormValue("password")
+	mustChangePassword := r.FormValue("must_change_password") == "on"
+
+	if email == "" || password == "" {
+		h.renderAdmin(w, r, "admin/users/new", AdminPageData{
+			Title:         "New User",
+			Error:         "Email and password are required",
+			GeneratedPass: password,
+		})
+		return
+	}
+
+	_, err := h.service.CreateUser(r.Context(), email, password, name, mustChangePassword)
+	if err != nil {
+		h.log.Errorf("Cannot create user: %v", err)
+		h.renderAdmin(w, r, "admin/users/new", AdminPageData{
+			Title:         "New User",
+			Error:         "Cannot create user: " + err.Error(),
+			GeneratedPass: password,
+		})
+		return
+	}
+
+	http.Redirect(w, r, "/admin/list-users", http.StatusSeeOther)
+}
+
+func (h *Handler) HandleShowUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.service.GetUser(r.Context(), id)
+	if err != nil {
+		h.log.Errorf("Cannot get user: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	h.renderAdmin(w, r, "admin/users/show", AdminPageData{
+		Title: user.Name,
+		User:  user,
+	})
+}
+
+func (h *Handler) HandleEditUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.service.GetUser(r.Context(), id)
+	if err != nil {
+		h.log.Errorf("Cannot get user: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	h.renderAdmin(w, r, "admin/users/edit", AdminPageData{
+		Title: "Edit " + user.Name,
+		User:  user,
+	})
+}
+
+func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.FormValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.service.GetUser(r.Context(), id)
+	if err != nil {
+		h.log.Errorf("Cannot get user: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	user.Email = r.FormValue("email")
+	user.Name = r.FormValue("name")
+	user.Status = r.FormValue("status")
+	user.MustChangePassword = r.FormValue("must_change_password") == "on"
+	user.UpdatedAt = time.Now()
+
+	newPassword := r.FormValue("new_password")
+	if newPassword != "" {
+		if err := user.UpdatePassword(newPassword); err != nil {
+			h.log.Errorf("Cannot update password: %v", err)
+			h.renderAdmin(w, r, "admin/users/edit", AdminPageData{
+				Title: "Edit " + user.Name,
+				User:  user,
+				Error: "Cannot update password",
+			})
+			return
+		}
+	}
+
+	if err := h.service.UpdateUser(r.Context(), user); err != nil {
+		h.log.Errorf("Cannot update user: %v", err)
+		h.renderAdmin(w, r, "admin/users/edit", AdminPageData{
+			Title: "Edit " + user.Name,
+			User:  user,
+			Error: "Cannot save user",
+		})
+		return
+	}
+
+	http.Redirect(w, r, "/admin/get-user?id="+id.String(), http.StatusSeeOther)
+}
+
+func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.FormValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	currentUserIDStr := middleware.GetUserID(r.Context())
+	if currentUserIDStr == id.String() {
+		http.Error(w, "Cannot delete yourself", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.DeleteUser(r.Context(), id); err != nil {
+		h.log.Errorf("Cannot delete user: %v", err)
+		http.Error(w, "Cannot delete user", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/list-users", http.StatusSeeOther)
 }

@@ -1,0 +1,45 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/admin/list-users">&larr; Users</a></p>
+    <h1>Edit User</h1>
+
+    <form method="POST" action="/admin/update-user">
+        <input type="hidden" name="id" value="{{ .User.ID }}">
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ .User.Email }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ .User.Name }}">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="active" {{ if eq .User.Status "active" }}selected{{ end }}>Active</option>
+                <option value="inactive" {{ if eq .User.Status "inactive" }}selected{{ end }}>Inactive</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="new_password">New Password (leave empty to keep current)</label>
+            <input type="text" id="new_password" name="new_password">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="must_change_password" {{ if .User.MustChangePassword }}checked{{ end }}>
+                Must change password on next sign in
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="/admin/get-user?id={{ .User.ID }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

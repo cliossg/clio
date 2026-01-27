@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>Users</h1>
+        <a href="/admin/new-user" class="btn">New User</a>
+    </div>
+
+    {{ if .Users }}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Users }}
+            <tr class="clickable-row" onclick="window.location='/admin/get-user?id={{ .ID }}'">
+                <td>{{ .Name }}</td>
+                <td>{{ .Email }}</td>
+                <td>{{ .Status }}</td>
+                <td>
+                    <a href="/admin/edit-user?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No users yet. <a href="/admin/new-user">Create your first user</a>.</p>
+    {{ end }}
+
+</div>
+{{ end }}

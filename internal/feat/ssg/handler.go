@@ -24,30 +24,32 @@ import (
 
 // Handler handles SSG web routes.
 type Handler struct {
-	service   Service
-	workspace *Workspace
-	generator *Generator
-	htmlGen   *HTMLGenerator
-	siteCtxMw func(http.Handler) http.Handler
-	sessionMw func(http.Handler) http.Handler
-	assetsFS  embed.FS
-	cfg       *config.Config
-	log       logger.Logger
+	service    Service
+	workspace  *Workspace
+	generator  *Generator
+	htmlGen    *HTMLGenerator
+	siteCtxMw  func(http.Handler) http.Handler
+	sessionMw  func(http.Handler) http.Handler
+	userNameFn func(context.Context) string
+	assetsFS   embed.FS
+	cfg        *config.Config
+	log        logger.Logger
 }
 
 // NewHandler creates a new SSG handler.
-func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Handler, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	return &Handler{
-		service:   service,
-		workspace: workspace,
-		generator: NewGenerator(workspace),
-		htmlGen:   NewHTMLGenerator(workspace, assetsFS),
-		siteCtxMw: siteCtxMw,
-		sessionMw: sessionMw,
-		assetsFS:  assetsFS,
-		cfg:       cfg,
-		log:       log,
+		service:    service,
+		workspace:  workspace,
+		generator:  NewGenerator(workspace),
+		htmlGen:    NewHTMLGenerator(workspace, assetsFS),
+		siteCtxMw:  siteCtxMw,
+		sessionMw:  sessionMw,
+		userNameFn: userNameFn,
+		assetsFS:   assetsFS,
+		cfg:        cfg,
+		log:        log,
 	}
 }
 
@@ -216,44 +218,49 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 // PageData holds common page data for templates.
 type PageData struct {
-	Title         string
-	Template      string
-	HideNav       bool
-	AuthPage      bool
-	Site          *Site
-	Sites         []*Site
-	Section       *Section
-	Sections      []*Section
-	Content       *Content
-	Contents      []*Content
-	Layout        *Layout
-	Layouts       []*Layout
-	Tag           *Tag
-	Tags          []*Tag
-	Param         *Param
-	Params        []*Param
-	Image         *Image
-	Images        []*Image
-	HeaderImage    *ContentImageWithDetails
-	ContentImages  []*ContentImageWithDetails
-	SectionImages  []*SectionImageWithDetails
-	SectionHeader  *SectionImageWithDetails
-	Meta           *Meta
-	Error         string
-	Success       string
-	CSRFToken     string
-	CurrentPage   int
-	TotalPages    int
-	HasPrev       bool
-	HasNext       bool
+	Title           string
+	Template        string
+	HideNav         bool
+	AuthPage        bool
+	CurrentUserName string
+	Site            *Site
+	Sites           []*Site
+	Section         *Section
+	Sections        []*Section
+	Content         *Content
+	Contents        []*Content
+	Layout          *Layout
+	Layouts         []*Layout
+	Tag             *Tag
+	Tags            []*Tag
+	Param           *Param
+	Params          []*Param
+	Image           *Image
+	Images          []*Image
+	HeaderImage     *ContentImageWithDetails
+	ContentImages   []*ContentImageWithDetails
+	SectionImages   []*SectionImageWithDetails
+	SectionHeader   *SectionImageWithDetails
+	Meta            *Meta
+	Error           string
+	Success         string
+	CSRFToken       string
+	CurrentPage     int
+	TotalPages      int
+	HasPrev         bool
+	HasNext         bool
 }
 
-func (h *Handler) render(w http.ResponseWriter, templateName string, data PageData) {
+func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName string, data PageData) {
 	funcMap := render.MergeFuncMaps(render.FuncMap(), template.FuncMap{
 		"add":      func(a, b int) int { return a + b },
 		"subtract": func(a, b int) int { return a - b },
 		"multiply": func(a, b int) int { return a * b },
 	})
+
+	if data.CurrentUserName == "" && h.userNameFn != nil {
+		data.CurrentUserName = h.userNameFn(r.Context())
+	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.assetsFS,
 		"assets/templates/base.html",
@@ -271,10 +278,10 @@ func (h *Handler) render(w http.ResponseWriter, templateName string, data PageDa
 	}
 }
 
-func (h *Handler) renderError(w http.ResponseWriter, status int, message string) {
+func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, status int, message string) {
 	h.log.Errorf("HTTP %d: %s", status, message)
 	w.WriteHeader(status)
-	h.render(w, "error", PageData{
+	h.render(w, r, "error", PageData{
 		Title: "Error",
 		Error: message,
 	})
@@ -298,7 +305,7 @@ func (h *Handler) HandleListSites(w http.ResponseWriter, r *http.Request) {
 	sites, err := h.service.ListSites(r.Context())
 	if err != nil {
 		h.log.Errorf("Cannot list sites: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load sites")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load sites")
 		return
 	}
 
@@ -307,21 +314,21 @@ func (h *Handler) HandleListSites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.render(w, "ssg/sites/list", PageData{
+	h.render(w, r, "ssg/sites/list", PageData{
 		Title: "Sites",
 		Sites: sites,
 	})
 }
 
 func (h *Handler) HandleNewSite(w http.ResponseWriter, r *http.Request) {
-	h.render(w, "ssg/sites/new", PageData{
+	h.render(w, r, "ssg/sites/new", PageData{
 		Title: "New Site",
 	})
 }
 
 func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -345,7 +352,7 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateSite(r.Context(), site); err != nil {
 		h.log.Errorf("Cannot create site: %v", err)
-		h.render(w, "ssg/sites/new", PageData{
+		h.render(w, r, "ssg/sites/new", PageData{
 			Title: "New Site",
 			Site:  site,
 			Error: "Cannot create site",
@@ -358,7 +365,7 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot create site directories: %v", err)
 		// Rollback: delete site from DB
 		_ = h.service.DeleteSite(r.Context(), site.ID)
-		h.render(w, "ssg/sites/new", PageData{
+		h.render(w, r, "ssg/sites/new", PageData{
 			Title: "New Site",
 			Site:  site,
 			Error: "Cannot create site directories",
@@ -379,18 +386,18 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowSite(w http.ResponseWriter, r *http.Request) {
 	siteID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid site ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid site ID")
 		return
 	}
 
 	site, err := h.service.GetSite(r.Context(), siteID)
 	if err != nil {
 		h.log.Errorf("Cannot get site: %v", err)
-		h.renderError(w, http.StatusNotFound, "Site not found")
+		h.renderError(w, r, http.StatusNotFound, "Site not found")
 		return
 	}
 
-	h.render(w, "ssg/sites/show", PageData{
+	h.render(w, r, "ssg/sites/show", PageData{
 		Title: site.Name,
 		Site:  site,
 	})
@@ -399,18 +406,18 @@ func (h *Handler) HandleShowSite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditSite(w http.ResponseWriter, r *http.Request) {
 	siteID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid site ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid site ID")
 		return
 	}
 
 	site, err := h.service.GetSite(r.Context(), siteID)
 	if err != nil {
 		h.log.Errorf("Cannot get site: %v", err)
-		h.renderError(w, http.StatusNotFound, "Site not found")
+		h.renderError(w, r, http.StatusNotFound, "Site not found")
 		return
 	}
 
-	h.render(w, "ssg/sites/edit", PageData{
+	h.render(w, r, "ssg/sites/edit", PageData{
 		Title: "Edit " + site.Name,
 		Site:  site,
 	})
@@ -418,20 +425,20 @@ func (h *Handler) HandleEditSite(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleUpdateSite(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	siteID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid site ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid site ID")
 		return
 	}
 
 	site, err := h.service.GetSite(r.Context(), siteID)
 	if err != nil {
 		h.log.Errorf("Cannot get site: %v", err)
-		h.renderError(w, http.StatusNotFound, "Site not found")
+		h.renderError(w, r, http.StatusNotFound, "Site not found")
 		return
 	}
 
@@ -449,7 +456,7 @@ func (h *Handler) HandleUpdateSite(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateSite(r.Context(), site); err != nil {
 		h.log.Errorf("Cannot update site: %v", err)
-		h.render(w, "ssg/sites/edit", PageData{
+		h.render(w, r, "ssg/sites/edit", PageData{
 			Title: "Edit " + site.Name,
 			Site:  site,
 			Error: "Cannot update site",
@@ -462,13 +469,13 @@ func (h *Handler) HandleUpdateSite(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleDeleteSite(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	siteID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid site ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid site ID")
 		return
 	}
 
@@ -476,13 +483,13 @@ func (h *Handler) HandleDeleteSite(w http.ResponseWriter, r *http.Request) {
 	site, err := h.service.GetSite(r.Context(), siteID)
 	if err != nil {
 		h.log.Errorf("Cannot get site for deletion: %v", err)
-		h.renderError(w, http.StatusNotFound, "Site not found")
+		h.renderError(w, r, http.StatusNotFound, "Site not found")
 		return
 	}
 
 	if err := h.service.DeleteSite(r.Context(), siteID); err != nil {
 		h.log.Errorf("Cannot delete site: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete site")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete site")
 		return
 	}
 
@@ -500,18 +507,18 @@ func (h *Handler) HandleDeleteSite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListSections(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	sections, err := h.service.GetSections(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list sections: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load sections")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load sections")
 		return
 	}
 
-	h.render(w, "ssg/sections/list", PageData{
+	h.render(w, r, "ssg/sections/list", PageData{
 		Title:    "Sections",
 		Site:     site,
 		Sections: sections,
@@ -521,13 +528,13 @@ func (h *Handler) HandleListSections(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	layouts, _ := h.service.GetLayouts(r.Context(), site.ID)
 
-	h.render(w, "ssg/sections/new", PageData{
+	h.render(w, r, "ssg/sections/new", PageData{
 		Title:   "New Section",
 		Site:    site,
 		Layouts: layouts,
@@ -537,12 +544,12 @@ func (h *Handler) HandleNewSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -565,7 +572,7 @@ func (h *Handler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.CreateSection(r.Context(), section); err != nil {
 		h.log.Errorf("Cannot create section: %v", err)
 		layouts, _ := h.service.GetLayouts(r.Context(), site.ID)
-		h.render(w, "ssg/sections/new", PageData{
+		h.render(w, r, "ssg/sections/new", PageData{
 			Title:   "New Section",
 			Site:    site,
 			Section: section,
@@ -581,24 +588,24 @@ func (h *Handler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	sectionID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid section ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid section ID")
 		return
 	}
 
 	section, err := h.service.GetSection(r.Context(), sectionID)
 	if err != nil {
 		h.log.Errorf("Cannot get section: %v", err)
-		h.renderError(w, http.StatusNotFound, "Section not found")
+		h.renderError(w, r, http.StatusNotFound, "Section not found")
 		return
 	}
 
-	h.render(w, "ssg/sections/show", PageData{
+	h.render(w, r, "ssg/sections/show", PageData{
 		Title:   section.Name,
 		Site:    site,
 		Section: section,
@@ -608,20 +615,20 @@ func (h *Handler) HandleShowSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	sectionID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid section ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid section ID")
 		return
 	}
 
 	section, err := h.service.GetSection(r.Context(), sectionID)
 	if err != nil {
 		h.log.Errorf("Cannot get section: %v", err)
-		h.renderError(w, http.StatusNotFound, "Section not found")
+		h.renderError(w, r, http.StatusNotFound, "Section not found")
 		return
 	}
 
@@ -638,7 +645,7 @@ func (h *Handler) HandleEditSection(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.render(w, "ssg/sections/edit", PageData{
+	h.render(w, r, "ssg/sections/edit", PageData{
 		Title:         "Edit " + section.Name,
 		Site:          site,
 		Section:       section,
@@ -651,25 +658,25 @@ func (h *Handler) HandleEditSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	sectionID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid section ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid section ID")
 		return
 	}
 
 	section, err := h.service.GetSection(r.Context(), sectionID)
 	if err != nil {
 		h.log.Errorf("Cannot get section: %v", err)
-		h.renderError(w, http.StatusNotFound, "Section not found")
+		h.renderError(w, r, http.StatusNotFound, "Section not found")
 		return
 	}
 
@@ -693,7 +700,7 @@ func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.UpdateSection(r.Context(), section); err != nil {
 		h.log.Errorf("Cannot update section: %v", err)
 		layouts, _ := h.service.GetLayouts(r.Context(), site.ID)
-		h.render(w, "ssg/sections/edit", PageData{
+		h.render(w, r, "ssg/sections/edit", PageData{
 			Title:   "Edit " + section.Name,
 			Site:    site,
 			Section: section,
@@ -709,24 +716,24 @@ func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDeleteSection(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	sectionID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid section ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid section ID")
 		return
 	}
 
 	if err := h.service.DeleteSection(r.Context(), sectionID); err != nil {
 		h.log.Errorf("Cannot delete section: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete section")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete section")
 		return
 	}
 
@@ -738,7 +745,7 @@ func (h *Handler) HandleDeleteSection(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListContents(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
@@ -756,13 +763,13 @@ func (h *Handler) HandleListContents(w http.ResponseWriter, r *http.Request) {
 	contents, total, err := h.service.GetContentWithPagination(r.Context(), site.ID, offset, limit, search)
 	if err != nil {
 		h.log.Errorf("Cannot list contents: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load contents")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load contents")
 		return
 	}
 
 	totalPages := (total + limit - 1) / limit
 
-	h.render(w, "ssg/contents/list", PageData{
+	h.render(w, r, "ssg/contents/list", PageData{
 		Title:       "Contents",
 		Site:        site,
 		Contents:    contents,
@@ -776,14 +783,14 @@ func (h *Handler) HandleListContents(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	sections, _ := h.service.GetSections(r.Context(), site.ID)
 	tags, _ := h.service.GetTags(r.Context(), site.ID)
 
-	h.render(w, "ssg/contents/new", PageData{
+	h.render(w, r, "ssg/contents/new", PageData{
 		Title:    "New Content",
 		Site:     site,
 		Sections: sections,
@@ -794,12 +801,12 @@ func (h *Handler) HandleNewContent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -839,7 +846,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot create content: %v", err)
 		sections, _ := h.service.GetSections(r.Context(), site.ID)
 		tags, _ := h.service.GetTags(r.Context(), site.ID)
-		h.render(w, "ssg/contents/new", PageData{
+		h.render(w, r, "ssg/contents/new", PageData{
 			Title:    "New Content",
 			Site:     site,
 			Content:  content,
@@ -859,27 +866,27 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	contentID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid content ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid content ID")
 		return
 	}
 
 	content, err := h.service.GetContent(r.Context(), contentID)
 	if err != nil {
 		h.log.Errorf("Cannot get content: %v", err)
-		h.renderError(w, http.StatusNotFound, "Content not found")
+		h.renderError(w, r, http.StatusNotFound, "Content not found")
 		return
 	}
 
 	// Load tags
 	content.Tags, _ = h.service.GetTagsForContent(r.Context(), contentID)
 
-	h.render(w, "ssg/contents/show", PageData{
+	h.render(w, r, "ssg/contents/show", PageData{
 		Title:   content.Heading,
 		Site:    site,
 		Content: content,
@@ -889,20 +896,20 @@ func (h *Handler) HandleShowContent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	contentID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid content ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid content ID")
 		return
 	}
 
 	content, err := h.service.GetContent(r.Context(), contentID)
 	if err != nil {
 		h.log.Errorf("Cannot get content: %v", err)
-		h.renderError(w, http.StatusNotFound, "Content not found")
+		h.renderError(w, r, http.StatusNotFound, "Content not found")
 		return
 	}
 
@@ -925,7 +932,7 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 	// Get meta for SEO/settings
 	meta, _ := h.service.GetMetaByContentID(r.Context(), contentID)
 
-	h.render(w, "ssg/contents/edit", PageData{
+	h.render(w, r, "ssg/contents/edit", PageData{
 		Title:         "Edit " + content.Heading,
 		Site:          site,
 		Content:       content,
@@ -940,25 +947,25 @@ func (h *Handler) HandleEditContent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	contentID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid content ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid content ID")
 		return
 	}
 
 	content, err := h.service.GetContent(r.Context(), contentID)
 	if err != nil {
 		h.log.Errorf("Cannot get content: %v", err)
-		h.renderError(w, http.StatusNotFound, "Content not found")
+		h.renderError(w, r, http.StatusNotFound, "Content not found")
 		return
 	}
 
@@ -993,7 +1000,7 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot update content: %v", err)
 		sections, _ := h.service.GetSections(r.Context(), site.ID)
 		tags, _ := h.service.GetTags(r.Context(), site.ID)
-		h.render(w, "ssg/contents/edit", PageData{
+		h.render(w, r, "ssg/contents/edit", PageData{
 			Title:    "Edit " + content.Heading,
 			Site:     site,
 			Content:  content,
@@ -1108,24 +1115,24 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	contentID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid content ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid content ID")
 		return
 	}
 
 	if err := h.service.DeleteContent(r.Context(), contentID); err != nil {
 		h.log.Errorf("Cannot delete content: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete content")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete content")
 		return
 	}
 
@@ -1137,18 +1144,18 @@ func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListLayouts(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	layouts, err := h.service.GetLayouts(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list layouts: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load layouts")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load layouts")
 		return
 	}
 
-	h.render(w, "ssg/layouts/list", PageData{
+	h.render(w, r, "ssg/layouts/list", PageData{
 		Title:   "Layouts",
 		Site:    site,
 		Layouts: layouts,
@@ -1158,11 +1165,11 @@ func (h *Handler) HandleListLayouts(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	h.render(w, "ssg/layouts/new", PageData{
+	h.render(w, r, "ssg/layouts/new", PageData{
 		Title: "New Layout",
 		Site:  site,
 	})
@@ -1171,12 +1178,12 @@ func (h *Handler) HandleNewLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -1193,7 +1200,7 @@ func (h *Handler) HandleCreateLayout(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateLayout(r.Context(), layout); err != nil {
 		h.log.Errorf("Cannot create layout: %v", err)
-		h.render(w, "ssg/layouts/new", PageData{
+		h.render(w, r, "ssg/layouts/new", PageData{
 			Title:  "New Layout",
 			Site:   site,
 			Layout: layout,
@@ -1208,24 +1215,24 @@ func (h *Handler) HandleCreateLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	layoutID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid layout ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid layout ID")
 		return
 	}
 
 	layout, err := h.service.GetLayout(r.Context(), layoutID)
 	if err != nil {
 		h.log.Errorf("Cannot get layout: %v", err)
-		h.renderError(w, http.StatusNotFound, "Layout not found")
+		h.renderError(w, r, http.StatusNotFound, "Layout not found")
 		return
 	}
 
-	h.render(w, "ssg/layouts/show", PageData{
+	h.render(w, r, "ssg/layouts/show", PageData{
 		Title:  layout.Name,
 		Site:   site,
 		Layout: layout,
@@ -1235,24 +1242,24 @@ func (h *Handler) HandleShowLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	layoutID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid layout ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid layout ID")
 		return
 	}
 
 	layout, err := h.service.GetLayout(r.Context(), layoutID)
 	if err != nil {
 		h.log.Errorf("Cannot get layout: %v", err)
-		h.renderError(w, http.StatusNotFound, "Layout not found")
+		h.renderError(w, r, http.StatusNotFound, "Layout not found")
 		return
 	}
 
-	h.render(w, "ssg/layouts/edit", PageData{
+	h.render(w, r, "ssg/layouts/edit", PageData{
 		Title:  "Edit " + layout.Name,
 		Site:   site,
 		Layout: layout,
@@ -1262,25 +1269,25 @@ func (h *Handler) HandleEditLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	layoutID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid layout ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid layout ID")
 		return
 	}
 
 	layout, err := h.service.GetLayout(r.Context(), layoutID)
 	if err != nil {
 		h.log.Errorf("Cannot get layout: %v", err)
-		h.renderError(w, http.StatusNotFound, "Layout not found")
+		h.renderError(w, r, http.StatusNotFound, "Layout not found")
 		return
 	}
 
@@ -1297,7 +1304,7 @@ func (h *Handler) HandleUpdateLayout(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateLayout(r.Context(), layout); err != nil {
 		h.log.Errorf("Cannot update layout: %v", err)
-		h.render(w, "ssg/layouts/edit", PageData{
+		h.render(w, r, "ssg/layouts/edit", PageData{
 			Title:  "Edit " + layout.Name,
 			Site:   site,
 			Layout: layout,
@@ -1312,24 +1319,24 @@ func (h *Handler) HandleUpdateLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDeleteLayout(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	layoutID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid layout ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid layout ID")
 		return
 	}
 
 	if err := h.service.DeleteLayout(r.Context(), layoutID); err != nil {
 		h.log.Errorf("Cannot delete layout: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete layout")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete layout")
 		return
 	}
 
@@ -1341,18 +1348,18 @@ func (h *Handler) HandleDeleteLayout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListTags(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	tags, err := h.service.GetTags(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list tags: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load tags")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load tags")
 		return
 	}
 
-	h.render(w, "ssg/tags/list", PageData{
+	h.render(w, r, "ssg/tags/list", PageData{
 		Title: "Tags",
 		Site:  site,
 		Tags:  tags,
@@ -1362,11 +1369,11 @@ func (h *Handler) HandleListTags(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	h.render(w, "ssg/tags/new", PageData{
+	h.render(w, r, "ssg/tags/new", PageData{
 		Title: "New Tag",
 		Site:  site,
 	})
@@ -1375,12 +1382,12 @@ func (h *Handler) HandleNewTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -1396,7 +1403,7 @@ func (h *Handler) HandleCreateTag(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateTag(r.Context(), tag); err != nil {
 		h.log.Errorf("Cannot create tag: %v", err)
-		h.render(w, "ssg/tags/new", PageData{
+		h.render(w, r, "ssg/tags/new", PageData{
 			Title: "New Tag",
 			Site:  site,
 			Tag:   tag,
@@ -1411,24 +1418,24 @@ func (h *Handler) HandleCreateTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	tagID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid tag ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid tag ID")
 		return
 	}
 
 	tag, err := h.service.GetTag(r.Context(), tagID)
 	if err != nil {
 		h.log.Errorf("Cannot get tag: %v", err)
-		h.renderError(w, http.StatusNotFound, "Tag not found")
+		h.renderError(w, r, http.StatusNotFound, "Tag not found")
 		return
 	}
 
-	h.render(w, "ssg/tags/show", PageData{
+	h.render(w, r, "ssg/tags/show", PageData{
 		Title: tag.Name,
 		Site:  site,
 		Tag:   tag,
@@ -1438,24 +1445,24 @@ func (h *Handler) HandleShowTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	tagID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid tag ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid tag ID")
 		return
 	}
 
 	tag, err := h.service.GetTag(r.Context(), tagID)
 	if err != nil {
 		h.log.Errorf("Cannot get tag: %v", err)
-		h.renderError(w, http.StatusNotFound, "Tag not found")
+		h.renderError(w, r, http.StatusNotFound, "Tag not found")
 		return
 	}
 
-	h.render(w, "ssg/tags/edit", PageData{
+	h.render(w, r, "ssg/tags/edit", PageData{
 		Title: "Edit " + tag.Name,
 		Site:  site,
 		Tag:   tag,
@@ -1465,25 +1472,25 @@ func (h *Handler) HandleEditTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	tagID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid tag ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid tag ID")
 		return
 	}
 
 	tag, err := h.service.GetTag(r.Context(), tagID)
 	if err != nil {
 		h.log.Errorf("Cannot get tag: %v", err)
-		h.renderError(w, http.StatusNotFound, "Tag not found")
+		h.renderError(w, r, http.StatusNotFound, "Tag not found")
 		return
 	}
 
@@ -1499,7 +1506,7 @@ func (h *Handler) HandleUpdateTag(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateTag(r.Context(), tag); err != nil {
 		h.log.Errorf("Cannot update tag: %v", err)
-		h.render(w, "ssg/tags/edit", PageData{
+		h.render(w, r, "ssg/tags/edit", PageData{
 			Title: "Edit " + tag.Name,
 			Site:  site,
 			Tag:   tag,
@@ -1514,24 +1521,24 @@ func (h *Handler) HandleUpdateTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDeleteTag(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	tagID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid tag ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid tag ID")
 		return
 	}
 
 	if err := h.service.DeleteTag(r.Context(), tagID); err != nil {
 		h.log.Errorf("Cannot delete tag: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete tag")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete tag")
 		return
 	}
 
@@ -1543,18 +1550,18 @@ func (h *Handler) HandleDeleteTag(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListParams(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	params, err := h.service.GetParams(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list params: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load params")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load params")
 		return
 	}
 
-	h.render(w, "ssg/params/list", PageData{
+	h.render(w, r, "ssg/params/list", PageData{
 		Title:  "Parameters",
 		Site:   site,
 		Params: params,
@@ -1564,11 +1571,11 @@ func (h *Handler) HandleListParams(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	h.render(w, "ssg/params/new", PageData{
+	h.render(w, r, "ssg/params/new", PageData{
 		Title: "New Parameter",
 		Site:  site,
 	})
@@ -1577,12 +1584,12 @@ func (h *Handler) HandleNewParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -1600,7 +1607,7 @@ func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateParam(r.Context(), param); err != nil {
 		h.log.Errorf("Cannot create param: %v", err)
-		h.render(w, "ssg/params/new", PageData{
+		h.render(w, r, "ssg/params/new", PageData{
 			Title: "New Parameter",
 			Site:  site,
 			Param: param,
@@ -1615,24 +1622,24 @@ func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	paramID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid param ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid param ID")
 		return
 	}
 
 	param, err := h.service.GetParam(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
-		h.renderError(w, http.StatusNotFound, "Parameter not found")
+		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
 		return
 	}
 
-	h.render(w, "ssg/params/show", PageData{
+	h.render(w, r, "ssg/params/show", PageData{
 		Title: param.Name,
 		Site:  site,
 		Param: param,
@@ -1642,24 +1649,24 @@ func (h *Handler) HandleShowParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	paramID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid param ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid param ID")
 		return
 	}
 
 	param, err := h.service.GetParam(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
-		h.renderError(w, http.StatusNotFound, "Parameter not found")
+		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
 		return
 	}
 
-	h.render(w, "ssg/params/edit", PageData{
+	h.render(w, r, "ssg/params/edit", PageData{
 		Title: "Edit " + param.Name,
 		Site:  site,
 		Param: param,
@@ -1669,25 +1676,25 @@ func (h *Handler) HandleEditParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	paramID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid param ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid param ID")
 		return
 	}
 
 	param, err := h.service.GetParam(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
-		h.renderError(w, http.StatusNotFound, "Parameter not found")
+		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
 		return
 	}
 
@@ -1705,7 +1712,7 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateParam(r.Context(), param); err != nil {
 		h.log.Errorf("Cannot update param: %v", err)
-		h.render(w, "ssg/params/edit", PageData{
+		h.render(w, r, "ssg/params/edit", PageData{
 			Title: "Edit " + param.Name,
 			Site:  site,
 			Param: param,
@@ -1720,24 +1727,24 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	paramID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid param ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid param ID")
 		return
 	}
 
 	if err := h.service.DeleteParam(r.Context(), paramID); err != nil {
 		h.log.Errorf("Cannot delete param: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete parameter")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete parameter")
 		return
 	}
 
@@ -1749,18 +1756,18 @@ func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleListImages(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	images, err := h.service.GetImages(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list images: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load images")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load images")
 		return
 	}
 
-	h.render(w, "ssg/images/list", PageData{
+	h.render(w, r, "ssg/images/list", PageData{
 		Title:  "Images",
 		Site:   site,
 		Images: images,
@@ -1770,11 +1777,11 @@ func (h *Handler) HandleListImages(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleNewImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	h.render(w, "ssg/images/new", PageData{
+	h.render(w, r, "ssg/images/new", PageData{
 		Title: "New Image",
 		Site:  site,
 	})
@@ -1783,14 +1790,14 @@ func (h *Handler) HandleNewImage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	// Parse multipart form (max 10MB)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		h.log.Errorf("Cannot parse multipart form: %v", err)
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -1798,7 +1805,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		h.log.Errorf("Cannot get uploaded file: %v", err)
-		h.render(w, "ssg/images/new", PageData{
+		h.render(w, r, "ssg/images/new", PageData{
 			Title: "Upload Image",
 			Site:  site,
 			Error: "Please select a file to upload",
@@ -1815,7 +1822,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	imagesPath := h.workspace.GetImagesPath(site.Slug)
 	if err := os.MkdirAll(imagesPath, 0755); err != nil {
 		h.log.Errorf("Cannot create images directory: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot create images directory")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot create images directory")
 		return
 	}
 
@@ -1829,7 +1836,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	dst, err := os.Create(filePath)
 	if err != nil {
 		h.log.Errorf("Cannot create file: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot save file")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot save file")
 		return
 	}
 	defer dst.Close()
@@ -1837,7 +1844,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	// Copy uploaded file
 	if _, err := io.Copy(dst, file); err != nil {
 		h.log.Errorf("Cannot write file: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot save file")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot save file")
 		return
 	}
 
@@ -1859,7 +1866,7 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot create image record: %v", err)
 		// Delete uploaded file on error
 		os.Remove(filePath)
-		h.render(w, "ssg/images/new", PageData{
+		h.render(w, r, "ssg/images/new", PageData{
 			Title: "Upload Image",
 			Site:  site,
 			Error: "Cannot save image record",
@@ -1874,24 +1881,24 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleShowImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	imageID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid image ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid image ID")
 		return
 	}
 
 	image, err := h.service.GetImage(r.Context(), imageID)
 	if err != nil {
 		h.log.Errorf("Cannot get image: %v", err)
-		h.renderError(w, http.StatusNotFound, "Image not found")
+		h.renderError(w, r, http.StatusNotFound, "Image not found")
 		return
 	}
 
-	h.render(w, "ssg/images/show", PageData{
+	h.render(w, r, "ssg/images/show", PageData{
 		Title: image.FileName,
 		Site:  site,
 		Image: image,
@@ -1901,24 +1908,24 @@ func (h *Handler) HandleShowImage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	imageID, err := uuid.Parse(r.URL.Query().Get("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid image ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid image ID")
 		return
 	}
 
 	image, err := h.service.GetImage(r.Context(), imageID)
 	if err != nil {
 		h.log.Errorf("Cannot get image: %v", err)
-		h.renderError(w, http.StatusNotFound, "Image not found")
+		h.renderError(w, r, http.StatusNotFound, "Image not found")
 		return
 	}
 
-	h.render(w, "ssg/images/edit", PageData{
+	h.render(w, r, "ssg/images/edit", PageData{
 		Title: "Edit " + image.FileName,
 		Site:  site,
 		Image: image,
@@ -1928,25 +1935,25 @@ func (h *Handler) HandleEditImage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	imageID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid image ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid image ID")
 		return
 	}
 
 	image, err := h.service.GetImage(r.Context(), imageID)
 	if err != nil {
 		h.log.Errorf("Cannot get image: %v", err)
-		h.renderError(w, http.StatusNotFound, "Image not found")
+		h.renderError(w, r, http.StatusNotFound, "Image not found")
 		return
 	}
 
@@ -1962,7 +1969,7 @@ func (h *Handler) HandleUpdateImage(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateImage(r.Context(), image); err != nil {
 		h.log.Errorf("Cannot update image: %v", err)
-		h.render(w, "ssg/images/edit", PageData{
+		h.render(w, r, "ssg/images/edit", PageData{
 			Title: "Edit " + image.FileName,
 			Site:  site,
 			Image: image,
@@ -1977,24 +1984,24 @@ func (h *Handler) HandleUpdateImage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleDeleteImage(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	imageID, err := uuid.Parse(r.FormValue("id"))
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Invalid image ID")
+		h.renderError(w, r, http.StatusBadRequest, "Invalid image ID")
 		return
 	}
 
 	if err := h.service.DeleteImage(r.Context(), imageID); err != nil {
 		h.log.Errorf("Cannot delete image: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot delete image")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete image")
 		return
 	}
 
@@ -2407,7 +2414,7 @@ func (h *Handler) HandleUpdateMeta(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
@@ -2415,7 +2422,7 @@ func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request)
 	contents, err := h.service.GetAllContentWithMeta(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get content for markdown generation: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load content")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load content")
 		return
 	}
 
@@ -2423,7 +2430,7 @@ func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request)
 	result, err := h.generator.GenerateMarkdown(r.Context(), site.Slug, contents)
 	if err != nil {
 		h.log.Errorf("Markdown generation failed: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Markdown generation failed")
+		h.renderError(w, r, http.StatusInternalServerError, "Markdown generation failed")
 		return
 	}
 
@@ -2439,7 +2446,7 @@ func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request)
 func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
@@ -2447,7 +2454,7 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 	contents, err := h.service.GetAllContentWithMeta(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get content for HTML generation: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load content")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load content")
 		return
 	}
 
@@ -2455,7 +2462,7 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 	sections, err := h.service.GetSections(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get sections for HTML generation: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "Cannot load sections")
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load sections")
 		return
 	}
 
@@ -2471,7 +2478,7 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 	result, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params)
 	if err != nil {
 		h.log.Errorf("HTML generation failed: %v", err)
-		h.renderError(w, http.StatusInternalServerError, "HTML generation failed")
+		h.renderError(w, r, http.StatusInternalServerError, "HTML generation failed")
 		return
 	}
 
@@ -2487,7 +2494,7 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
-		h.renderError(w, http.StatusBadRequest, "Site context required")
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 

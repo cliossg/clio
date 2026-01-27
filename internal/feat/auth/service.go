@@ -31,6 +31,7 @@ type Service interface {
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	ListUsers(ctx context.Context) ([]*User, error)
 	UpdateUser(ctx context.Context, user *User) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
 	CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error)
 	ValidateSession(ctx context.Context, sessionID string) (string, error)
 	DeleteSession(ctx context.Context, sessionID string) error
@@ -189,6 +190,20 @@ func (s *service) UpdateUser(ctx context.Context, user *User) error {
 	_, err := s.queries.UpdateUser(ctx, params)
 	if err != nil {
 		return fmt.Errorf("cannot update user: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	s.ensureQueries()
+
+	if err := s.queries.DeleteUserSessions(ctx, id.String()); err != nil {
+		return fmt.Errorf("cannot delete user sessions: %w", err)
+	}
+
+	if err := s.queries.DeleteUser(ctx, id.String()); err != nil {
+		return fmt.Errorf("cannot delete user: %w", err)
 	}
 
 	return nil
