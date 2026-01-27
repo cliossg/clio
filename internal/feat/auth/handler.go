@@ -403,6 +403,34 @@ func (h *Handler) GetUserRoles(ctx context.Context) string {
 	return user.Roles
 }
 
+// GetCurrentUserID returns the current user's ID from context.
+func (h *Handler) GetCurrentUserID(ctx context.Context) (uuid.UUID, error) {
+	userIDStr := middleware.GetUserID(ctx)
+	if userIDStr == "" {
+		return uuid.Nil, ErrUserNotFound
+	}
+	return uuid.Parse(userIDStr)
+}
+
+// GetCurrentUserProfileID returns the current user's profile ID from context.
+func (h *Handler) GetCurrentUserProfileID(ctx context.Context) (*uuid.UUID, error) {
+	user, err := h.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return user.ProfileID, nil
+}
+
+// GetCurrentUserRoles returns the current user's roles from context (alias for GetUserRoles).
+func (h *Handler) GetCurrentUserRoles(ctx context.Context) string {
+	return h.GetUserRoles(ctx)
+}
+
+// SetUserProfile sets the user's profile ID.
+func (h *Handler) SetUserProfile(ctx context.Context, userID, profileID uuid.UUID) error {
+	return h.service.SetUserProfile(ctx, userID, profileID)
+}
+
 // --- Users CRUD ---
 
 // AdminPageData holds data for admin pages.

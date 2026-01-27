@@ -388,6 +388,7 @@ type SocialLink struct {
 type Contributor struct {
 	ID          uuid.UUID    `json:"id"`
 	SiteID      uuid.UUID    `json:"site_id"`
+	ProfileID   *uuid.UUID   `json:"profile_id,omitempty"`
 	ShortID     string       `json:"short_id"`
 	Handle      string       `json:"handle"`
 	Name        string       `json:"name"`

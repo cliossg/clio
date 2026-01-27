@@ -1,0 +1,41 @@
+{{ define "content" }}
+<div class="card">
+    <div class="card-header">
+        <h1>My Profile</h1>
+        <a href="/profile/edit" class="btn">Edit</a>
+    </div>
+
+    <dl class="detail-list">
+        <dt>Slug</dt>
+        <dd><code>{{ .Profile.Slug }}</code></dd>
+
+        <dt>Name</dt>
+        <dd>{{ .Profile.Name }}</dd>
+
+        <dt>Surname</dt>
+        <dd>{{ .Profile.Surname }}</dd>
+
+        <dt>Bio</dt>
+        <dd>{{ if .Profile.Bio }}{{ .Profile.Bio }}{{ else }}<em>Not set</em>{{ end }}</dd>
+
+        <dt>Social Links</dt>
+        <dd>
+            {{ if eq (len .SocialLinksMap) 0 }}
+                <em>Not set</em>
+            {{ else }}
+                <ul class="social-links-list">
+                {{ range $platform, $url := .SocialLinksMap }}
+                    <li><strong>{{ $platform }}</strong>: <a href="{{ $url }}" target="_blank">{{ $url }}</a></li>
+                {{ end }}
+                </ul>
+            {{ end }}
+        </dd>
+
+        <dt>Photo</dt>
+        <dd>{{ if .Profile.PhotoPath }}{{ .Profile.PhotoPath }}{{ else }}<em>Not set</em>{{ end }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Profile.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+</div>
+{{ end }}

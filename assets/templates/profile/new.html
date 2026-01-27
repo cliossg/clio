@@ -1,0 +1,90 @@
+{{ define "content" }}
+<div class="card">
+    <h1>Create Profile</h1>
+    <p>Set up your author profile to appear on your published content.</p>
+
+    {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
+
+    <form method="POST" action="/profile/create">
+        <div class="form-group">
+            <label for="slug">Slug</label>
+            <input type="text" id="slug" name="slug" required>
+            <small>URL-friendly identifier for your author page (e.g. john-doe)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="surname">Surname</label>
+            <input type="text" id="surname" name="surname">
+        </div>
+
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Social Links</label>
+            <table class="social-links-table">
+                <tbody>
+                    <tr><td><label for="social_facebook">Facebook</label></td><td><input type="text" id="social_facebook" name="social_facebook" placeholder="https://facebook.com/..."></td></tr>
+                    <tr><td><label for="social_youtube">YouTube</label></td><td><input type="text" id="social_youtube" name="social_youtube" placeholder="https://youtube.com/..."></td></tr>
+                    <tr><td><label for="social_instagram">Instagram</label></td><td><input type="text" id="social_instagram" name="social_instagram" placeholder="https://instagram.com/..."></td></tr>
+                    <tr><td><label for="social_x">X</label></td><td><input type="text" id="social_x" name="social_x" placeholder="https://x.com/..."></td></tr>
+                    <tr><td><label for="social_tiktok">TikTok</label></td><td><input type="text" id="social_tiktok" name="social_tiktok" placeholder="https://tiktok.com/..."></td></tr>
+                    <tr><td><label for="social_linkedin">LinkedIn</label></td><td><input type="text" id="social_linkedin" name="social_linkedin" placeholder="https://linkedin.com/in/..."></td></tr>
+                    <tr><td><label for="social_github">GitHub</label></td><td><input type="text" id="social_github" name="social_github" placeholder="https://github.com/..."></td></tr>
+                    <tr><td><label for="social_whatsapp">WhatsApp</label></td><td><input type="text" id="social_whatsapp" name="social_whatsapp" placeholder="https://wa.me/..."></td></tr>
+                    <tr><td><label for="social_telegram">Telegram</label></td><td><input type="text" id="social_telegram" name="social_telegram" placeholder="https://t.me/..."></td></tr>
+                    <tr><td><label for="social_reddit">Reddit</label></td><td><input type="text" id="social_reddit" name="social_reddit" placeholder="https://reddit.com/u/..."></td></tr>
+                </tbody>
+            </table>
+
+            <details class="form-details">
+                <summary>More platforms</summary>
+                <div>
+                <table class="social-links-table">
+                    <tbody>
+                        <tr><td><label for="social_messenger">Messenger</label></td><td><input type="text" id="social_messenger" name="social_messenger"></td></tr>
+                        <tr><td><label for="social_snapchat">Snapchat</label></td><td><input type="text" id="social_snapchat" name="social_snapchat"></td></tr>
+                        <tr><td><label for="social_pinterest">Pinterest</label></td><td><input type="text" id="social_pinterest" name="social_pinterest"></td></tr>
+                        <tr><td><label for="social_tumblr">Tumblr</label></td><td><input type="text" id="social_tumblr" name="social_tumblr"></td></tr>
+                        <tr><td><label for="social_discord">Discord</label></td><td><input type="text" id="social_discord" name="social_discord"></td></tr>
+                        <tr><td><label for="social_twitch">Twitch</label></td><td><input type="text" id="social_twitch" name="social_twitch"></td></tr>
+                        <tr><td><label for="social_signal">Signal</label></td><td><input type="text" id="social_signal" name="social_signal"></td></tr>
+                        <tr><td><label for="social_viber">Viber</label></td><td><input type="text" id="social_viber" name="social_viber"></td></tr>
+                        <tr><td><label for="social_line">LINE</label></td><td><input type="text" id="social_line" name="social_line"></td></tr>
+                        <tr><td><label for="social_kakaotalk">KakaoTalk</label></td><td><input type="text" id="social_kakaotalk" name="social_kakaotalk"></td></tr>
+                        <tr><td><label for="social_wechat">WeChat</label></td><td><input type="text" id="social_wechat" name="social_wechat"></td></tr>
+                        <tr><td><label for="social_qq">QQ</label></td><td><input type="text" id="social_qq" name="social_qq"></td></tr>
+                        <tr><td><label for="social_douyin">Douyin</label></td><td><input type="text" id="social_douyin" name="social_douyin"></td></tr>
+                        <tr><td><label for="social_kuaishou">Kuaishou</label></td><td><input type="text" id="social_kuaishou" name="social_kuaishou"></td></tr>
+                        <tr><td><label for="social_weibo">Weibo</label></td><td><input type="text" id="social_weibo" name="social_weibo"></td></tr>
+                        <tr><td><label for="social_xiaohongshu">Xiaohongshu</label></td><td><input type="text" id="social_xiaohongshu" name="social_xiaohongshu"></td></tr>
+                        <tr><td><label for="social_bilibili">Bilibili</label></td><td><input type="text" id="social_bilibili" name="social_bilibili"></td></tr>
+                        <tr><td><label for="social_zhihu">Zhihu</label></td><td><input type="text" id="social_zhihu" name="social_zhihu"></td></tr>
+                        <tr><td><label for="social_vk">VK</label></td><td><input type="text" id="social_vk" name="social_vk"></td></tr>
+                        <tr><td><label for="social_odnoklassniki">Odnoklassniki</label></td><td><input type="text" id="social_odnoklassniki" name="social_odnoklassniki"></td></tr>
+                        <tr><td><label for="social_mastodon">Mastodon</label></td><td><input type="text" id="social_mastodon" name="social_mastodon"></td></tr>
+                        <tr><td><label for="social_bluesky">Bluesky</label></td><td><input type="text" id="social_bluesky" name="social_bluesky"></td></tr>
+                        <tr><td><label for="social_threads">Threads</label></td><td><input type="text" id="social_threads" name="social_threads"></td></tr>
+                        <tr><td><label for="social_flickr">Flickr</label></td><td><input type="text" id="social_flickr" name="social_flickr"></td></tr>
+                        <tr><td><label for="social_vimeo">Vimeo</label></td><td><input type="text" id="social_vimeo" name="social_vimeo"></td></tr>
+                        <tr><td><label for="social_dailymotion">Dailymotion</label></td><td><input type="text" id="social_dailymotion" name="social_dailymotion"></td></tr>
+                        <tr><td><label for="social_quora">Quora</label></td><td><input type="text" id="social_quora" name="social_quora"></td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </details>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Profile</button>
+        </div>
+    </form>
+</div>
+{{ end }}

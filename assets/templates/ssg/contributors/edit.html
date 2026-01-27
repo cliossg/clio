@@ -3,29 +3,101 @@
     <p class="breadcrumb"><a href="/ssg/list-contributors?site_id={{ .Site.ID }}">&larr; Contributors</a></p>
     <h1>Edit Contributor</h1>
 
+    {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
+
     <form method="POST" action="/ssg/update-contributor">
         <input type="hidden" name="id" value="{{ .Contributor.ID }}">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
 
+        <h3>Internal Data</h3>
         <div class="form-group">
             <label for="handle">Handle</label>
             <input type="text" id="handle" name="handle" value="{{ .Contributor.Handle }}" required>
+            <small>Internal identifier for this contributor</small>
         </div>
 
-        <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" value="{{ .Contributor.Name }}" required>
-        </div>
-
-        <div class="form-group">
-            <label for="surname">Surname</label>
-            <input type="text" id="surname" name="surname" value="{{ .Contributor.Surname }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" value="{{ .Contributor.Name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="surname">Surname</label>
+                <input type="text" id="surname" name="surname" value="{{ .Contributor.Surname }}">
+            </div>
         </div>
 
         <div class="form-group">
             <label for="bio">Bio</label>
-            <textarea id="bio" name="bio" rows="4">{{ .Contributor.Bio }}</textarea>
+            <textarea id="bio" name="bio" rows="3">{{ .Contributor.Bio }}</textarea>
         </div>
+
+        <details class="form-details" {{ if .ContributorProfile }}open{{ end }}>
+            <summary>Public Profile (shown to readers)</summary>
+            <div>
+                <p><small>These fields are displayed publicly on author pages. If empty, internal data is used as fallback.</small></p>
+
+                <div class="form-group">
+                    <label for="profile_slug">Profile Slug</label>
+                    <input type="text" id="profile_slug" name="profile_slug" value="{{ if .ContributorProfile }}{{ .ContributorProfile.Slug }}{{ end }}">
+                    <small>URL-friendly identifier (e.g. john-doe)</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="profile_name">Display Name</label>
+                        <input type="text" id="profile_name" name="profile_name" value="{{ if .ContributorProfile }}{{ .ContributorProfile.Name }}{{ end }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_surname">Display Surname</label>
+                        <input type="text" id="profile_surname" name="profile_surname" value="{{ if .ContributorProfile }}{{ .ContributorProfile.Surname }}{{ end }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="profile_bio">Public Bio</label>
+                    <textarea id="profile_bio" name="profile_bio" rows="3">{{ if .ContributorProfile }}{{ .ContributorProfile.Bio }}{{ end }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Social Links</label>
+                    <table class="social-links-table">
+                        <tbody>
+                            <tr><td><label for="profile_social_facebook">Facebook</label></td><td><input type="text" id="profile_social_facebook" name="profile_social_facebook" value="{{ index .ProfileSocialLinks "facebook" }}" placeholder="https://facebook.com/..."></td></tr>
+                            <tr><td><label for="profile_social_youtube">YouTube</label></td><td><input type="text" id="profile_social_youtube" name="profile_social_youtube" value="{{ index .ProfileSocialLinks "youtube" }}" placeholder="https://youtube.com/..."></td></tr>
+                            <tr><td><label for="profile_social_instagram">Instagram</label></td><td><input type="text" id="profile_social_instagram" name="profile_social_instagram" value="{{ index .ProfileSocialLinks "instagram" }}" placeholder="https://instagram.com/..."></td></tr>
+                            <tr><td><label for="profile_social_x">X</label></td><td><input type="text" id="profile_social_x" name="profile_social_x" value="{{ index .ProfileSocialLinks "x" }}" placeholder="https://x.com/..."></td></tr>
+                            <tr><td><label for="profile_social_tiktok">TikTok</label></td><td><input type="text" id="profile_social_tiktok" name="profile_social_tiktok" value="{{ index .ProfileSocialLinks "tiktok" }}" placeholder="https://tiktok.com/..."></td></tr>
+                            <tr><td><label for="profile_social_linkedin">LinkedIn</label></td><td><input type="text" id="profile_social_linkedin" name="profile_social_linkedin" value="{{ index .ProfileSocialLinks "linkedin" }}" placeholder="https://linkedin.com/in/..."></td></tr>
+                            <tr><td><label for="profile_social_github">GitHub</label></td><td><input type="text" id="profile_social_github" name="profile_social_github" value="{{ index .ProfileSocialLinks "github" }}" placeholder="https://github.com/..."></td></tr>
+                            <tr><td><label for="profile_social_whatsapp">WhatsApp</label></td><td><input type="text" id="profile_social_whatsapp" name="profile_social_whatsapp" value="{{ index .ProfileSocialLinks "whatsapp" }}" placeholder="https://wa.me/..."></td></tr>
+                            <tr><td><label for="profile_social_telegram">Telegram</label></td><td><input type="text" id="profile_social_telegram" name="profile_social_telegram" value="{{ index .ProfileSocialLinks "telegram" }}" placeholder="https://t.me/..."></td></tr>
+                            <tr><td><label for="profile_social_reddit">Reddit</label></td><td><input type="text" id="profile_social_reddit" name="profile_social_reddit" value="{{ index .ProfileSocialLinks "reddit" }}" placeholder="https://reddit.com/u/..."></td></tr>
+                        </tbody>
+                    </table>
+
+                    <details class="form-details">
+                        <summary>More platforms</summary>
+                        <div>
+                        <table class="social-links-table">
+                            <tbody>
+                                <tr><td><label for="profile_social_messenger">Messenger</label></td><td><input type="text" id="profile_social_messenger" name="profile_social_messenger" value="{{ index .ProfileSocialLinks "messenger" }}"></td></tr>
+                                <tr><td><label for="profile_social_snapchat">Snapchat</label></td><td><input type="text" id="profile_social_snapchat" name="profile_social_snapchat" value="{{ index .ProfileSocialLinks "snapchat" }}"></td></tr>
+                                <tr><td><label for="profile_social_pinterest">Pinterest</label></td><td><input type="text" id="profile_social_pinterest" name="profile_social_pinterest" value="{{ index .ProfileSocialLinks "pinterest" }}"></td></tr>
+                                <tr><td><label for="profile_social_tumblr">Tumblr</label></td><td><input type="text" id="profile_social_tumblr" name="profile_social_tumblr" value="{{ index .ProfileSocialLinks "tumblr" }}"></td></tr>
+                                <tr><td><label for="profile_social_discord">Discord</label></td><td><input type="text" id="profile_social_discord" name="profile_social_discord" value="{{ index .ProfileSocialLinks "discord" }}"></td></tr>
+                                <tr><td><label for="profile_social_twitch">Twitch</label></td><td><input type="text" id="profile_social_twitch" name="profile_social_twitch" value="{{ index .ProfileSocialLinks "twitch" }}"></td></tr>
+                                <tr><td><label for="profile_social_mastodon">Mastodon</label></td><td><input type="text" id="profile_social_mastodon" name="profile_social_mastodon" value="{{ index .ProfileSocialLinks "mastodon" }}"></td></tr>
+                                <tr><td><label for="profile_social_bluesky">Bluesky</label></td><td><input type="text" id="profile_social_bluesky" name="profile_social_bluesky" value="{{ index .ProfileSocialLinks "bluesky" }}"></td></tr>
+                                <tr><td><label for="profile_social_threads">Threads</label></td><td><input type="text" id="profile_social_threads" name="profile_social_threads" value="{{ index .ProfileSocialLinks "threads" }}"></td></tr>
+                                <tr><td><label for="profile_social_vimeo">Vimeo</label></td><td><input type="text" id="profile_social_vimeo" name="profile_social_vimeo" value="{{ index .ProfileSocialLinks "vimeo" }}"></td></tr>
+                            </tbody>
+                        </table>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </details>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save</button>

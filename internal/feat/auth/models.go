@@ -18,6 +18,7 @@ type User struct {
 	Status             string
 	Roles              string
 	MustChangePassword bool
+	ProfileID          *uuid.UUID
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

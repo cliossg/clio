@@ -27,3 +27,6 @@ RETURNING *;
 
 -- name: DeleteContributor :exec
 DELETE FROM contributor WHERE id = ?;
+
+-- name: SetContributorProfile :exec
+UPDATE contributor SET profile_id = ?, updated_by = ?, updated_at = ? WHERE id = ?;

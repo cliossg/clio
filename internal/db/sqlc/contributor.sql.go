@@ -7,13 +7,14 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
 const createContributor = `-- name: CreateContributor :one
 INSERT INTO contributor (id, short_id, site_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, site_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
+RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
 `
 
 type CreateContributorParams struct {
@@ -53,6 +54,7 @@ func (q *Queries) CreateContributor(ctx context.Context, arg CreateContributorPa
 		&i.ID,
 		&i.ShortID,
 		&i.SiteID,
+		&i.ProfileID,
 		&i.Handle,
 		&i.Name,
 		&i.Surname,
@@ -77,7 +79,7 @@ func (q *Queries) DeleteContributor(ctx context.Context, id string) error {
 }
 
 const getContributor = `-- name: GetContributor :one
-SELECT id, short_id, site_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE id = ?
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE id = ?
 `
 
 func (q *Queries) GetContributor(ctx context.Context, id string) (Contributor, error) {
@@ -87,6 +89,7 @@ func (q *Queries) GetContributor(ctx context.Context, id string) (Contributor, e
 		&i.ID,
 		&i.ShortID,
 		&i.SiteID,
+		&i.ProfileID,
 		&i.Handle,
 		&i.Name,
 		&i.Surname,
@@ -102,7 +105,7 @@ func (q *Queries) GetContributor(ctx context.Context, id string) (Contributor, e
 }
 
 const getContributorByHandle = `-- name: GetContributorByHandle :one
-SELECT id, short_id, site_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? AND handle = ?
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? AND handle = ?
 `
 
 type GetContributorByHandleParams struct {
@@ -117,6 +120,7 @@ func (q *Queries) GetContributorByHandle(ctx context.Context, arg GetContributor
 		&i.ID,
 		&i.ShortID,
 		&i.SiteID,
+		&i.ProfileID,
 		&i.Handle,
 		&i.Name,
 		&i.Surname,
@@ -132,7 +136,7 @@ func (q *Queries) GetContributorByHandle(ctx context.Context, arg GetContributor
 }
 
 const listContributorsBySiteID = `-- name: ListContributorsBySiteID :many
-SELECT id, short_id, site_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? ORDER BY name, surname
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? ORDER BY name, surname
 `
 
 func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error) {
@@ -148,6 +152,7 @@ func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) (
 			&i.ID,
 			&i.ShortID,
 			&i.SiteID,
+			&i.ProfileID,
 			&i.Handle,
 			&i.Name,
 			&i.Surname,
@@ -172,6 +177,27 @@ func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) (
 	return items, nil
 }
 
+const setContributorProfile = `-- name: SetContributorProfile :exec
+UPDATE contributor SET profile_id = ?, updated_by = ?, updated_at = ? WHERE id = ?
+`
+
+type SetContributorProfileParams struct {
+	ProfileID sql.NullString `json:"profile_id"`
+	UpdatedBy string         `json:"updated_by"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	ID        string         `json:"id"`
+}
+
+func (q *Queries) SetContributorProfile(ctx context.Context, arg SetContributorProfileParams) error {
+	_, err := q.db.ExecContext(ctx, setContributorProfile,
+		arg.ProfileID,
+		arg.UpdatedBy,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	return err
+}
+
 const updateContributor = `-- name: UpdateContributor :one
 UPDATE contributor SET
     handle = ?,
@@ -183,7 +209,7 @@ UPDATE contributor SET
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, site_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
+RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
 `
 
 type UpdateContributorParams struct {
@@ -215,6 +241,7 @@ func (q *Queries) UpdateContributor(ctx context.Context, arg UpdateContributorPa
 		&i.ID,
 		&i.ShortID,
 		&i.SiteID,
+		&i.ProfileID,
 		&i.Handle,
 		&i.Name,
 		&i.Surname,

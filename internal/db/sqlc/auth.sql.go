@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -43,7 +44,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 const createUser = `-- name: CreateUser :one
 INSERT INTO user (id, short_id, email, password_hash, name, status, roles, must_change_password, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles
+RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id
 `
 
 type CreateUserParams struct {
@@ -84,6 +85,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.MustChangePassword,
 		&i.Roles,
+		&i.ProfileID,
 	)
 	return i, err
 }
@@ -141,7 +143,7 @@ func (q *Queries) GetSession(ctx context.Context, id string) (Session, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles FROM user WHERE id = ?
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id FROM user WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
@@ -158,12 +160,13 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 		&i.UpdatedAt,
 		&i.MustChangePassword,
 		&i.Roles,
+		&i.ProfileID,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles FROM user WHERE email = ?
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id FROM user WHERE email = ?
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -180,6 +183,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.MustChangePassword,
 		&i.Roles,
+		&i.ProfileID,
 	)
 	return i, err
 }
@@ -201,7 +205,7 @@ func (q *Queries) GetValidSession(ctx context.Context, id string) (Session, erro
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles FROM user ORDER BY created_at DESC
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id FROM user ORDER BY created_at DESC
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -224,6 +228,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.UpdatedAt,
 			&i.MustChangePassword,
 			&i.Roles,
+			&i.ProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -238,6 +243,21 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const setUserProfile = `-- name: SetUserProfile :exec
+UPDATE user SET profile_id = ?, updated_at = ? WHERE id = ?
+`
+
+type SetUserProfileParams struct {
+	ProfileID sql.NullString `json:"profile_id"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	ID        string         `json:"id"`
+}
+
+func (q *Queries) SetUserProfile(ctx context.Context, arg SetUserProfileParams) error {
+	_, err := q.db.ExecContext(ctx, setUserProfile, arg.ProfileID, arg.UpdatedAt, arg.ID)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE user SET
     email = ?,
@@ -248,7 +268,7 @@ UPDATE user SET
     must_change_password = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles
+RETURNING id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id
 `
 
 type UpdateUserParams struct {
@@ -285,6 +305,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.MustChangePassword,
 		&i.Roles,
+		&i.ProfileID,
 	)
 	return i, err
 }

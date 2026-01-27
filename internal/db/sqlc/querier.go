@@ -21,6 +21,7 @@ type Querier interface {
 	CreateLayout(ctx context.Context, arg CreateLayoutParams) (Layout, error)
 	CreateMeta(ctx context.Context, arg CreateMetaParams) (Meta, error)
 	CreateParam(ctx context.Context, arg CreateParamParams) (Param, error)
+	CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error)
 	CreateSection(ctx context.Context, arg CreateSectionParams) (Section, error)
 	CreateSectionImage(ctx context.Context, arg CreateSectionImageParams) error
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
@@ -38,6 +39,7 @@ type Querier interface {
 	DeleteMeta(ctx context.Context, id string) error
 	DeleteMetaByContentID(ctx context.Context, contentID string) error
 	DeleteParam(ctx context.Context, id string) error
+	DeleteProfile(ctx context.Context, id string) error
 	DeleteSection(ctx context.Context, id string) error
 	DeleteSectionImage(ctx context.Context, id string) error
 	DeleteSession(ctx context.Context, id string) error
@@ -72,6 +74,8 @@ type Querier interface {
 	GetParamByName(ctx context.Context, arg GetParamByNameParams) (Param, error)
 	GetParamByRefKey(ctx context.Context, arg GetParamByRefKeyParams) (Param, error)
 	GetParamsBySiteID(ctx context.Context, siteID string) ([]Param, error)
+	GetProfile(ctx context.Context, id string) (Profile, error)
+	GetProfileBySlug(ctx context.Context, slug string) (Profile, error)
 	GetPublishedContentBySiteID(ctx context.Context, siteID string) ([]Content, error)
 	GetSection(ctx context.Context, id string) (Section, error)
 	GetSectionByPath(ctx context.Context, arg GetSectionByPathParams) (Section, error)
@@ -92,11 +96,14 @@ type Querier interface {
 	GetValidSession(ctx context.Context, id string) (Session, error)
 	ListAllSites(ctx context.Context) ([]Site, error)
 	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
+	ListProfiles(ctx context.Context) ([]Profile, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveAllTagsFromContent(ctx context.Context, contentID string) error
 	RemoveTagFromContent(ctx context.Context, arg RemoveTagFromContentParams) error
 	SearchContent(ctx context.Context, arg SearchContentParams) ([]Content, error)
+	SetContributorProfile(ctx context.Context, arg SetContributorProfileParams) error
+	SetUserProfile(ctx context.Context, arg SetUserProfileParams) error
 	UpdateContent(ctx context.Context, arg UpdateContentParams) (Content, error)
 	UpdateContributor(ctx context.Context, arg UpdateContributorParams) (Contributor, error)
 	UpdateImage(ctx context.Context, arg UpdateImageParams) (Image, error)
@@ -104,6 +111,7 @@ type Querier interface {
 	UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Layout, error)
 	UpdateMeta(ctx context.Context, arg UpdateMetaParams) (Meta, error)
 	UpdateParam(ctx context.Context, arg UpdateParamParams) (Param, error)
+	UpdateProfile(ctx context.Context, arg UpdateProfileParams) (Profile, error)
 	UpdateSection(ctx context.Context, arg UpdateSectionParams) (Section, error)
 	UpdateSite(ctx context.Context, arg UpdateSiteParams) (Site, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)

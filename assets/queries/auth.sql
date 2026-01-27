@@ -27,6 +27,9 @@ RETURNING *;
 -- name: DeleteUser :exec
 DELETE FROM user WHERE id = ?;
 
+-- name: SetUserProfile :exec
+UPDATE user SET profile_id = ?, updated_at = ? WHERE id = ?;
+
 -- name: CreateSession :one
 INSERT INTO session (id, user_id, expires_at, created_at)
 VALUES (?, ?, ?, ?)

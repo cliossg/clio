@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/cliossg/clio/internal/feat/auth"
+	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/internal/feat/ssg"
 	"github.com/cliossg/clio/internal/web"
 	"github.com/cliossg/clio/pkg/cl/app"
@@ -41,6 +42,7 @@ func main() {
 	db.SetMigrationPath("assets/migrations/sqlite")
 
 	authService := auth.NewService(db, cfg, log)
+	profileService := profile.NewService(db, cfg, log)
 	ssgService := ssg.NewService(db, cfg, log)
 
 	optionalSessionMw := middleware.OptionalSession(authService)
@@ -48,7 +50,8 @@ func main() {
 	siteCtxMw := ssg.SiteContextMiddleware(ssgService, log)
 
 	authHandler := auth.NewHandler(authService, optionalSessionMw, templatesFS, cfg, log)
-	ssgHandler := ssg.NewHandler(ssgService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, cfg, log)
+	profileHandler := profile.NewHandler(profileService, authHandler, requiredSessionMw, templatesFS, cfg, log)
+	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, cfg, log)
 
 	authSeeder := auth.NewSeeder(authService, templatesFS, log)
 	if cfg.Credentials.Path != "" {
@@ -62,7 +65,7 @@ func main() {
 
 	fileServer := web.NewFileServer(staticFS, log)
 
-	deps := []any{db, authService, ssgService, authSeeder, ssgSeeder, authHandler, ssgHandler, fileServer}
+	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, authHandler, profileHandler, ssgHandler, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {

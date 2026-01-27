@@ -49,19 +49,20 @@ type ContentTag struct {
 }
 
 type Contributor struct {
-	ID          string    `json:"id"`
-	ShortID     string    `json:"short_id"`
-	SiteID      string    `json:"site_id"`
-	Handle      string    `json:"handle"`
-	Name        string    `json:"name"`
-	Surname     string    `json:"surname"`
-	Bio         string    `json:"bio"`
-	SocialLinks string    `json:"social_links"`
-	CreatedBy   string    `json:"created_by"`
-	UpdatedBy   string    `json:"updated_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Role        string    `json:"role"`
+	ID          string         `json:"id"`
+	ShortID     string         `json:"short_id"`
+	SiteID      string         `json:"site_id"`
+	ProfileID   sql.NullString `json:"profile_id"`
+	Handle      string         `json:"handle"`
+	Name        string         `json:"name"`
+	Surname     string         `json:"surname"`
+	Bio         string         `json:"bio"`
+	SocialLinks string         `json:"social_links"`
+	CreatedBy   string         `json:"created_by"`
+	UpdatedBy   string         `json:"updated_by"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	Role        string         `json:"role"`
 }
 
 type Image struct {
@@ -146,6 +147,21 @@ type Param struct {
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
 }
 
+type Profile struct {
+	ID          string    `json:"id"`
+	ShortID     string    `json:"short_id"`
+	Slug        string    `json:"slug"`
+	Name        string    `json:"name"`
+	Surname     string    `json:"surname"`
+	Bio         string    `json:"bio"`
+	SocialLinks string    `json:"social_links"`
+	PhotoPath   string    `json:"photo_path"`
+	CreatedBy   string    `json:"created_by"`
+	UpdatedBy   string    `json:"updated_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Section struct {
 	ID          string         `json:"id"`
 	SiteID      string         `json:"site_id"`
@@ -204,14 +220,15 @@ type Tag struct {
 }
 
 type User struct {
-	ID                 string    `json:"id"`
-	ShortID            string    `json:"short_id"`
-	Email              string    `json:"email"`
-	PasswordHash       string    `json:"password_hash"`
-	Name               string    `json:"name"`
-	Status             string    `json:"status"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
-	MustChangePassword int64     `json:"must_change_password"`
-	Roles              string    `json:"roles"`
+	ID                 string         `json:"id"`
+	ShortID            string         `json:"short_id"`
+	Email              string         `json:"email"`
+	PasswordHash       string         `json:"password_hash"`
+	Name               string         `json:"name"`
+	Status             string         `json:"status"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	MustChangePassword int64          `json:"must_change_password"`
+	Roles              string         `json:"roles"`
+	ProfileID          sql.NullString `json:"profile_id"`
 }

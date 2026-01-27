@@ -102,6 +102,7 @@ type Service interface {
 	GetContributors(ctx context.Context, siteID uuid.UUID) ([]*Contributor, error)
 	UpdateContributor(ctx context.Context, contributor *Contributor) error
 	DeleteContributor(ctx context.Context, id uuid.UUID) error
+	SetContributorProfile(ctx context.Context, contributorID, profileID uuid.UUID, updatedBy string) error
 }
 
 // DBProvider provides access to the database.
@@ -1411,6 +1412,22 @@ func (s *service) DeleteContributor(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (s *service) SetContributorProfile(ctx context.Context, contributorID, profileID uuid.UUID, updatedBy string) error {
+	s.ensureQueries()
+
+	err := s.queries.SetContributorProfile(ctx, sqlc.SetContributorProfileParams{
+		ProfileID: nullString(profileID.String()),
+		UpdatedBy: updatedBy,
+		UpdatedAt: time.Now(),
+		ID:        contributorID.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot set contributor profile: %w", err)
+	}
+
+	return nil
+}
+
 func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 	var socialLinks []SocialLink
 	if row.SocialLinks != "" && row.SocialLinks != "[]" {
@@ -1419,9 +1436,16 @@ func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 		}
 	}
 
+	var profileID *uuid.UUID
+	if row.ProfileID.Valid {
+		id := uuid.MustParse(row.ProfileID.String)
+		profileID = &id
+	}
+
 	return &Contributor{
 		ID:          uuid.MustParse(row.ID),
 		SiteID:      uuid.MustParse(row.SiteID),
+		ProfileID:   profileID,
 		ShortID:     row.ShortID,
 		Handle:      row.Handle,
 		Name:        row.Name,

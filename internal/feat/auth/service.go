@@ -33,6 +33,7 @@ type Service interface {
 	ListUsers(ctx context.Context) ([]*User, error)
 	UpdateUser(ctx context.Context, user *User) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	SetUserProfile(ctx context.Context, userID, profileID uuid.UUID) error
 	CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error)
 	ValidateSession(ctx context.Context, sessionID string) (string, error)
 	DeleteSession(ctx context.Context, sessionID string) error
@@ -280,9 +281,28 @@ func (s *service) GetSessionTTL() time.Duration {
 	return s.sessionTTL
 }
 
+func (s *service) SetUserProfile(ctx context.Context, userID, profileID uuid.UUID) error {
+	s.ensureQueries()
+
+	err := s.queries.SetUserProfile(ctx, sqlc.SetUserProfileParams{
+		ProfileID: toNullString(profileID.String()),
+		UpdatedAt: time.Now(),
+		ID:        userID.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot set user profile: %w", err)
+	}
+
+	return nil
+}
+
+func toNullString(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
+}
+
 func fromSQLCUser(u sqlc.User) *User {
 	id, _ := uuid.Parse(u.ID)
-	return &User{
+	user := &User{
 		ID:                 id,
 		ShortID:            u.ShortID,
 		Email:              u.Email,
@@ -294,6 +314,11 @@ func fromSQLCUser(u sqlc.User) *User {
 		CreatedAt:          u.CreatedAt,
 		UpdatedAt:          u.UpdatedAt,
 	}
+	if u.ProfileID.Valid {
+		profileID, _ := uuid.Parse(u.ProfileID.String)
+		user.ProfileID = &profileID
+	}
+	return user
 }
 
 func boolToInt(b bool) int64 {

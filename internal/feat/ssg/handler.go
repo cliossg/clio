@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
@@ -22,36 +23,42 @@ import (
 	"github.com/google/uuid"
 )
 
-// Handler handles SSG web routes.
-type Handler struct {
-	service    Service
-	workspace  *Workspace
-	generator  *Generator
-	htmlGen     *HTMLGenerator
-	siteCtxMw   func(http.Handler) http.Handler
-	sessionMw   func(http.Handler) http.Handler
-	userNameFn  func(context.Context) string
-	userRolesFn func(context.Context) string
-	assetsFS    embed.FS
-	cfg         *config.Config
-	log         logger.Logger
+type ProfileService interface {
+	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	GetProfile(ctx context.Context, id uuid.UUID) (*profile.Profile, error)
+	UpdateProfile(ctx context.Context, p *profile.Profile) error
 }
 
-// NewHandler creates a new SSG handler.
-func NewHandler(service Service, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+type Handler struct {
+	service        Service
+	profileService ProfileService
+	workspace      *Workspace
+	generator      *Generator
+	htmlGen        *HTMLGenerator
+	siteCtxMw      func(http.Handler) http.Handler
+	sessionMw      func(http.Handler) http.Handler
+	userNameFn     func(context.Context) string
+	userRolesFn    func(context.Context) string
+	assetsFS       embed.FS
+	cfg            *config.Config
+	log            logger.Logger
+}
+
+func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	return &Handler{
-		service:     service,
-		workspace:   workspace,
-		generator:   NewGenerator(workspace),
-		htmlGen:     NewHTMLGenerator(workspace, assetsFS),
-		siteCtxMw:   siteCtxMw,
-		sessionMw:   sessionMw,
-		userNameFn:  userNameFn,
-		userRolesFn: userRolesFn,
-		assetsFS:    assetsFS,
-		cfg:         cfg,
-		log:         log,
+		service:        service,
+		profileService: profileService,
+		workspace:      workspace,
+		generator:      NewGenerator(workspace),
+		htmlGen:        NewHTMLGenerator(workspace, assetsFS),
+		siteCtxMw:      siteCtxMw,
+		sessionMw:      sessionMw,
+		userNameFn:     userNameFn,
+		userRolesFn:    userRolesFn,
+		assetsFS:       assetsFS,
+		cfg:            cfg,
+		log:            log,
 	}
 }
 
@@ -308,8 +315,10 @@ type PageData struct {
 	Params          []*Param
 	Image           *Image
 	Images          []*Image
-	Contributor     *Contributor
-	Contributors    []*Contributor
+	Contributor          *Contributor
+	Contributors         []*Contributor
+	ContributorProfile   *profile.Profile
+	ProfileSocialLinks   map[string]string
 	HeaderImage     *ContentImageWithDetails
 	ContentImages   []*ContentImageWithDetails
 	SectionImages   []*SectionImageWithDetails
@@ -2654,10 +2663,21 @@ func (h *Handler) HandleEditContributor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var contributorProfile *profile.Profile
+	var socialLinksMap map[string]string
+	if contributor.ProfileID != nil {
+		contributorProfile, _ = h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+		if contributorProfile != nil {
+			socialLinksMap = parseSocialLinksToMap(contributorProfile.SocialLinks)
+		}
+	}
+
 	h.render(w, r, "ssg/contributors/edit", PageData{
-		Title:       "Edit " + contributor.FullName(),
-		Site:        site,
-		Contributor: contributor,
+		Title:              "Edit " + contributor.FullName(),
+		Site:               site,
+		Contributor:        contributor,
+		ContributorProfile: contributorProfile,
+		ProfileSocialLinks: socialLinksMap,
 	})
 }
 
@@ -2686,11 +2706,13 @@ func (h *Handler) HandleUpdateContributor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	userID := middleware.GetUserID(r.Context())
+
 	contributor.Handle = r.FormValue("handle")
 	contributor.Name = r.FormValue("name")
 	contributor.Surname = r.FormValue("surname")
 	contributor.Bio = r.FormValue("bio")
-	contributor.UpdatedBy = parseUUID(middleware.GetUserID(r.Context()))
+	contributor.UpdatedBy = parseUUID(userID)
 	contributor.UpdatedAt = time.Now()
 
 	if err := h.service.UpdateContributor(r.Context(), contributor); err != nil {
@@ -2701,6 +2723,34 @@ func (h *Handler) HandleUpdateContributor(w http.ResponseWriter, r *http.Request
 			Error:       "Cannot update contributor",
 		})
 		return
+	}
+
+	profileSlug := normalizeSlug(r.FormValue("profile_slug"))
+	profileName := strings.TrimSpace(r.FormValue("profile_name"))
+
+	if profileSlug != "" && profileName != "" {
+		profileSurname := strings.TrimSpace(r.FormValue("profile_surname"))
+		profileBio := strings.TrimSpace(r.FormValue("profile_bio"))
+		socialLinks := buildSocialLinksJSON(r)
+
+		if contributor.ProfileID != nil {
+			existingProfile, err := h.profileService.GetProfile(r.Context(), *contributor.ProfileID)
+			if err == nil && existingProfile != nil {
+				existingProfile.Slug = profileSlug
+				existingProfile.Name = profileName
+				existingProfile.Surname = profileSurname
+				existingProfile.Bio = profileBio
+				existingProfile.SocialLinks = socialLinks
+				existingProfile.UpdatedBy = userID
+				existingProfile.UpdatedAt = time.Now()
+				h.profileService.UpdateProfile(r.Context(), existingProfile)
+			}
+		} else {
+			newProfile, err := h.profileService.CreateProfile(r.Context(), profileSlug, profileName, profileSurname, profileBio, socialLinks, "", userID)
+			if err == nil && newProfile != nil {
+				h.service.SetContributorProfile(r.Context(), contributor.ID, newProfile.ID, userID)
+			}
+		}
 	}
 
 	h.siteRedirect(w, r, "/ssg/get-contributor?id="+id.String())
@@ -2826,4 +2876,62 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	// For now, just redirect back with a message
 	h.log.Info("Publish requested but not yet implemented", "site", site.Slug)
 	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=publish_not_implemented", http.StatusSeeOther)
+}
+
+type profileSocialLink struct {
+	Platform string `json:"platform"`
+	URL      string `json:"url"`
+}
+
+func parseSocialLinksToMap(jsonStr string) map[string]string {
+	result := make(map[string]string)
+	if jsonStr == "" || jsonStr == "[]" {
+		return result
+	}
+	var links []profileSocialLink
+	if err := json.Unmarshal([]byte(jsonStr), &links); err != nil {
+		return result
+	}
+	for _, link := range links {
+		result[link.Platform] = link.URL
+	}
+	return result
+}
+
+var socialPlatforms = []string{
+	"facebook", "youtube", "instagram", "x", "tiktok", "linkedin", "github",
+	"whatsapp", "telegram", "reddit", "messenger", "snapchat", "pinterest",
+	"tumblr", "discord", "twitch", "signal", "viber", "line", "kakaotalk",
+	"wechat", "qq", "douyin", "kuaishou", "weibo", "xiaohongshu", "bilibili",
+	"zhihu", "vk", "odnoklassniki", "mastodon", "bluesky", "threads", "flickr",
+	"vimeo", "dailymotion", "quora",
+}
+
+func buildSocialLinksJSON(r *http.Request) string {
+	var links []profileSocialLink
+	for _, platform := range socialPlatforms {
+		url := strings.TrimSpace(r.FormValue("profile_social_" + platform))
+		if url != "" {
+			links = append(links, profileSocialLink{Platform: platform, URL: url})
+		}
+	}
+	if len(links) == 0 {
+		return "[]"
+	}
+	data, err := json.Marshal(links)
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
+func normalizeSlug(s string) string {
+	s = strings.ToLower(s)
+	var result strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }

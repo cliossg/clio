@@ -1,21 +1,19 @@
 -- +migrate Up
-CREATE TABLE contributor (
+CREATE TABLE profile (
     id TEXT PRIMARY KEY,
     short_id TEXT NOT NULL,
-    site_id TEXT NOT NULL REFERENCES site(id) ON DELETE CASCADE,
-    profile_id TEXT REFERENCES profile(id) ON DELETE SET NULL,
-    handle TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     surname TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
     social_links TEXT NOT NULL DEFAULT '[]',
+    photo_path TEXT NOT NULL DEFAULT '',
     created_by TEXT NOT NULL,
     updated_by TEXT NOT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL
 );
-CREATE INDEX idx_contributor_site_id ON contributor(site_id);
-CREATE UNIQUE INDEX idx_contributor_site_handle ON contributor(site_id, handle);
+CREATE UNIQUE INDEX idx_profile_slug ON profile(slug);
 
 -- +migrate Down
-DROP TABLE contributor;
+DROP TABLE profile;
