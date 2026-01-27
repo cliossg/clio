@@ -6,7 +6,8 @@
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/images" enctype="multipart/form-data">
+    <form method="POST" action="/ssg/create-image" enctype="multipart/form-data">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="file">Image File</label>
             <input type="file" id="file" name="file" accept="image/*" required>
@@ -26,7 +27,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Upload Image</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/images" class="btn">Cancel</a>
+            <a href="/ssg/list-images?site_id={{ .Site.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

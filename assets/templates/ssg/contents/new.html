@@ -1,28 +1,33 @@
 {{ define "content" }}
 <div class="card">
-    <h1>New Content</h1>
+    <div class="card-header">
+        <h1>New Content</h1>
+    </div>
 
     {{ if .Error }}
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/contents">
+    <form method="POST" action="/ssg/create-content">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+
+        <!-- Basic Fields -->
         <div class="form-group">
             <label for="heading">Title</label>
             <input type="text" id="heading" name="heading" required placeholder="Enter content title">
         </div>
 
-        <div class="form-group">
-            <label for="section_id">Section</label>
-            <select id="section_id" name="section_id">
-                <option value="">-- No Section --</option>
-                {{ range .Sections }}
-                <option value="{{ .ID }}">{{ .Name }}</option>
-                {{ end }}
-            </select>
-        </div>
-
         <div class="form-row">
+            <div class="form-group">
+                <label for="section_id">Section</label>
+                <select id="section_id" name="section_id">
+                    <option value="">-- No Section --</option>
+                    {{ range .Sections }}
+                    <option value="{{ .ID }}">{{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="kind">Kind</label>
                 <select id="kind" name="kind">
@@ -31,7 +36,9 @@
                     <option value="series">Series</option>
                 </select>
             </div>
+        </div>
 
+        <div class="form-row">
             <div class="form-group">
                 <label for="series">Series Name</label>
                 <input type="text" id="series" name="series" placeholder="Optional series name">
@@ -48,16 +55,37 @@
             <textarea id="summary" name="summary" rows="2" placeholder="Brief summary for listings"></textarea>
         </div>
 
+        <!-- Split Pane Editor -->
         <div class="form-group">
-            <label for="body">Body (Markdown)</label>
-            <textarea id="body" name="body" rows="15" placeholder="Write your content in Markdown..."></textarea>
+            <label>Content (Markdown)</label>
+            <div class="editor-toolbar">
+                <div class="editor-toolbar-group">
+                    <button type="button" class="toolbar-btn" onclick="insertMarkdown('**', '**')" title="Bold">B</button>
+                    <button type="button" class="toolbar-btn" onclick="insertMarkdown('*', '*')" title="Italic"><i>I</i></button>
+                    <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')" title="Code">&lt;/&gt;</button>
+                    <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')" title="Link">Link</button>
+                    <button type="button" class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">Img</button>
+                </div>
+            </div>
+            <div id="editor-wrapper" class="editor-container">
+                <div class="editor-pane">
+                    <textarea id="body" name="body" class="editor-textarea" placeholder="Write your content in Markdown..."></textarea>
+                </div>
+                <div class="editor-splitter" id="splitter"></div>
+                <div class="editor-pane">
+                    <div id="preview" class="editor-preview prose"></div>
+                </div>
+            </div>
+            <small>Images can be uploaded after creating the content.</small>
         </div>
 
+        <!-- Tags -->
         <div class="form-group">
             <label for="tags">Tags</label>
             <input type="text" id="tags" name="tags" placeholder="Comma-separated tags (e.g., golang, web, tutorial)">
         </div>
 
+        <!-- Publishing Options -->
         <div class="form-row">
             <div class="form-group">
                 <label class="checkbox-label">
@@ -70,18 +98,91 @@
                     <input type="checkbox" name="featured"> Featured
                 </label>
             </div>
-        </div>
 
-        <div class="form-group">
-            <label for="published_at">Publish Date</label>
-            <input type="datetime-local" id="published_at" name="published_at">
-            <small>Leave empty to publish immediately when not a draft.</small>
+            <div class="form-group">
+                <label for="published_at">Publish Date</label>
+                <input type="datetime-local" id="published_at" name="published_at">
+            </div>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Content</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/contents" class="btn">Cancel</a>
+            <a href="/ssg/list-contents?site_id={{ .Site.ID }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<script src="/static/js/vendor/marked.min.js"></script>
+<script>
+// Elements
+const bodyTextarea = document.getElementById('body');
+const preview = document.getElementById('preview');
+const editorWrapper = document.getElementById('editor-wrapper');
+const splitter = document.getElementById('splitter');
+
+// Initialize marked
+marked.setOptions({
+    breaks: true,
+    gfm: true
+});
+
+// Update preview on input
+function updatePreview() {
+    preview.innerHTML = marked.parse(bodyTextarea.value || '');
+}
+
+bodyTextarea.addEventListener('input', updatePreview);
+updatePreview(); // Initial render
+
+// Splitter drag functionality
+let isDragging = false;
+let startX, startLeftWidth;
+
+splitter.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    const leftPane = splitter.previousElementSibling;
+    startLeftWidth = leftPane.offsetWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const leftPane = splitter.previousElementSibling;
+    const rightPane = splitter.nextElementSibling;
+    const containerWidth = editorWrapper.offsetWidth;
+    const newLeftWidth = startLeftWidth + (e.clientX - startX);
+    const minWidth = 200;
+    const maxWidth = containerWidth - minWidth - splitter.offsetWidth;
+
+    if (newLeftWidth >= minWidth && newLeftWidth <= maxWidth) {
+        leftPane.style.flex = 'none';
+        leftPane.style.width = newLeftWidth + 'px';
+        rightPane.style.flex = '1';
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }
+});
+
+// Toolbar markdown insertion
+function insertMarkdown(before, after) {
+    const start = bodyTextarea.selectionStart;
+    const end = bodyTextarea.selectionEnd;
+    const text = bodyTextarea.value;
+    const selected = text.substring(start, end);
+
+    bodyTextarea.value = text.substring(0, start) + before + selected + after + text.substring(end);
+    bodyTextarea.focus();
+    bodyTextarea.selectionStart = start + before.length;
+    bodyTextarea.selectionEnd = start + before.length + selected.length;
+    updatePreview();
+}
+</script>
 {{ end }}

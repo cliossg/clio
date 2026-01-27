@@ -305,6 +305,27 @@ type ContentImage struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// ContentImageWithDetails represents a content-image with full image data.
+type ContentImageWithDetails struct {
+	ContentImageID uuid.UUID `json:"content_image_id"`
+	ContentID      uuid.UUID `json:"content_id"`
+	IsHeader       bool      `json:"is_header"`
+	IsFeatured     bool      `json:"is_featured"`
+	OrderNum       int       `json:"order_num"`
+	// Image fields
+	ID        uuid.UUID `json:"id"`
+	SiteID    uuid.UUID `json:"site_id"`
+	ShortID   string    `json:"short_id"`
+	FileName  string    `json:"file_name"`
+	FilePath  string    `json:"file_path"`
+	AltText   string    `json:"alt_text"`
+	Title     string    `json:"title"`
+	Width     int       `json:"width"`
+	Height    int       `json:"height"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // SectionImage represents a section-image relationship.
 type SectionImage struct {
 	ID         uuid.UUID `json:"id"`

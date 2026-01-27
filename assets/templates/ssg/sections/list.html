@@ -2,7 +2,7 @@
 <div class="card">
     <div class="card-header">
         <h1>Sections</h1>
-        <a href="/ssg/sites/{{ .Site.ID }}/sections/new" class="btn">New Section</a>
+        <a href="/ssg/new-section?site_id={{ .Site.ID }}" class="btn">New Section</a>
     </div>
 
     {{ if .Error }}
@@ -26,22 +26,22 @@
         <tbody>
             {{ range .Sections }}
             <tr>
-                <td><a href="/ssg/sites/{{ $.Site.ID }}/sections/{{ .ID }}">{{ .Name }}</a></td>
+                <td><a href="/ssg/get-section?id={{ .ID }}">{{ .Name }}</a></td>
                 <td><code>{{ .Path }}</code></td>
                 <td>{{ if .LayoutName }}{{ .LayoutName }}{{ else }}<em>None</em>{{ end }}</td>
                 <td>
-                    <a href="/ssg/sites/{{ $.Site.ID }}/sections/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-section?id={{ .ID }}" class="btn btn-sm">Edit</a>
                 </td>
             </tr>
             {{ end }}
         </tbody>
     </table>
     {{ else }}
-    <p class="empty-state">No sections yet. <a href="/ssg/sites/{{ .Site.ID }}/sections/new">Create your first section</a>.</p>
+    <p class="empty-state">No sections yet. <a href="/ssg/new-section?site_id={{ .Site.ID }}">Create your first section</a>.</p>
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
     </p>
 </div>
 {{ end }}

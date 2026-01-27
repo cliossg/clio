@@ -65,6 +65,29 @@ VALUES (?, ?, ?, ?, ?, ?, ?);
 -- name: GetContentImagesByContentID :many
 SELECT * FROM content_images WHERE content_id = ? ORDER BY order_num;
 
+-- name: GetContentImagesWithDetails :many
+SELECT
+    ci.id as content_image_id,
+    ci.content_id,
+    ci.is_header,
+    ci.is_featured,
+    ci.order_num,
+    i.id,
+    i.site_id,
+    i.short_id,
+    i.file_name,
+    i.file_path,
+    i.alt_text,
+    i.title,
+    i.width,
+    i.height,
+    i.created_at,
+    i.updated_at
+FROM content_images ci
+JOIN image i ON ci.image_id = i.id
+WHERE ci.content_id = ?
+ORDER BY ci.is_header DESC, ci.order_num;
+
 -- name: DeleteContentImage :exec
 DELETE FROM content_images WHERE id = ?;
 

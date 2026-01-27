@@ -1,7 +1,8 @@
 {{ define "content" }}
 <div class="card">
     <h1>Edit {{ .Site.Name }}</h1>
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}">
+    <form method="POST" action="/ssg/update-site">
+        <input type="hidden" name="id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Site.Name }}" required>
@@ -24,10 +25,11 @@
         </div>
         <div class="actions">
             <button type="submit" class="btn">Save</button>
-            <a href="/ssg/sites" class="btn btn-secondary">Cancel</a>
+            <a href="/ssg/list-sites" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/delete" onsubmit="return confirm('Delete this site?')" style="margin-top: 30px;">
+    <form method="POST" action="/ssg/delete-site" onsubmit="return confirm('Delete this site?')" style="margin-top: 30px;">
+        <input type="hidden" name="id" value="{{ .Site.ID }}">
         <button type="submit" class="btn btn-danger">Delete Site</button>
     </form>
 </div>

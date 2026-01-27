@@ -265,6 +265,89 @@ func (q *Queries) GetContentImagesByContentID(ctx context.Context, contentID str
 	return items, nil
 }
 
+const getContentImagesWithDetails = `-- name: GetContentImagesWithDetails :many
+SELECT
+    ci.id as content_image_id,
+    ci.content_id,
+    ci.is_header,
+    ci.is_featured,
+    ci.order_num,
+    i.id,
+    i.site_id,
+    i.short_id,
+    i.file_name,
+    i.file_path,
+    i.alt_text,
+    i.title,
+    i.width,
+    i.height,
+    i.created_at,
+    i.updated_at
+FROM content_images ci
+JOIN image i ON ci.image_id = i.id
+WHERE ci.content_id = ?
+ORDER BY ci.is_header DESC, ci.order_num
+`
+
+type GetContentImagesWithDetailsRow struct {
+	ContentImageID string         `json:"content_image_id"`
+	ContentID      string         `json:"content_id"`
+	IsHeader       sql.NullInt64  `json:"is_header"`
+	IsFeatured     sql.NullInt64  `json:"is_featured"`
+	OrderNum       sql.NullInt64  `json:"order_num"`
+	ID             string         `json:"id"`
+	SiteID         string         `json:"site_id"`
+	ShortID        sql.NullString `json:"short_id"`
+	FileName       string         `json:"file_name"`
+	FilePath       string         `json:"file_path"`
+	AltText        sql.NullString `json:"alt_text"`
+	Title          sql.NullString `json:"title"`
+	Width          sql.NullInt64  `json:"width"`
+	Height         sql.NullInt64  `json:"height"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetContentImagesWithDetails(ctx context.Context, contentID string) ([]GetContentImagesWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getContentImagesWithDetails, contentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetContentImagesWithDetailsRow
+	for rows.Next() {
+		var i GetContentImagesWithDetailsRow
+		if err := rows.Scan(
+			&i.ContentImageID,
+			&i.ContentID,
+			&i.IsHeader,
+			&i.IsFeatured,
+			&i.OrderNum,
+			&i.ID,
+			&i.SiteID,
+			&i.ShortID,
+			&i.FileName,
+			&i.FilePath,
+			&i.AltText,
+			&i.Title,
+			&i.Width,
+			&i.Height,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getImage = `-- name: GetImage :one
 SELECT id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE id = ?
 `

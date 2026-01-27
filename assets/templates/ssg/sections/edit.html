@@ -6,7 +6,8 @@
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}">
+    <form method="POST" action="/ssg/update-section">
+        <input type="hidden" name="id" value="{{ .Section.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Section.Name }}" required>
@@ -35,7 +36,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Section</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/sections/{{ .Section.ID }}" class="btn">Cancel</a>
+            <a href="/ssg/get-section?id={{ .Section.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

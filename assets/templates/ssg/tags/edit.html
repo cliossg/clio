@@ -6,7 +6,8 @@
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}">
+    <form method="POST" action="/ssg/update-tag">
+        <input type="hidden" name="id" value="{{ .Tag.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Tag.Name }}" required>
@@ -14,7 +15,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Tag</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}" class="btn">Cancel</a>
+            <a href="/ssg/get-tag?id={{ .Tag.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

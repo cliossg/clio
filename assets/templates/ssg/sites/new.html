@@ -1,7 +1,7 @@
 {{ define "content" }}
 <div class="card">
     <h1>New Site</h1>
-    <form method="POST" action="/ssg/sites">
+    <form method="POST" action="/ssg/create-site">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" required>
@@ -19,7 +19,7 @@
         </div>
         <div class="actions">
             <button type="submit" class="btn">Create</button>
-            <a href="/ssg/sites" class="btn btn-secondary">Cancel</a>
+            <a href="/ssg/list-sites" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

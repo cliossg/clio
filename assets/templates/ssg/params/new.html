@@ -6,7 +6,8 @@
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/params">
+    <form method="POST" action="/ssg/create-param">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" required placeholder="e.g., site_title, analytics_id">
@@ -37,7 +38,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Parameter</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/params" class="btn">Cancel</a>
+            <a href="/ssg/list-params?site_id={{ .Site.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

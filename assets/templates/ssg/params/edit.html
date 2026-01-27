@@ -6,7 +6,8 @@
     <div class="alert alert-error">{{ .Error }}</div>
     {{ end }}
 
-    <form method="POST" action="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}">
+    <form method="POST" action="/ssg/update-param">
+        <input type="hidden" name="id" value="{{ .Param.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" value="{{ .Param.Name }}" required>
@@ -35,7 +36,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Parameter</button>
-            <a href="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}" class="btn">Cancel</a>
+            <a href="/ssg/get-param?id={{ .Param.ID }}" class="btn">Cancel</a>
         </div>
     </form>
 </div>

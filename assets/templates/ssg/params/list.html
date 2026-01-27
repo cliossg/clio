@@ -2,7 +2,7 @@
 <div class="card">
     <div class="card-header">
         <h1>Parameters</h1>
-        <a href="/ssg/sites/{{ .Site.ID }}/params/new" class="btn">New Parameter</a>
+        <a href="/ssg/new-param?site_id={{ .Site.ID }}" class="btn">New Parameter</a>
     </div>
 
     {{ if .Error }}
@@ -26,22 +26,22 @@
         <tbody>
             {{ range .Params }}
             <tr>
-                <td><a href="/ssg/sites/{{ $.Site.ID }}/params/{{ .ID }}">{{ .Name }}</a></td>
+                <td><a href="/ssg/get-param?id={{ .ID }}">{{ .Name }}</a></td>
                 <td><code>{{ if gt (len .Value) 50 }}{{ slice .Value 0 50 }}...{{ else }}{{ .Value }}{{ end }}</code></td>
                 <td>{{ if .System }}<span class="badge">System</span>{{ else }}-{{ end }}</td>
                 <td>
-                    <a href="/ssg/sites/{{ $.Site.ID }}/params/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-param?id={{ .ID }}" class="btn btn-sm">Edit</a>
                 </td>
             </tr>
             {{ end }}
         </tbody>
     </table>
     {{ else }}
-    <p class="empty-state">No parameters yet. <a href="/ssg/sites/{{ .Site.ID }}/params/new">Create your first parameter</a>.</p>
+    <p class="empty-state">No parameters yet. <a href="/ssg/new-param?site_id={{ .Site.ID }}">Create your first parameter</a>.</p>
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
     </p>
 </div>
 {{ end }}

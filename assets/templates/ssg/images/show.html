@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Image.FileName }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/images/{{ .Image.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/images/{{ .Image.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-image?id={{ .Image.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-image" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Image.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this image?')">Delete</button>
             </form>
         </div>
@@ -48,7 +49,7 @@
     </dl>
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}/images">&larr; Back to Images</a>
+        <a href="/ssg/list-images?site_id={{ .Site.ID }}">&larr; Back to Images</a>
     </p>
 </div>
 {{ end }}

@@ -75,7 +75,7 @@ func (h *Handler) SessionMiddleware() func(http.Handler) http.Handler {
 }
 
 func (h *Handler) handleHome(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ssg/sites", http.StatusSeeOther)
+	http.Redirect(w, r, "/ssg/list-sites", http.StatusSeeOther)
 }
 
 // PageData holds common page data for templates.
@@ -123,7 +123,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	middleware.SetSessionCookie(w, session.ID, maxAge)
 
 	h.log.Infof("User authenticated: %s", user.ID)
-	http.Redirect(w, r, "/ssg/sites", http.StatusSeeOther)
+	http.Redirect(w, r, "/ssg/list-sites", http.StatusSeeOther)
 }
 
 func (h *Handler) renderLoginForm(w http.ResponseWriter, errorMsg, email string) {

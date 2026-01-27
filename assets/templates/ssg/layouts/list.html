@@ -2,7 +2,7 @@
 <div class="card">
     <div class="card-header">
         <h1>Layouts</h1>
-        <a href="/ssg/sites/{{ .Site.ID }}/layouts/new" class="btn">New Layout</a>
+        <a href="/ssg/new-layout?site_id={{ .Site.ID }}" class="btn">New Layout</a>
     </div>
 
     {{ if .Error }}
@@ -25,21 +25,21 @@
         <tbody>
             {{ range .Layouts }}
             <tr>
-                <td><a href="/ssg/sites/{{ $.Site.ID }}/layouts/{{ .ID }}">{{ .Name }}</a></td>
+                <td><a href="/ssg/get-layout?id={{ .ID }}">{{ .Name }}</a></td>
                 <td>{{ if .Description }}{{ .Description }}{{ else }}<em>No description</em>{{ end }}</td>
                 <td>
-                    <a href="/ssg/sites/{{ $.Site.ID }}/layouts/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-layout?id={{ .ID }}" class="btn btn-sm">Edit</a>
                 </td>
             </tr>
             {{ end }}
         </tbody>
     </table>
     {{ else }}
-    <p class="empty-state">No layouts yet. <a href="/ssg/sites/{{ .Site.ID }}/layouts/new">Create your first layout</a>.</p>
+    <p class="empty-state">No layouts yet. <a href="/ssg/new-layout?site_id={{ .Site.ID }}">Create your first layout</a>.</p>
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
     </p>
 </div>
 {{ end }}

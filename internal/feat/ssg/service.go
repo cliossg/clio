@@ -78,6 +78,10 @@ type Service interface {
 	CreateImage(ctx context.Context, image *Image) error
 	GetImage(ctx context.Context, id uuid.UUID) (*Image, error)
 	GetImages(ctx context.Context, siteID uuid.UUID) ([]*Image, error)
+	GetContentImagesWithDetails(ctx context.Context, contentID uuid.UUID) ([]*ContentImageWithDetails, error)
+	LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error
+	UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error
+	UnlinkHeaderImageFromContent(ctx context.Context, contentID uuid.UUID) error
 	UpdateImage(ctx context.Context, image *Image) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error
 }
@@ -934,6 +938,95 @@ func (s *service) GetImages(ctx context.Context, siteID uuid.UUID) ([]*Image, er
 	}
 
 	return images, nil
+}
+
+func (s *service) GetContentImagesWithDetails(ctx context.Context, contentID uuid.UUID) ([]*ContentImageWithDetails, error) {
+	s.ensureQueries()
+
+	rows, err := s.queries.GetContentImagesWithDetails(ctx, contentID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get content images: %w", err)
+	}
+
+	images := make([]*ContentImageWithDetails, len(rows))
+	for i, row := range rows {
+		images[i] = &ContentImageWithDetails{
+			ContentImageID: uuid.MustParse(row.ContentImageID),
+			ContentID:      uuid.MustParse(row.ContentID),
+			IsHeader:       row.IsHeader.Int64 == 1,
+			IsFeatured:     row.IsFeatured.Int64 == 1,
+			OrderNum:       int(row.OrderNum.Int64),
+			ID:             uuid.MustParse(row.ID),
+			SiteID:         uuid.MustParse(row.SiteID),
+			ShortID:        row.ShortID.String,
+			FileName:       row.FileName,
+			FilePath:       row.FilePath,
+			AltText:        row.AltText.String,
+			Title:          row.Title.String,
+			Width:          int(row.Width.Int64),
+			Height:         int(row.Height.Int64),
+			CreatedAt:      row.CreatedAt.Time,
+			UpdatedAt:      row.UpdatedAt.Time,
+		}
+	}
+
+	return images, nil
+}
+
+func (s *service) LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error {
+	s.ensureQueries()
+
+	isHeaderInt := int64(0)
+	if isHeader {
+		isHeaderInt = 1
+	}
+
+	params := sqlc.CreateContentImageParams{
+		ID:        uuid.New().String(),
+		ContentID: contentID.String(),
+		ImageID:   imageID.String(),
+		IsHeader:  sql.NullInt64{Int64: isHeaderInt, Valid: true},
+		IsFeatured: sql.NullInt64{Int64: 0, Valid: true},
+		OrderNum:  sql.NullInt64{Int64: 0, Valid: true},
+		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	}
+
+	if err := s.queries.CreateContentImage(ctx, params); err != nil {
+		return fmt.Errorf("cannot link image to content: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error {
+	s.ensureQueries()
+
+	if err := s.queries.DeleteContentImage(ctx, contentImageID.String()); err != nil {
+		return fmt.Errorf("cannot unlink image from content: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) UnlinkHeaderImageFromContent(ctx context.Context, contentID uuid.UUID) error {
+	s.ensureQueries()
+
+	// Get all content images to find the header
+	images, err := s.GetContentImagesWithDetails(ctx, contentID)
+	if err != nil {
+		return fmt.Errorf("cannot get content images: %w", err)
+	}
+
+	for _, img := range images {
+		if img.IsHeader {
+			if err := s.queries.DeleteContentImage(ctx, img.ContentImageID.String()); err != nil {
+				return fmt.Errorf("cannot unlink header image: %w", err)
+			}
+			break
+		}
+	}
+
+	return nil
 }
 
 func (s *service) UpdateImage(ctx context.Context, image *Image) error {

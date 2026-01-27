@@ -2,7 +2,7 @@
 <div class="card">
     <div class="card-header">
         <h1>Tags</h1>
-        <a href="/ssg/sites/{{ .Site.ID }}/tags/new" class="btn">New Tag</a>
+        <a href="/ssg/new-tag?site_id={{ .Site.ID }}" class="btn">New Tag</a>
     </div>
 
     {{ if .Error }}
@@ -25,21 +25,21 @@
         <tbody>
             {{ range .Tags }}
             <tr>
-                <td><a href="/ssg/sites/{{ $.Site.ID }}/tags/{{ .ID }}">{{ .Name }}</a></td>
+                <td><a href="/ssg/get-tag?id={{ .ID }}">{{ .Name }}</a></td>
                 <td><code>{{ .Slug }}</code></td>
                 <td>
-                    <a href="/ssg/sites/{{ $.Site.ID }}/tags/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-tag?id={{ .ID }}" class="btn btn-sm">Edit</a>
                 </td>
             </tr>
             {{ end }}
         </tbody>
     </table>
     {{ else }}
-    <p class="empty-state">No tags yet. <a href="/ssg/sites/{{ .Site.ID }}/tags/new">Create your first tag</a>.</p>
+    <p class="empty-state">No tags yet. <a href="/ssg/new-tag?site_id={{ .Site.ID }}">Create your first tag</a>.</p>
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
     </p>
 </div>
 {{ end }}

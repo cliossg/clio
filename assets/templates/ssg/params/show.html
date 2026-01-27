@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Param.Name }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/params/{{ .Param.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-param?id={{ .Param.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-param" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Param.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this parameter?')">Delete</button>
             </form>
         </div>
@@ -42,7 +43,7 @@
     </dl>
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}/params">&larr; Back to Parameters</a>
+        <a href="/ssg/list-params?site_id={{ .Site.ID }}">&larr; Back to Parameters</a>
     </p>
 </div>
 {{ end }}

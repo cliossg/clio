@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Content.Heading }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/contents/{{ .Content.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-content?id={{ .Content.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-content" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Content.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this content?')">Delete</button>
             </form>
         </div>
@@ -65,7 +66,7 @@
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}/contents">&larr; Back to Contents</a>
+        <a href="/ssg/list-contents?site_id={{ .Site.ID }}">&larr; Back to Contents</a>
     </p>
 </div>
 {{ end }}

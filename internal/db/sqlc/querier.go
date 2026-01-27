@@ -49,6 +49,7 @@ type Querier interface {
 	GetContentBySiteID(ctx context.Context, siteID string) ([]Content, error)
 	GetContentForTag(ctx context.Context, tagID string) ([]Content, error)
 	GetContentImagesByContentID(ctx context.Context, contentID string) ([]ContentImage, error)
+	GetContentImagesWithDetails(ctx context.Context, contentID string) ([]GetContentImagesWithDetailsRow, error)
 	GetContentWithMeta(ctx context.Context, id string) (GetContentWithMetaRow, error)
 	GetContentWithPagination(ctx context.Context, arg GetContentWithPaginationParams) ([]Content, error)
 	GetImage(ctx context.Context, id string) (Image, error)

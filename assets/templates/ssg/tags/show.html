@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Tag.Name }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/tags/{{ .Tag.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-tag?id={{ .Tag.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-tag" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Tag.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this tag?')">Delete</button>
             </form>
         </div>
@@ -29,7 +30,7 @@
     </dl>
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}/tags">&larr; Back to Tags</a>
+        <a href="/ssg/list-tags?site_id={{ .Site.ID }}">&larr; Back to Tags</a>
     </p>
 </div>
 {{ end }}

@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Site.Name }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-site?id={{ .Site.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-site" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Site.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this site and all its content?')">Delete</button>
             </form>
         </div>
@@ -38,19 +39,19 @@
     <div class="site-nav">
         <h3>Content Management</h3>
         <div class="nav-grid">
-            <a href="/ssg/sites/{{ .Site.ID }}/contents" class="nav-card">
+            <a href="/ssg/list-contents?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Contents</strong>
                 <span>Manage posts, pages, and articles</span>
             </a>
-            <a href="/ssg/sites/{{ .Site.ID }}/sections" class="nav-card">
+            <a href="/ssg/list-sections?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Sections</strong>
                 <span>Organize content into sections</span>
             </a>
-            <a href="/ssg/sites/{{ .Site.ID }}/tags" class="nav-card">
+            <a href="/ssg/list-tags?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Tags</strong>
                 <span>Categorize and tag content</span>
             </a>
-            <a href="/ssg/sites/{{ .Site.ID }}/images" class="nav-card">
+            <a href="/ssg/list-images?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Images</strong>
                 <span>Manage media assets</span>
             </a>
@@ -58,11 +59,11 @@
 
         <h3>Site Configuration</h3>
         <div class="nav-grid">
-            <a href="/ssg/sites/{{ .Site.ID }}/layouts" class="nav-card">
+            <a href="/ssg/list-layouts?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Layouts</strong>
                 <span>Content display templates</span>
             </a>
-            <a href="/ssg/sites/{{ .Site.ID }}/params" class="nav-card">
+            <a href="/ssg/list-params?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Parameters</strong>
                 <span>Site settings and configuration</span>
             </a>
@@ -70,19 +71,22 @@
 
         <h3>Generation</h3>
         <div class="nav-grid">
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/generate-markdown" class="nav-card-form">
+            <form method="POST" action="/ssg/generate-markdown" class="nav-card-form">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
                     <strong>Generate Markdown</strong>
                     <span>Export content to .md files</span>
                 </button>
             </form>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/generate-html" class="nav-card-form">
+            <form method="POST" action="/ssg/generate-html" class="nav-card-form">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
                     <strong>Generate HTML</strong>
                     <span>Build static site</span>
                 </button>
             </form>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/publish" class="nav-card-form">
+            <form method="POST" action="/ssg/publish" class="nav-card-form">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
                     <strong>Publish</strong>
                     <span>Deploy to Git repository</span>
@@ -92,7 +96,7 @@
     </div>
 
     <p class="nav-links">
-        <a href="/ssg/sites">&larr; Back to Sites</a>
+        <a href="/ssg/list-sites">&larr; Back to Sites</a>
     </p>
 </div>
 {{ end }}

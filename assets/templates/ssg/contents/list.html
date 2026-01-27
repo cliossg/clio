@@ -2,7 +2,7 @@
 <div class="card">
     <div class="card-header">
         <h1>Contents</h1>
-        <a href="/ssg/sites/{{ .Site.ID }}/contents/new" class="btn">New Content</a>
+        <a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>
     </div>
 
     {{ if .Error }}
@@ -27,7 +27,7 @@
         <tbody>
             {{ range .Contents }}
             <tr>
-                <td><a href="/ssg/sites/{{ $.Site.ID }}/contents/{{ .ID }}">{{ .Heading }}</a></td>
+                <td><a href="/ssg/get-content?id={{ .ID }}">{{ .Heading }}</a></td>
                 <td>{{ if .SectionName }}{{ .SectionName }}{{ else }}<em>None</em>{{ end }}</td>
                 <td>{{ .Kind }}</td>
                 <td>
@@ -35,7 +35,7 @@
                     {{ if .Featured }}<span class="badge badge-info">Featured</span>{{ end }}
                 </td>
                 <td>
-                    <a href="/ssg/sites/{{ $.Site.ID }}/contents/{{ .ID }}/edit" class="btn btn-sm">Edit</a>
+                    <a href="/ssg/edit-content?id={{ .ID }}" class="btn btn-sm">Edit</a>
                 </td>
             </tr>
             {{ end }}
@@ -45,20 +45,20 @@
     {{ if gt .TotalPages 1 }}
     <div class="pagination">
         {{ if .HasPrev }}
-        <a href="?page={{ subtract .CurrentPage 1 }}" class="btn btn-sm">&larr; Previous</a>
+        <a href="?site_id={{ .Site.ID }}&page={{ subtract .CurrentPage 1 }}" class="btn btn-sm">&larr; Previous</a>
         {{ end }}
         <span>Page {{ .CurrentPage }} of {{ .TotalPages }}</span>
         {{ if .HasNext }}
-        <a href="?page={{ add .CurrentPage 1 }}" class="btn btn-sm">Next &rarr;</a>
+        <a href="?site_id={{ .Site.ID }}&page={{ add .CurrentPage 1 }}" class="btn btn-sm">Next &rarr;</a>
         {{ end }}
     </div>
     {{ end }}
     {{ else }}
-    <p class="empty-state">No content yet. <a href="/ssg/sites/{{ .Site.ID }}/contents/new">Create your first content</a>.</p>
+    <p class="empty-state">No content yet. <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.</p>
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
+        <a href="/ssg/get-site?id={{ .Site.ID }}">&larr; Back to {{ .Site.Name }}</a>
     </p>
 </div>
 {{ end }}

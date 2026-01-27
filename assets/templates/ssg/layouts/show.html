@@ -3,8 +3,9 @@
     <div class="card-header">
         <h1>{{ .Layout.Name }}</h1>
         <div>
-            <a href="/ssg/sites/{{ .Site.ID }}/layouts/{{ .Layout.ID }}/edit" class="btn">Edit</a>
-            <form method="POST" action="/ssg/sites/{{ .Site.ID }}/layouts/{{ .Layout.ID }}/delete" style="display:inline;">
+            <a href="/ssg/edit-layout?id={{ .Layout.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-layout" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Layout.ID }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this layout?')">Delete</button>
             </form>
         </div>
@@ -38,7 +39,7 @@
     {{ end }}
 
     <p class="nav-links">
-        <a href="/ssg/sites/{{ .Site.ID }}/layouts">&larr; Back to Layouts</a>
+        <a href="/ssg/list-layouts?site_id={{ .Site.ID }}">&larr; Back to Layouts</a>
     </p>
 </div>
 {{ end }}

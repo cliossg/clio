@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -12,19 +11,19 @@ type contextKey string
 
 const siteContextKey contextKey = "site"
 
-// SiteContextMiddleware creates a middleware that loads the site from the URL and puts it in context.
+// SiteContextMiddleware creates a middleware that loads the site from query param and puts it in context.
 func SiteContextMiddleware(service Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			siteIDStr := chi.URLParam(r, "siteID")
+			siteIDStr := r.URL.Query().Get("site_id")
 			if siteIDStr == "" {
-				http.Error(w, "Site ID required", http.StatusBadRequest)
+				http.Error(w, "site_id query param required", http.StatusBadRequest)
 				return
 			}
 
 			siteID, err := uuid.Parse(siteIDStr)
 			if err != nil {
-				http.Error(w, "Invalid site ID", http.StatusBadRequest)
+				http.Error(w, "Invalid site_id", http.StatusBadRequest)
 				return
 			}
 
