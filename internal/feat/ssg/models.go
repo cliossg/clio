@@ -54,6 +54,10 @@ type Section struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+func normalizePath(path string) string {
+	return strings.TrimLeft(path, "/")
+}
+
 // NewSection creates a new Section instance.
 func NewSection(siteID uuid.UUID, name, description, path string) *Section {
 	now := time.Now()
@@ -63,7 +67,7 @@ func NewSection(siteID uuid.UUID, name, description, path string) *Section {
 		ShortID:     uuid.New().String()[:8],
 		Name:        name,
 		Description: description,
-		Path:        path,
+		Path:        normalizePath(path),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}

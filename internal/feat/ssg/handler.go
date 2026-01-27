@@ -669,7 +669,7 @@ func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 
 	section.Name = r.FormValue("name")
 	section.Description = r.FormValue("description")
-	section.Path = r.FormValue("path")
+	section.Path = normalizePath(r.FormValue("path"))
 
 	if layoutID := r.FormValue("layout_id"); layoutID != "" {
 		if id, err := uuid.Parse(layoutID); err == nil {
