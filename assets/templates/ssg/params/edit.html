@@ -28,14 +28,6 @@
             {{ if .Param.System }}<small>System parameter - only value can be modified.</small>{{ else }}<small>Reference key cannot be changed after creation.</small>{{ end }}
         </div>
 
-        {{ if not .Param.System }}
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" name="system" {{ if .Param.System }}checked{{ end }}> System Parameter
-            </label>
-        </div>
-        {{ end }}
-
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Parameter</button>
             <a href="/ssg/get-param?id={{ .Param.ID }}&site_id={{ .Site.ID }}" class="btn">Cancel</a>

@@ -12,7 +12,7 @@
             <tr>
                 <th>Name</th>
                 <th>Value</th>
-                <th>Type</th>
+                <th style="text-align: center;">Type</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -21,7 +21,7 @@
             <tr class="clickable-row" onclick="window.location='/ssg/get-param?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
                 <td><code>{{ .MaskedValue }}</code></td>
-                <td>{{ if .System }}<span class="badge">System</span>{{ else }}<span class="badge badge-secondary">User</span>{{ end }}</td>
+                <td style="text-align: center;">{{ if .System }}<span class="badge">System</span>{{ else }}<span class="badge badge-outline">User</span>{{ end }}</td>
                 <td>
                     <a href="/ssg/edit-param?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>

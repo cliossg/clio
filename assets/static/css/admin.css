@@ -260,6 +260,8 @@ h1, h2, h3 {
     border-radius: 4px;
     background: var(--stone-beige);
     color: var(--navy-deep);
+    min-width: 4rem;
+    text-align: center;
 }
 
 .badge-success {
@@ -275,6 +277,12 @@ h1, h2, h3 {
 .badge-info {
     background: #d1ecf1;
     color: #0c5460;
+}
+
+.badge-outline {
+    background: transparent;
+    border: 1px solid var(--stone-beige);
+    color: var(--stone-beige);
 }
 
 /* Nav Links */
@@ -453,7 +461,8 @@ h1, h2, h3 {
 }
 
 .nav-card {
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding: 1rem;
     background: var(--white-warm);
     border: 1px solid var(--stone-beige);
