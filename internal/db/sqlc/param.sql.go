@@ -11,9 +11,9 @@ import (
 )
 
 const createParam = `-- name: CreateParam :one
-INSERT INTO param (id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at
+INSERT INTO param (id, site_id, short_id, name, description, value, ref_key, category, position, system, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position
 `
 
 type CreateParamParams struct {
@@ -24,6 +24,8 @@ type CreateParamParams struct {
 	Description sql.NullString `json:"description"`
 	Value       sql.NullString `json:"value"`
 	RefKey      sql.NullString `json:"ref_key"`
+	Category    sql.NullString `json:"category"`
+	Position    sql.NullInt64  `json:"position"`
 	System      sql.NullInt64  `json:"system"`
 	CreatedBy   sql.NullString `json:"created_by"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
@@ -40,6 +42,8 @@ func (q *Queries) CreateParam(ctx context.Context, arg CreateParamParams) (Param
 		arg.Description,
 		arg.Value,
 		arg.RefKey,
+		arg.Category,
+		arg.Position,
 		arg.System,
 		arg.CreatedBy,
 		arg.UpdatedBy,
@@ -60,6 +64,8 @@ func (q *Queries) CreateParam(ctx context.Context, arg CreateParamParams) (Param
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Category,
+		&i.Position,
 	)
 	return i, err
 }
@@ -74,7 +80,7 @@ func (q *Queries) DeleteParam(ctx context.Context, id string) error {
 }
 
 const getParam = `-- name: GetParam :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at FROM param WHERE id = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM param WHERE id = ?
 `
 
 func (q *Queries) GetParam(ctx context.Context, id string) (Param, error) {
@@ -93,12 +99,14 @@ func (q *Queries) GetParam(ctx context.Context, id string) (Param, error) {
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Category,
+		&i.Position,
 	)
 	return i, err
 }
 
 const getParamByName = `-- name: GetParamByName :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at FROM param WHERE site_id = ? AND name = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM param WHERE site_id = ? AND name = ?
 `
 
 type GetParamByNameParams struct {
@@ -122,12 +130,14 @@ func (q *Queries) GetParamByName(ctx context.Context, arg GetParamByNameParams) 
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Category,
+		&i.Position,
 	)
 	return i, err
 }
 
 const getParamByRefKey = `-- name: GetParamByRefKey :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at FROM param WHERE site_id = ? AND ref_key = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM param WHERE site_id = ? AND ref_key = ?
 `
 
 type GetParamByRefKeyParams struct {
@@ -151,12 +161,14 @@ func (q *Queries) GetParamByRefKey(ctx context.Context, arg GetParamByRefKeyPara
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Category,
+		&i.Position,
 	)
 	return i, err
 }
 
 const getParamsBySiteID = `-- name: GetParamsBySiteID :many
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at FROM param WHERE site_id = ? ORDER BY name
+SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM param WHERE site_id = ? ORDER BY category, position, name
 `
 
 func (q *Queries) GetParamsBySiteID(ctx context.Context, siteID string) ([]Param, error) {
@@ -181,6 +193,8 @@ func (q *Queries) GetParamsBySiteID(ctx context.Context, siteID string) ([]Param
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Category,
+			&i.Position,
 		); err != nil {
 			return nil, err
 		}
@@ -201,11 +215,13 @@ UPDATE param SET
     description = ?,
     value = ?,
     ref_key = ?,
+    category = ?,
+    position = ?,
     system = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position
 `
 
 type UpdateParamParams struct {
@@ -213,6 +229,8 @@ type UpdateParamParams struct {
 	Description sql.NullString `json:"description"`
 	Value       sql.NullString `json:"value"`
 	RefKey      sql.NullString `json:"ref_key"`
+	Category    sql.NullString `json:"category"`
+	Position    sql.NullInt64  `json:"position"`
 	System      sql.NullInt64  `json:"system"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
@@ -225,6 +243,8 @@ func (q *Queries) UpdateParam(ctx context.Context, arg UpdateParamParams) (Param
 		arg.Description,
 		arg.Value,
 		arg.RefKey,
+		arg.Category,
+		arg.Position,
 		arg.System,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
@@ -244,6 +264,8 @@ func (q *Queries) UpdateParam(ctx context.Context, arg UpdateParamParams) (Param
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Category,
+		&i.Position,
 	)
 	return i, err
 }

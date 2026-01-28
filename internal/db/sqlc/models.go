@@ -147,6 +147,8 @@ type Param struct {
 	UpdatedBy   sql.NullString `json:"updated_by"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	Category    sql.NullString `json:"category"`
+	Position    sql.NullInt64  `json:"position"`
 }
 
 type Profile struct {

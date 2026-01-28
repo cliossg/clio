@@ -155,32 +155,37 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		description string
 		value       string
 		refKey      string
+		category    string
+		position    int
 		system      bool
 	}{
-		{"site_description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", false},
-		{"hero_image", "Hero image filename", "", "hero_image", false},
-		{"Site base path", "Base path for GitHub Pages subpath hosting", "/", "ssg.site.base_path", false},
-		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", true},
-		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", true},
-		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", true},
-		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", true},
-		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", false},
-		{"Publish branch", "Git branch for publishing", "gh-pages", "ssg.publish.branch", false},
-		{"Pages subdirectory", "Subdirectory for GitHub Pages", "", "ssg.publish.pages.subdir", false},
-		{"Publish auth method", "Authentication method (token, ssh)", "token", "ssg.publish.auth.method", false},
-		{"Publish auth token", "Authentication token for publishing", "", "ssg.publish.auth.token", false},
-		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.publish.commit.user.name", false},
-		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.publish.commit.user.email", false},
-		{"Commit message", "Default commit message", "Update site content", "ssg.publish.commit.message", false},
-		{"Backup repository URL", "Git repository URL for markdown backup", "", "ssg.backup.repo.url", false},
-		{"Backup branch", "Git branch for markdown backup", "main", "ssg.backup.branch", false},
-		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", false},
+		// Site
+		{"Site description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", "site", 1, true},
+		{"Hero image", "Hero image filename", "", "hero_image", "site", 2, true},
+		{"Site base path", "Base path for GitHub Pages subpath hosting", "/", "ssg.site.base_path", "site", 3, true},
+		// Display
+		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", "display", 1, true},
+		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", "display", 2, true},
+		// Search
+		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", "search", 1, true},
+		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", "search", 2, true},
+		// Git
+		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", "git", 1, true},
+		{"Publish branch", "Git branch for publishing", "gh-pages", "ssg.publish.branch", "git", 2, true},
+		{"Publish auth token", "Authentication token for publishing", "", "ssg.publish.auth.token", "git", 3, true},
+		{"Backup repository URL", "Git repository URL for markdown backup", "", "ssg.backup.repo.url", "git", 4, true},
+		{"Backup branch", "Git branch for markdown backup", "main", "ssg.backup.branch", "git", 5, true},
+		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", "git", 6, true},
+		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.git.commit.user.name", "git", 7, true},
+		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.git.commit.user.email", "git", 8, true},
 	}
 
 	for _, d := range defaults {
 		param := NewParam(siteID, d.name, d.value)
 		param.Description = d.description
 		param.RefKey = d.refKey
+		param.Category = d.category
+		param.Position = d.position
 		param.System = d.system
 		if err := s.service.CreateParam(ctx, param); err != nil {
 			return fmt.Errorf("cannot create param %s: %w", d.name, err)

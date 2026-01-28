@@ -343,6 +343,12 @@ func paramFromSQLC(p sqlc.Param) *Param {
 	if p.UpdatedAt.Valid {
 		param.UpdatedAt = p.UpdatedAt.Time
 	}
+	if p.Category.Valid {
+		param.Category = p.Category.String
+	}
+	if p.Position.Valid {
+		param.Position = int(p.Position.Int64)
+	}
 
 	return param
 }

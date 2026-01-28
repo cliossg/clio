@@ -8,12 +8,12 @@
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
             <label for="name">Name</label>
-            <input type="text" id="name" name="name" value="{{ .Param.Name }}" required>
+            <input type="text" id="name" name="name" value="{{ .Param.Name }}" {{ if .Param.System }}disabled{{ end }} required>
         </div>
 
         <div class="form-group">
             <label for="description">Description</label>
-            <textarea id="description" name="description" rows="2">{{ .Param.Description }}</textarea>
+            <textarea id="description" name="description" rows="2" {{ if .Param.System }}disabled{{ end }}>{{ .Param.Description }}</textarea>
         </div>
 
         <div class="form-group">
@@ -24,14 +24,16 @@
         <div class="form-group">
             <label for="ref_key">Reference Key</label>
             <input type="text" id="ref_key" value="{{ .Param.RefKey }}" readonly disabled>
-            <small>Reference key cannot be changed after creation.</small>
+            {{ if .Param.System }}<small>System parameter - only value can be modified.</small>{{ else }}<small>Reference key cannot be changed after creation.</small>{{ end }}
         </div>
 
+        {{ if not .Param.System }}
         <div class="form-group">
             <label class="checkbox-label">
                 <input type="checkbox" name="system" {{ if .Param.System }}checked{{ end }}> System Parameter
             </label>
         </div>
+        {{ end }}
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Update Parameter</button>

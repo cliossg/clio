@@ -241,6 +241,8 @@ type Param struct {
 	Description string    `json:"description"`
 	Value       string    `json:"value"`
 	RefKey      string    `json:"ref_key"`
+	Category    string    `json:"category"`
+	Position    int       `json:"position"`
 	System      bool      `json:"system"`
 	CreatedBy   uuid.UUID `json:"-"`
 	UpdatedBy   uuid.UUID `json:"-"`
@@ -260,6 +262,31 @@ func NewParam(siteID uuid.UUID, name, value string) *Param {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+}
+
+func (p *Param) MaskedValue() string {
+	if p.Value == "" {
+		return ""
+	}
+
+	lower := strings.ToLower(p.Name) + strings.ToLower(p.RefKey)
+	sensitive := strings.Contains(lower, "token") ||
+		strings.Contains(lower, "pass") ||
+		strings.Contains(lower, "secret") ||
+		strings.Contains(lower, "key") ||
+		strings.Contains(lower, "credential")
+
+	if !sensitive {
+		if len(p.Value) > 50 {
+			return p.Value[:50] + "..."
+		}
+		return p.Value
+	}
+
+	if len(p.Value) <= 8 {
+		return "***"
+	}
+	return p.Value[:4] + "***..." + p.Value[len(p.Value)-4:]
 }
 
 // Image represents an image asset.

@@ -1879,10 +1879,11 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	param.Name = r.FormValue("name")
-	param.Description = r.FormValue("description")
+	if !param.System {
+		param.Name = r.FormValue("name")
+		param.Description = r.FormValue("description")
+	}
 	param.Value = r.FormValue("value")
-	// RefKey is immutable after creation
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -3136,8 +3137,8 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 	if repoURL != nil && repoURL.Value != "" {
 		authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
 		branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.branch")
-		commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.name")
-		commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.email")
+		commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
+		commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
 
 		branchValue := "main"
 		if branch != nil && branch.Value != "" {
@@ -3298,8 +3299,8 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 
 	authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.auth.token")
 	branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.branch")
-	commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.name")
-	commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.email")
+	commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
+	commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
 
 	branchValue := "gh-pages"
 	if branch != nil && branch.Value != "" {
