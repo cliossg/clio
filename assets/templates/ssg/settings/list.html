@@ -2,11 +2,11 @@
 <div class="card">
     <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">← {{ .Site.Name }}</a></p>
     <div class="card-header">
-        <h1>Parameters</h1>
-        <a href="/ssg/new-param?site_id={{ .Site.ID }}" class="btn">New Parameter</a>
+        <h1>Settings</h1>
+        <a href="/ssg/new-setting?site_id={{ .Site.ID }}" class="btn">New Setting</a>
     </div>
 
-    {{ if .Params }}
+    {{ if .Settings }}
     <table>
         <thead>
             <tr>
@@ -17,20 +17,20 @@
             </tr>
         </thead>
         <tbody>
-            {{ range .Params }}
-            <tr class="clickable-row" onclick="window.location='/ssg/get-param?id={{ .ID }}&site_id={{ $.Site.ID }}'">
+            {{ range .Settings }}
+            <tr class="clickable-row" onclick="window.location='/ssg/get-setting?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
                 <td><code>{{ .MaskedValue }}</code></td>
                 <td style="text-align: center;">{{ if .System }}<span class="badge">System</span>{{ else }}<span class="badge badge-outline">User</span>{{ end }}</td>
                 <td>
-                    <a href="/ssg/edit-param?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                    <a href="/ssg/edit-setting?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>
             </tr>
             {{ end }}
         </tbody>
     </table>
     {{ else }}
-    <p class="empty-state">No parameters yet. <a href="/ssg/new-param?site_id={{ .Site.ID }}">Create your first parameter</a>.</p>
+    <p class="empty-state">No settings yet. <a href="/ssg/new-setting?site_id={{ .Site.ID }}">Create your first setting</a>.</p>
     {{ end }}
 
 </div>

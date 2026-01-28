@@ -1,0 +1,44 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-settings?site_id={{ .Site.ID }}">← Settings</a></p>
+    <div class="card-header">
+        <h1>{{ .Setting.Name }}</h1>
+        <div>
+            <a href="/ssg/edit-setting?id={{ .Setting.ID }}&site_id={{ .Site.ID }}" class="btn">Edit</a>
+            <form method="POST" action="/ssg/delete-setting" style="display:inline;">
+                <input type="hidden" name="id" value="{{ .Setting.ID }}">
+                <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this setting?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <dl class="detail-list">
+        <dt>Name</dt>
+        <dd>{{ .Setting.Name }}</dd>
+
+        {{ if .Setting.Description }}
+        <dt>Description</dt>
+        <dd>{{ .Setting.Description }}</dd>
+        {{ end }}
+
+        <dt>Value</dt>
+        <dd><pre class="code-block">{{ .Setting.MaskedValue }}</pre></dd>
+
+        {{ if .Setting.RefKey }}
+        <dt>Reference Key</dt>
+        <dd><code>{{ .Setting.RefKey }}</code></dd>
+        {{ end }}
+
+        <dt>Type</dt>
+        <dd>{{ if .Setting.System }}<span class="badge">System</span>{{ else }}User{{ end }}</dd>
+
+        <dt>Created</dt>
+        <dd>{{ .Setting.CreatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ .Setting.UpdatedAt.Format "Jan 02, 2006 15:04" }}</dd>
+    </dl>
+
+</div>
+{{ end }}

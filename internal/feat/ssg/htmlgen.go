@@ -70,7 +70,7 @@ type GenerateHTMLResult struct {
 }
 
 // GenerateHTML generates the static HTML site.
-func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents []*Content, sections []*Section, layouts []*Layout, params []*Param, contributors []*Contributor, userAuthors map[string]*Contributor) (*GenerateHTMLResult, error) {
+func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents []*Content, sections []*Section, layouts []*Layout, params []*Setting, contributors []*Contributor, userAuthors map[string]*Contributor) (*GenerateHTMLResult, error) {
 	result := &GenerateHTMLResult{
 		TotalContent: len(contents),
 	}

@@ -234,8 +234,8 @@ func NewMeta(siteID, contentID uuid.UUID) *Meta {
 	}
 }
 
-// Param represents a site configuration parameter.
-type Param struct {
+// Setting represents a site configuration setting.
+type Setting struct {
 	ID          uuid.UUID `json:"id"`
 	SiteID      uuid.UUID `json:"site_id"`
 	ShortID     string    `json:"short_id"`
@@ -252,10 +252,10 @@ type Param struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// NewParam creates a new Param instance.
-func NewParam(siteID uuid.UUID, name, value string) *Param {
+// NewSetting creates a new Setting instance.
+func NewSetting(siteID uuid.UUID, name, value string) *Setting {
 	now := time.Now()
-	return &Param{
+	return &Setting{
 		ID:        uuid.New(),
 		SiteID:    siteID,
 		ShortID:   uuid.New().String()[:8],
@@ -266,7 +266,7 @@ func NewParam(siteID uuid.UUID, name, value string) *Param {
 	}
 }
 
-func (p *Param) MaskedValue() string {
+func (p *Setting) MaskedValue() string {
 	if p.Value == "" {
 		return ""
 	}

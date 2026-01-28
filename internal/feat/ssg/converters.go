@@ -314,50 +314,50 @@ func tagFromSQLC(t sqlc.Tag) *Tag {
 	return tag
 }
 
-// Param converters
+// Setting converters
 
-func paramFromSQLC(p sqlc.Param) *Param {
-	param := &Param{
-		ID:     parseUUID(p.ID),
-		SiteID: parseUUID(p.SiteID),
-		Name:   p.Name,
-	}
-
-	if p.ShortID.Valid {
-		param.ShortID = p.ShortID.String
-	}
-	if p.Description.Valid {
-		param.Description = p.Description.String
-	}
-	if p.Value.Valid {
-		param.Value = p.Value.String
-	}
-	if p.RefKey.Valid {
-		param.RefKey = p.RefKey.String
-	}
-	if p.System.Valid {
-		param.System = intToBool(p.System.Int64)
-	}
-	if p.CreatedBy.Valid {
-		param.CreatedBy = parseUUID(p.CreatedBy.String)
-	}
-	if p.UpdatedBy.Valid {
-		param.UpdatedBy = parseUUID(p.UpdatedBy.String)
-	}
-	if p.CreatedAt.Valid {
-		param.CreatedAt = p.CreatedAt.Time
-	}
-	if p.UpdatedAt.Valid {
-		param.UpdatedAt = p.UpdatedAt.Time
-	}
-	if p.Category.Valid {
-		param.Category = p.Category.String
-	}
-	if p.Position.Valid {
-		param.Position = int(p.Position.Int64)
+func settingFromSQLC(s sqlc.Setting) *Setting {
+	setting := &Setting{
+		ID:     parseUUID(s.ID),
+		SiteID: parseUUID(s.SiteID),
+		Name:   s.Name,
 	}
 
-	return param
+	if s.ShortID.Valid {
+		setting.ShortID = s.ShortID.String
+	}
+	if s.Description.Valid {
+		setting.Description = s.Description.String
+	}
+	if s.Value.Valid {
+		setting.Value = s.Value.String
+	}
+	if s.RefKey.Valid {
+		setting.RefKey = s.RefKey.String
+	}
+	if s.System.Valid {
+		setting.System = intToBool(s.System.Int64)
+	}
+	if s.CreatedBy.Valid {
+		setting.CreatedBy = parseUUID(s.CreatedBy.String)
+	}
+	if s.UpdatedBy.Valid {
+		setting.UpdatedBy = parseUUID(s.UpdatedBy.String)
+	}
+	if s.CreatedAt.Valid {
+		setting.CreatedAt = s.CreatedAt.Time
+	}
+	if s.UpdatedAt.Valid {
+		setting.UpdatedAt = s.UpdatedAt.Time
+	}
+	if s.Category.Valid {
+		setting.Category = s.Category.String
+	}
+	if s.Position.Valid {
+		setting.Position = int(s.Position.Int64)
+	}
+
+	return setting
 }
 
 // Image converters

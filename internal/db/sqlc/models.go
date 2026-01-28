@@ -134,23 +134,6 @@ type Meta struct {
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 }
 
-type Param struct {
-	ID          string         `json:"id"`
-	SiteID      string         `json:"site_id"`
-	ShortID     sql.NullString `json:"short_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Value       sql.NullString `json:"value"`
-	RefKey      sql.NullString `json:"ref_key"`
-	System      sql.NullInt64  `json:"system"`
-	CreatedBy   sql.NullString `json:"created_by"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	Category    sql.NullString `json:"category"`
-	Position    sql.NullInt64  `json:"position"`
-}
-
 type Profile struct {
 	ID          string    `json:"id"`
 	ShortID     string    `json:"short_id"`
@@ -196,6 +179,23 @@ type Session struct {
 	UserID    string    `json:"user_id"`
 	ExpiresAt time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type Setting struct {
+	ID          string         `json:"id"`
+	SiteID      string         `json:"site_id"`
+	ShortID     sql.NullString `json:"short_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Value       sql.NullString `json:"value"`
+	RefKey      sql.NullString `json:"ref_key"`
+	System      sql.NullInt64  `json:"system"`
+	CreatedBy   sql.NullString `json:"created_by"`
+	UpdatedBy   sql.NullString `json:"updated_by"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	Category    sql.NullString `json:"category"`
+	Position    sql.NullInt64  `json:"position"`
 }
 
 type Site struct {

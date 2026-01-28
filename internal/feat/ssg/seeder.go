@@ -184,13 +184,13 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 	}
 
 	for _, d := range defaults {
-		param := NewParam(siteID, d.name, d.value)
+		param := NewSetting(siteID, d.name, d.value)
 		param.Description = d.description
 		param.RefKey = d.refKey
 		param.Category = d.category
 		param.Position = d.position
 		param.System = d.system
-		if err := s.service.CreateParam(ctx, param); err != nil {
+		if err := s.service.CreateSetting(ctx, param); err != nil {
 			return fmt.Errorf("cannot create param %s: %w", d.name, err)
 		}
 	}

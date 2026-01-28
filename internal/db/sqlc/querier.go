@@ -20,11 +20,11 @@ type Querier interface {
 	CreateImageVariant(ctx context.Context, arg CreateImageVariantParams) (ImageVariant, error)
 	CreateLayout(ctx context.Context, arg CreateLayoutParams) (Layout, error)
 	CreateMeta(ctx context.Context, arg CreateMetaParams) (Meta, error)
-	CreateParam(ctx context.Context, arg CreateParamParams) (Param, error)
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error)
 	CreateSection(ctx context.Context, arg CreateSectionParams) (Section, error)
 	CreateSectionImage(ctx context.Context, arg CreateSectionImageParams) error
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
+	CreateSetting(ctx context.Context, arg CreateSettingParams) (Setting, error)
 	CreateSite(ctx context.Context, arg CreateSiteParams) (Site, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
@@ -38,11 +38,11 @@ type Querier interface {
 	DeleteLayout(ctx context.Context, id string) error
 	DeleteMeta(ctx context.Context, id string) error
 	DeleteMetaByContentID(ctx context.Context, contentID string) error
-	DeleteParam(ctx context.Context, id string) error
 	DeleteProfile(ctx context.Context, id string) error
 	DeleteSection(ctx context.Context, id string) error
 	DeleteSectionImage(ctx context.Context, id string) error
 	DeleteSession(ctx context.Context, id string) error
+	DeleteSetting(ctx context.Context, id string) error
 	DeleteSite(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
 	DeleteUser(ctx context.Context, id string) error
@@ -70,10 +70,6 @@ type Querier interface {
 	GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layout, error)
 	GetMeta(ctx context.Context, id string) (Meta, error)
 	GetMetaByContentID(ctx context.Context, contentID string) (Meta, error)
-	GetParam(ctx context.Context, id string) (Param, error)
-	GetParamByName(ctx context.Context, arg GetParamByNameParams) (Param, error)
-	GetParamByRefKey(ctx context.Context, arg GetParamByRefKeyParams) (Param, error)
-	GetParamsBySiteID(ctx context.Context, siteID string) ([]Param, error)
 	GetProfile(ctx context.Context, id string) (Profile, error)
 	GetProfileBySlug(ctx context.Context, slug string) (Profile, error)
 	GetPublishedContentBySiteID(ctx context.Context, siteID string) ([]Content, error)
@@ -84,6 +80,10 @@ type Querier interface {
 	GetSectionImagesWithDetails(ctx context.Context, sectionID string) ([]GetSectionImagesWithDetailsRow, error)
 	GetSectionsBySiteID(ctx context.Context, siteID string) ([]Section, error)
 	GetSession(ctx context.Context, id string) (Session, error)
+	GetSetting(ctx context.Context, id string) (Setting, error)
+	GetSettingByName(ctx context.Context, arg GetSettingByNameParams) (Setting, error)
+	GetSettingByRefKey(ctx context.Context, arg GetSettingByRefKeyParams) (Setting, error)
+	GetSettingsBySiteID(ctx context.Context, siteID string) ([]Setting, error)
 	GetSite(ctx context.Context, id string) (Site, error)
 	GetSiteBySlug(ctx context.Context, slug string) (Site, error)
 	GetTag(ctx context.Context, id string) (Tag, error)
@@ -113,9 +113,9 @@ type Querier interface {
 	UpdateImageVariant(ctx context.Context, arg UpdateImageVariantParams) (ImageVariant, error)
 	UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Layout, error)
 	UpdateMeta(ctx context.Context, arg UpdateMetaParams) (Meta, error)
-	UpdateParam(ctx context.Context, arg UpdateParamParams) (Param, error)
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) (Profile, error)
 	UpdateSection(ctx context.Context, arg UpdateSectionParams) (Section, error)
+	UpdateSetting(ctx context.Context, arg UpdateSettingParams) (Setting, error)
 	UpdateSite(ctx context.Context, arg UpdateSiteParams) (Site, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)

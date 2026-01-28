@@ -179,7 +179,7 @@ func (s *PreviewServer) getBasePath(ctx context.Context, siteSlug string) string
 		return "/"
 	}
 
-	param, err := s.service.GetParamByRefKey(ctx, site.ID, "ssg.site.base_path")
+	param, err := s.service.GetSettingByRefKey(ctx, site.ID, "ssg.site.base_path")
 	if err != nil || param == nil || param.Value == "" {
 		return "/"
 	}

@@ -16,7 +16,7 @@
         <a href="/ssg/list-contents?site_id={{ .Site.ID }}">Contents</a>
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-layouts?site_id={{ .Site.ID }}">Layouts</a>{{ end }}
         <a href="/ssg/list-tags?site_id={{ .Site.ID }}">Tags</a>
-        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-params?site_id={{ .Site.ID }}">Params</a>{{ end }}
+        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-settings?site_id={{ .Site.ID }}">Settings</a>{{ end }}
         <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-contributors?site_id={{ .Site.ID }}">Contributors</a>{{ end }}
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/admin/list-users">Users</a>{{ end }}

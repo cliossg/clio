@@ -67,14 +67,14 @@ type Service interface {
 	RemoveAllTagsFromContent(ctx context.Context, contentID uuid.UUID) error
 	GetTagsForContent(ctx context.Context, contentID uuid.UUID) ([]*Tag, error)
 
-	// Param operations
-	CreateParam(ctx context.Context, param *Param) error
-	GetParam(ctx context.Context, id uuid.UUID) (*Param, error)
-	GetParamByName(ctx context.Context, siteID uuid.UUID, name string) (*Param, error)
-	GetParamByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Param, error)
-	GetParams(ctx context.Context, siteID uuid.UUID) ([]*Param, error)
-	UpdateParam(ctx context.Context, param *Param) error
-	DeleteParam(ctx context.Context, id uuid.UUID) error
+	// Setting operations
+	CreateSetting(ctx context.Context, param *Setting) error
+	GetSetting(ctx context.Context, id uuid.UUID) (*Setting, error)
+	GetSettingByName(ctx context.Context, siteID uuid.UUID, name string) (*Setting, error)
+	GetSettingByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Setting, error)
+	GetSettings(ctx context.Context, siteID uuid.UUID) ([]*Setting, error)
+	UpdateSetting(ctx context.Context, param *Setting) error
+	DeleteSetting(ctx context.Context, id uuid.UUID) error
 
 	// Image operations
 	CreateImage(ctx context.Context, image *Image) error
@@ -817,12 +817,12 @@ func (s *service) GetTagsForContent(ctx context.Context, contentID uuid.UUID) ([
 	return tags, nil
 }
 
-// --- Param Operations ---
+// --- Setting Operations ---
 
-func (s *service) CreateParam(ctx context.Context, param *Param) error {
+func (s *service) CreateSetting(ctx context.Context, param *Setting) error {
 	s.ensureQueries()
 
-	params := sqlc.CreateParamParams{
+	params := sqlc.CreateSettingParams{
 		ID:          param.ID.String(),
 		SiteID:      param.SiteID.String(),
 		ShortID:     nullString(param.ShortID),
@@ -839,7 +839,7 @@ func (s *service) CreateParam(ctx context.Context, param *Param) error {
 		UpdatedAt:   nullTime(&param.UpdatedAt),
 	}
 
-	_, err := s.queries.CreateParam(ctx, params)
+	_, err := s.queries.CreateSetting(ctx, params)
 	if err != nil {
 		return fmt.Errorf("cannot create param: %w", err)
 	}
@@ -847,10 +847,10 @@ func (s *service) CreateParam(ctx context.Context, param *Param) error {
 	return nil
 }
 
-func (s *service) GetParam(ctx context.Context, id uuid.UUID) (*Param, error) {
+func (s *service) GetSetting(ctx context.Context, id uuid.UUID) (*Setting, error) {
 	s.ensureQueries()
 
-	sqlcParam, err := s.queries.GetParam(ctx, id.String())
+	sqlcParam, err := s.queries.GetSetting(ctx, id.String())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -858,13 +858,13 @@ func (s *service) GetParam(ctx context.Context, id uuid.UUID) (*Param, error) {
 		return nil, fmt.Errorf("cannot get param: %w", err)
 	}
 
-	return paramFromSQLC(sqlcParam), nil
+	return settingFromSQLC(sqlcParam), nil
 }
 
-func (s *service) GetParamByName(ctx context.Context, siteID uuid.UUID, name string) (*Param, error) {
+func (s *service) GetSettingByName(ctx context.Context, siteID uuid.UUID, name string) (*Setting, error) {
 	s.ensureQueries()
 
-	sqlcParam, err := s.queries.GetParamByName(ctx, sqlc.GetParamByNameParams{
+	sqlcParam, err := s.queries.GetSettingByName(ctx, sqlc.GetSettingByNameParams{
 		SiteID: siteID.String(),
 		Name:   name,
 	})
@@ -875,13 +875,13 @@ func (s *service) GetParamByName(ctx context.Context, siteID uuid.UUID, name str
 		return nil, fmt.Errorf("cannot get param by name: %w", err)
 	}
 
-	return paramFromSQLC(sqlcParam), nil
+	return settingFromSQLC(sqlcParam), nil
 }
 
-func (s *service) GetParamByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Param, error) {
+func (s *service) GetSettingByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Setting, error) {
 	s.ensureQueries()
 
-	sqlcParam, err := s.queries.GetParamByRefKey(ctx, sqlc.GetParamByRefKeyParams{
+	sqlcParam, err := s.queries.GetSettingByRefKey(ctx, sqlc.GetSettingByRefKeyParams{
 		SiteID: siteID.String(),
 		RefKey: sql.NullString{String: refKey, Valid: true},
 	})
@@ -892,29 +892,29 @@ func (s *service) GetParamByRefKey(ctx context.Context, siteID uuid.UUID, refKey
 		return nil, fmt.Errorf("cannot get param by ref key: %w", err)
 	}
 
-	return paramFromSQLC(sqlcParam), nil
+	return settingFromSQLC(sqlcParam), nil
 }
 
-func (s *service) GetParams(ctx context.Context, siteID uuid.UUID) ([]*Param, error) {
+func (s *service) GetSettings(ctx context.Context, siteID uuid.UUID) ([]*Setting, error) {
 	s.ensureQueries()
 
-	sqlcParams, err := s.queries.GetParamsBySiteID(ctx, siteID.String())
+	sqlcParams, err := s.queries.GetSettingsBySiteID(ctx, siteID.String())
 	if err != nil {
 		return nil, fmt.Errorf("cannot get params: %w", err)
 	}
 
-	params := make([]*Param, len(sqlcParams))
+	params := make([]*Setting, len(sqlcParams))
 	for i, sqlcParam := range sqlcParams {
-		params[i] = paramFromSQLC(sqlcParam)
+		params[i] = settingFromSQLC(sqlcParam)
 	}
 
 	return params, nil
 }
 
-func (s *service) UpdateParam(ctx context.Context, param *Param) error {
+func (s *service) UpdateSetting(ctx context.Context, param *Setting) error {
 	s.ensureQueries()
 
-	params := sqlc.UpdateParamParams{
+	params := sqlc.UpdateSettingParams{
 		Name:        param.Name,
 		Description: nullString(param.Description),
 		Value:       nullString(param.Value),
@@ -927,7 +927,7 @@ func (s *service) UpdateParam(ctx context.Context, param *Param) error {
 		ID:          param.ID.String(),
 	}
 
-	_, err := s.queries.UpdateParam(ctx, params)
+	_, err := s.queries.UpdateSetting(ctx, params)
 	if err != nil {
 		return fmt.Errorf("cannot update param: %w", err)
 	}
@@ -935,10 +935,10 @@ func (s *service) UpdateParam(ctx context.Context, param *Param) error {
 	return nil
 }
 
-func (s *service) DeleteParam(ctx context.Context, id uuid.UUID) error {
+func (s *service) DeleteSetting(ctx context.Context, id uuid.UUID) error {
 	s.ensureQueries()
 
-	err := s.queries.DeleteParam(ctx, id.String())
+	err := s.queries.DeleteSetting(ctx, id.String())
 	if err != nil {
 		return fmt.Errorf("cannot delete param: %w", err)
 	}
@@ -1572,9 +1572,9 @@ func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) erro
 		layouts = []*Layout{}
 	}
 
-	params, err := s.GetParams(ctx, site.ID)
+	params, err := s.GetSettings(ctx, site.ID)
 	if err != nil {
-		params = []*Param{}
+		params = []*Setting{}
 	}
 
 	contributors, err := s.GetContributors(ctx, site.ID)

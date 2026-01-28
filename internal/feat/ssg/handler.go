@@ -257,13 +257,13 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Use(h.requireAdmin)
 
 				// Params
-				r.Get("/ssg/list-params", h.HandleListParams)
-				r.Get("/ssg/get-param", h.HandleShowParam)
-				r.Get("/ssg/new-param", h.HandleNewParam)
-				r.Post("/ssg/create-param", h.HandleCreateParam)
-				r.Get("/ssg/edit-param", h.HandleEditParam)
-				r.Post("/ssg/update-param", h.HandleUpdateParam)
-				r.Post("/ssg/delete-param", h.HandleDeleteParam)
+				r.Get("/ssg/list-settings", h.HandleListSettings)
+				r.Get("/ssg/get-setting", h.HandleShowParam)
+				r.Get("/ssg/new-setting", h.HandleNewSetting)
+				r.Post("/ssg/create-setting", h.HandleCreateSetting)
+				r.Get("/ssg/edit-setting", h.HandleEditSetting)
+				r.Post("/ssg/update-setting", h.HandleUpdateSetting)
+				r.Post("/ssg/delete-setting", h.HandleDeleteSetting)
 
 				// Sections
 				r.Get("/ssg/list-sections", h.HandleListSections)
@@ -322,8 +322,8 @@ type PageData struct {
 	Layouts         []*Layout
 	Tag             *Tag
 	Tags            []*Tag
-	Param           *Param
-	Params          []*Param
+	Setting           *Setting
+	Settings        []*Setting
 	Image           *Image
 	Images          []*Image
 	Contributor          *Contributor
@@ -1744,43 +1744,43 @@ func (h *Handler) HandleDeleteTag(w http.ResponseWriter, r *http.Request) {
 	h.siteRedirect(w, r, "/ssg/list-tags")
 }
 
-// --- Param Handlers ---
+// --- Setting Handlers ---
 
-func (h *Handler) HandleListParams(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleListSettings(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	params, err := h.service.GetParams(r.Context(), site.ID)
+	params, err := h.service.GetSettings(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot list params: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "Cannot load params")
 		return
 	}
 
-	h.render(w, r, "ssg/params/list", PageData{
-		Title:  "Parameters",
+	h.render(w, r, "ssg/settings/list", PageData{
+		Title:  "Settings",
 		Site:   site,
-		Params: params,
+		Settings: params,
 	})
 }
 
-func (h *Handler) HandleNewParam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleNewSetting(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
 		return
 	}
 
-	h.render(w, r, "ssg/params/new", PageData{
+	h.render(w, r, "ssg/settings/new", PageData{
 		Title: "New Parameter",
 		Site:  site,
 	})
 }
 
-func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleCreateSetting(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
@@ -1792,7 +1792,7 @@ func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	param := NewParam(site.ID, r.FormValue("name"), r.FormValue("value"))
+	param := NewSetting(site.ID, r.FormValue("name"), r.FormValue("value"))
 	param.Description = r.FormValue("description")
 	param.RefKey = r.FormValue("ref_key")
 
@@ -1804,18 +1804,18 @@ func (h *Handler) HandleCreateParam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.service.CreateParam(r.Context(), param); err != nil {
+	if err := h.service.CreateSetting(r.Context(), param); err != nil {
 		h.log.Errorf("Cannot create param: %v", err)
-		h.render(w, r, "ssg/params/new", PageData{
+		h.render(w, r, "ssg/settings/new", PageData{
 			Title: "New Parameter",
 			Site:  site,
-			Param: param,
+			Setting: param,
 			Error: "Cannot create parameter",
 		})
 		return
 	}
 
-	h.siteRedirect(w, r, "/ssg/list-params")
+	h.siteRedirect(w, r, "/ssg/list-settings")
 }
 
 func (h *Handler) HandleShowParam(w http.ResponseWriter, r *http.Request) {
@@ -1831,21 +1831,21 @@ func (h *Handler) HandleShowParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	param, err := h.service.GetParam(r.Context(), paramID)
+	param, err := h.service.GetSetting(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
 		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
 		return
 	}
 
-	h.render(w, r, "ssg/params/show", PageData{
+	h.render(w, r, "ssg/settings/show", PageData{
 		Title: param.Name,
 		Site:  site,
-		Param: param,
+		Setting: param,
 	})
 }
 
-func (h *Handler) HandleEditParam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleEditSetting(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
@@ -1858,21 +1858,21 @@ func (h *Handler) HandleEditParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	param, err := h.service.GetParam(r.Context(), paramID)
+	param, err := h.service.GetSetting(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
 		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
 		return
 	}
 
-	h.render(w, r, "ssg/params/edit", PageData{
+	h.render(w, r, "ssg/settings/edit", PageData{
 		Title: "Edit " + param.Name,
 		Site:  site,
-		Param: param,
+		Setting: param,
 	})
 }
 
-func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleUpdateSetting(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
@@ -1890,7 +1890,7 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	param, err := h.service.GetParam(r.Context(), paramID)
+	param, err := h.service.GetSetting(r.Context(), paramID)
 	if err != nil {
 		h.log.Errorf("Cannot get param: %v", err)
 		h.renderError(w, r, http.StatusNotFound, "Parameter not found")
@@ -1910,21 +1910,21 @@ func (h *Handler) HandleUpdateParam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.service.UpdateParam(r.Context(), param); err != nil {
+	if err := h.service.UpdateSetting(r.Context(), param); err != nil {
 		h.log.Errorf("Cannot update param: %v", err)
-		h.render(w, r, "ssg/params/edit", PageData{
+		h.render(w, r, "ssg/settings/edit", PageData{
 			Title: "Edit " + param.Name,
 			Site:  site,
-			Param: param,
+			Setting: param,
 			Error: "Cannot update parameter",
 		})
 		return
 	}
 
-	h.siteRedirect(w, r, "/ssg/list-params")
+	h.siteRedirect(w, r, "/ssg/list-settings")
 }
 
-func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleDeleteSetting(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
@@ -1942,13 +1942,13 @@ func (h *Handler) HandleDeleteParam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.DeleteParam(r.Context(), paramID); err != nil {
+	if err := h.service.DeleteSetting(r.Context(), paramID); err != nil {
 		h.log.Errorf("Cannot delete param: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete parameter")
 		return
 	}
 
-	h.siteRedirect(w, r, "/ssg/list-params")
+	h.siteRedirect(w, r, "/ssg/list-settings")
 }
 
 // --- Image Handlers ---
@@ -3150,13 +3150,13 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if backup repo is configured
-	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.repo.url")
+	repoURL, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.backup.repo.url")
 
 	if repoURL != nil && repoURL.Value != "" {
-		authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
-		branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.branch")
-		commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
-		commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
+		authToken, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
+		branch, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.backup.branch")
+		commitName, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
+		commitEmail, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
 
 		branchValue := "main"
 		if branch != nil && branch.Value != "" {
@@ -3240,10 +3240,10 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 		layouts = []*Layout{}
 	}
 
-	params, err := h.service.GetParams(r.Context(), site.ID)
+	params, err := h.service.GetSettings(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get params for HTML generation: %v", err)
-		params = []*Param{}
+		params = []*Setting{}
 	}
 
 	contributors, err := h.service.GetContributors(r.Context(), site.ID)
@@ -3297,10 +3297,10 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		layouts = []*Layout{}
 	}
 
-	params, err := h.service.GetParams(r.Context(), site.ID)
+	params, err := h.service.GetSettings(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get params for publish: %v", err)
-		params = []*Param{}
+		params = []*Setting{}
 	}
 
 	contributors, err := h.service.GetContributors(r.Context(), site.ID)
@@ -3319,7 +3319,7 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	}
 	h.log.Infof("HTML generation complete: %d pages", htmlResult.PagesGenerated)
 
-	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.repo.url")
+	repoURL, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.publish.repo.url")
 
 	if repoURL == nil || repoURL.Value == "" {
 		h.log.Error("Publish repo not configured")
@@ -3327,10 +3327,10 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.auth.token")
-	branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.branch")
-	commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
-	commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
+	authToken, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.publish.auth.token")
+	branch, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.publish.branch")
+	commitName, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.git.commit.user.name")
+	commitEmail, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.git.commit.user.email")
 
 	branchValue := "gh-pages"
 	if branch != nil && branch.Value != "" {
