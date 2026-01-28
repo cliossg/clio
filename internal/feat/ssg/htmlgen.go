@@ -93,7 +93,7 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 
 	paramsMap := make(map[string]string)
 	for _, p := range params {
-		paramsMap[p.Name] = p.Value
+		paramsMap[p.RefKey] = p.Value
 	}
 
 	for _, content := range contents {
@@ -240,16 +240,17 @@ func (g *HTMLGenerator) buildMenu(sections []*Section, mode string) []*Section {
 
 // renderContentPage renders a single content page.
 func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath string, site *Site, content *Content, sections []*Section, menu []*Section, params map[string]string) error {
-	// Process markdown to HTML
 	htmlBody, err := g.processor.ProcessContent(content)
 	if err != nil {
 		return err
 	}
 
+	basePath := g.getAssetPath(params)
+
 	rendered := &RenderedContent{
 		Content:  content,
 		HTMLBody: template.HTML(htmlBody),
-		URL:      g.getContentURL(content, site.Mode),
+		URL:      g.getContentURL(content, basePath),
 	}
 
 	// Find section
@@ -268,7 +269,7 @@ func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath stri
 		Sections:  sections,
 		Menu:      menu,
 		IsIndex:   false,
-		AssetPath: g.getAssetPath(),
+		AssetPath: basePath,
 		Params:    params,
 	}
 
@@ -343,6 +344,8 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 		totalPages = 1
 	}
 
+	basePath := g.getAssetPath(params)
+
 	for page := 1; page <= totalPages; page++ {
 		start := (page - 1) * pageSize
 		end := start + pageSize
@@ -352,14 +355,13 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 
 		pageContents := contents[start:end]
 
-		// Render content previews
 		var renderedContents []*RenderedContent
 		for _, c := range pageContents {
 			htmlBody, _ := g.processor.ProcessContent(c)
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),
-				URL:      g.getContentURL(c, site.Mode),
+				URL:      g.getContentURL(c, basePath),
 			})
 		}
 
@@ -383,15 +385,15 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 			TotalPages:  totalPages,
 			HasPrev:     page > 1,
 			HasNext:     page < totalPages,
-			AssetPath:   g.getAssetPath(),
+			AssetPath:   basePath,
 			Params:      params,
 		}
 
 		if page > 1 {
-			data.PrevURL = g.getPaginationURL(indexPath, page-1)
+			data.PrevURL = g.getPaginationURL(basePath, indexPath, page-1)
 		}
 		if page < totalPages {
-			data.NextURL = g.getPaginationURL(indexPath, page+1)
+			data.NextURL = g.getPaginationURL(basePath, indexPath, page+1)
 		}
 
 		// Determine output path
@@ -416,34 +418,44 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 }
 
 // getContentURL returns the URL for a content item.
-func (g *HTMLGenerator) getContentURL(content *Content, mode string) string {
+func (g *HTMLGenerator) getContentURL(content *Content, basePath string) string {
 	if content.SectionPath == "" || content.SectionPath == "/" {
-		return "/" + content.Slug() + "/"
+		return basePath + content.Slug() + "/"
 	}
-	return "/" + content.SectionPath + "/" + content.Slug() + "/"
+	return basePath + content.SectionPath + "/" + content.Slug() + "/"
 }
 
 // getPaginationURL returns the URL for a pagination page.
-func (g *HTMLGenerator) getPaginationURL(indexPath string, page int) string {
+func (g *HTMLGenerator) getPaginationURL(basePath, indexPath string, page int) string {
 	if page == 1 {
 		if indexPath == "" || indexPath == "/" {
-			return "/"
+			return basePath
 		}
-		return "/" + indexPath + "/"
+		return basePath + indexPath + "/"
 	}
 	if indexPath == "" || indexPath == "/" {
-		return fmt.Sprintf("/page/%d/", page)
+		return fmt.Sprintf("%spage/%d/", basePath, page)
 	}
-	return fmt.Sprintf("/%s/page/%d/", indexPath, page)
+	return fmt.Sprintf("%s%s/page/%d/", basePath, indexPath, page)
 }
 
-func (g *HTMLGenerator) getAssetPath() string {
+func (g *HTMLGenerator) getAssetPath(params map[string]string) string {
+	if basePath, ok := params["ssg.site.base_path"]; ok && basePath != "" {
+		if basePath[0] != '/' {
+			basePath = "/" + basePath
+		}
+		if basePath[len(basePath)-1] != '/' {
+			basePath = basePath + "/"
+		}
+		return basePath
+	}
 	return "/"
 }
 
 func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath string, site *Site, contents []*Content, contributors []*Contributor, userAuthors map[string]*Contributor, menu []*Section, params map[string]string) (int, error) {
 	count := 0
 	generatedHandles := make(map[string]bool)
+	basePath := g.getAssetPath(params)
 
 	for _, contributor := range contributors {
 		authorContents := g.getContentsByAuthor(contents, contributor.Handle)
@@ -455,7 +467,7 @@ func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath stri
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),
-				URL:      g.getContentURL(c, site.Mode),
+				URL:      g.getContentURL(c, basePath),
 			})
 		}
 
@@ -465,7 +477,7 @@ func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath stri
 			Contents:  renderedContents,
 			Menu:      menu,
 			IsAuthor:  true,
-			AssetPath: g.getAssetPath(),
+			AssetPath: basePath,
 			Params:    params,
 		}
 
@@ -497,7 +509,7 @@ func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath stri
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),
-				URL:      g.getContentURL(c, site.Mode),
+				URL:      g.getContentURL(c, basePath),
 			})
 		}
 
@@ -515,7 +527,7 @@ func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath stri
 			Contents:  renderedContents,
 			Menu:      menu,
 			IsAuthor:  true,
-			AssetPath: g.getAssetPath(),
+			AssetPath: basePath,
 			Params:    params,
 		}
 

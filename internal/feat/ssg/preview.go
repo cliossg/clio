@@ -64,6 +64,12 @@ func (s *PreviewServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestPath := r.URL.Path
+
+	basePath := s.getBasePath(r.Context(), siteSlug)
+	if basePath != "/" && strings.HasPrefix(requestPath, basePath) {
+		requestPath = strings.TrimPrefix(requestPath, strings.TrimSuffix(basePath, "/"))
+	}
+
 	if requestPath == "/" || requestPath == "" {
 		requestPath = "/index.html"
 	}
@@ -165,4 +171,18 @@ func (s *PreviewServer) serveImage(w http.ResponseWriter, r *http.Request, siteS
 	}
 
 	http.ServeFile(w, r, cleanPath)
+}
+
+func (s *PreviewServer) getBasePath(ctx context.Context, siteSlug string) string {
+	site, err := s.service.GetSiteBySlug(ctx, siteSlug)
+	if err != nil || site == nil {
+		return "/"
+	}
+
+	param, err := s.service.GetParamByRefKey(ctx, site.ID, "ssg.site.base_path")
+	if err != nil || param == nil || param.Value == "" {
+		return "/"
+	}
+
+	return param.Value
 }

@@ -31,10 +31,11 @@
 <body>
     <nav>
         <div class="site-container" style="padding: 0;">
-            <a href="/">{{ .Site.Name }}</a>
+            <a href="{{ .AssetPath }}">{{ .Site.Name }}</a>
             {{ $currentSection := .Section }}
+            {{ $basePath := .AssetPath }}
             {{ range .Menu }}
-            <a href="/{{ .Path }}/"{{ if and $currentSection (eq $currentSection.Path .Path) }} class="active"{{ end }}>{{ .Name }}</a>
+            <a href="{{ $basePath }}{{ .Path }}/"{{ if and $currentSection (eq $currentSection.Path .Path) }} class="active"{{ end }}>{{ .Name }}</a>
             {{ end }}
         </div>
     </nav>

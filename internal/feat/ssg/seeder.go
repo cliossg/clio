@@ -159,6 +159,7 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 	}{
 		{"site_description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", false},
 		{"hero_image", "Hero image filename", "", "hero_image", false},
+		{"Site base path", "Base path for GitHub Pages subpath hosting", "/", "ssg.site.base_path", false},
 		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", true},
 		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", true},
 		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", true},

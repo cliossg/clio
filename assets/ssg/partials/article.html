@@ -25,9 +25,9 @@
                     <span class="article-separator">·</span>
                     {{ end }}
                     {{ if .Content.ContributorHandle }}
-                    <a href="/authors/{{ .Content.ContributorHandle }}/" class="article-author">@{{ .Content.ContributorHandle }}</a>
+                    <a href="{{ .AssetPath }}authors/{{ .Content.ContributorHandle }}/" class="article-author">@{{ .Content.ContributorHandle }}</a>
                     {{ else if .Content.AuthorUsername }}
-                    <a href="/authors/{{ .Content.AuthorUsername }}/" class="article-author">@{{ .Content.AuthorUsername }}</a>
+                    <a href="{{ .AssetPath }}authors/{{ .Content.AuthorUsername }}/" class="article-author">@{{ .Content.AuthorUsername }}</a>
                     {{ end }}
                 </div>
                 <div class="article-tags">
@@ -35,7 +35,7 @@
                     <span class="tag">{{ .Name }}</span>
                     {{ end }}
                     {{ if .Section }}
-                    <a href="/{{ .Section.Path }}/" class="tag tag-section">{{ .Section.Name }}</a>
+                    <a href="{{ .AssetPath }}{{ .Section.Path }}/" class="tag tag-section">{{ .Section.Name }}</a>
                     {{ end }}
                 </div>
             </div>
@@ -46,7 +46,7 @@
         </div>
 
         <nav class="article-nav">
-            <a href="/" class="article-nav-link">&larr; Back to home</a>
+            <a href="{{ .AssetPath }}" class="article-nav-link">&larr; Back to home</a>
         </nav>
     </div>
 </article>

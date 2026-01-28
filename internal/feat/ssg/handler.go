@@ -3252,6 +3252,42 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	contents, err := h.service.GetAllContentWithMeta(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get content for publish: %v", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load content")
+		return
+	}
+
+	sections, err := h.service.GetSections(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get sections for publish: %v", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot load sections")
+		return
+	}
+
+	params, err := h.service.GetParams(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get params for publish: %v", err)
+		params = []*Param{}
+	}
+
+	contributors, err := h.service.GetContributors(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get contributors for publish: %v", err)
+		contributors = []*Contributor{}
+	}
+
+	userAuthors := h.service.BuildUserAuthorsMap(r.Context(), contents, contributors)
+
+	htmlResult, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params, contributors, userAuthors)
+	if err != nil {
+		h.log.Errorf("HTML generation failed: %v", err)
+		h.renderError(w, r, http.StatusInternalServerError, "HTML generation failed")
+		return
+	}
+	h.log.Infof("HTML generation complete: %d pages", htmlResult.PagesGenerated)
+
 	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.repo.url")
 
 	if repoURL == nil || repoURL.Value == "" {
