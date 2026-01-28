@@ -264,7 +264,8 @@ func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	if err := os.MkdirAll(profilesBasePath, 0755); err != nil {
+	usersPhotoPath := filepath.Join(profilesBasePath, "users")
+	if err := os.MkdirAll(usersPhotoPath, 0755); err != nil {
 		h.log.Errorf("Cannot create profiles directory: %v", err)
 		http.Error(w, "Cannot create directory", http.StatusInternalServerError)
 		return
@@ -276,7 +277,7 @@ func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ext := filepath.Ext(header.Filename)
-	fileName := profile.ID.String() + ext
+	fileName := filepath.Join("users", profile.ID.String()+ext)
 	filePath := filepath.Join(profilesBasePath, fileName)
 
 	dst, err := os.Create(filePath)

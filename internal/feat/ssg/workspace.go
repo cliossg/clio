@@ -8,7 +8,8 @@ import (
 
 // Default workspace paths
 const (
-	DefaultSitesBasePath = "_workspace/sites"
+	DefaultSitesBasePath    = "_workspace/sites"
+	DefaultProfilesBasePath = "_workspace/profiles"
 )
 
 // Workspace handles site directory operations.
@@ -87,6 +88,11 @@ func (w *Workspace) GetHTMLPath(slug string) string {
 // e.g., _workspace/sites/my-blog/images
 func (w *Workspace) GetImagesPath(slug string) string {
 	return filepath.Join(w.basePath, slug, "images")
+}
+
+// GetProfilesPath returns the global profiles path.
+func (w *Workspace) GetProfilesPath() string {
+	return DefaultProfilesBasePath
 }
 
 // GetStaticPath returns the static assets path inside HTML output.

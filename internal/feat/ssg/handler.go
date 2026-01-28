@@ -516,6 +516,8 @@ func (h *Handler) HandleShowSite(w http.ResponseWriter, r *http.Request) {
 		data.Success = "Markdown files generated successfully"
 	case "backup":
 		data.Success = "Markdown backed up to git repository"
+	case "backup_no_changes":
+		data.Success = "No changes to backup"
 	case "html":
 		data.Success = "HTML site generated successfully"
 	}
@@ -2992,7 +2994,8 @@ func (h *Handler) HandleUploadContributorPhoto(w http.ResponseWriter, r *http.Re
 	}
 	defer file.Close()
 
-	if err := os.MkdirAll(profilesBasePath, 0755); err != nil {
+	contributorsPhotoPath := filepath.Join(profilesBasePath, "contributors")
+	if err := os.MkdirAll(contributorsPhotoPath, 0755); err != nil {
 		h.log.Errorf("Cannot create profiles directory: %v", err)
 		http.Error(w, "Cannot create directory", http.StatusInternalServerError)
 		return
@@ -3004,7 +3007,7 @@ func (h *Handler) HandleUploadContributorPhoto(w http.ResponseWriter, r *http.Re
 	}
 
 	ext := filepath.Ext(header.Filename)
-	fileName := contributorProfile.ID.String() + ext
+	fileName := filepath.Join("contributors", contributorProfile.ID.String()+ext)
 	filePath := filepath.Join(profilesBasePath, fileName)
 
 	dst, err := os.Create(filePath)
@@ -3155,6 +3158,12 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			h.log.Errorf("Markdown backup to git failed: %v", err)
 			http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=backup_failed", http.StatusSeeOther)
+			return
+		}
+
+		if backupResult.NoChanges {
+			h.log.Info("Markdown backup: no changes to commit")
+			http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=backup_no_changes", http.StatusSeeOther)
 			return
 		}
 

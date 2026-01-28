@@ -13,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -32,6 +33,7 @@ type PublishResult struct {
 	Added      int
 	Modified   int
 	Deleted    int
+	NoChanges  bool
 }
 
 // PlanResult contains the result of a dry-run plan.
@@ -90,40 +92,38 @@ func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug str
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Clone repository
+	// Clone or init repository (handles empty repos)
 	auth := &http.BasicAuth{
 		Username: "git", // Can be anything for token auth
 		Password: cfg.AuthToken,
 	}
 
-	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
-		URL:      cfg.RepoURL,
-		Auth:     auth,
-		Progress: nil,
-	})
+	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
 	if err != nil {
-		return nil, fmt.Errorf("cannot clone repository: %w", err)
+		return nil, err
 	}
 
-	// Checkout or create branch
 	w, err := repo.Worktree()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get worktree: %w", err)
 	}
 
-	branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
-		Create: false,
-	})
-	if err != nil {
-		// Try to create the branch
+	// Checkout or create branch (skip for freshly initialized empty repos)
+	if !isEmpty {
+		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
 		err = w.Checkout(&git.CheckoutOptions{
 			Branch: branchRef,
-			Create: true,
+			Create: false,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
+			// Try to create the branch
+			err = w.Checkout(&git.CheckoutOptions{
+				Branch: branchRef,
+				Create: true,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
+			}
 		}
 	}
 
@@ -170,13 +170,20 @@ func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug str
 		return nil, fmt.Errorf("cannot commit: %w", err)
 	}
 
-	// Push
+	// For empty repos, create the branch reference before pushing
+	if isEmpty {
+		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
+		ref := plumbing.NewHashReference(branchRef, commit)
+		if err := repo.Storer.SetReference(ref); err != nil {
+			return nil, fmt.Errorf("cannot create branch reference: %w", err)
+		}
+	}
+
+	refSpec := config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch))
 	err = repo.Push(&git.PushOptions{
 		RemoteName: "origin",
-		RefSpecs: []config.RefSpec{
-			config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch)),
-		},
-		Auth: auth,
+		RefSpecs:   []config.RefSpec{refSpec},
+		Auth:       auth,
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return nil, fmt.Errorf("cannot push: %w", err)
@@ -204,6 +211,7 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 	}
 
 	imagesDir := p.workspace.GetImagesPath(siteSlug)
+	profilesDir := p.workspace.GetProfilesPath()
 
 	tempDir, err := os.MkdirTemp("", "clio-backup-*")
 	if err != nil {
@@ -216,13 +224,9 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		Password: cfg.AuthToken,
 	}
 
-	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
-		URL:      cfg.RepoURL,
-		Auth:     auth,
-		Progress: nil,
-	})
+	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
 	if err != nil {
-		return nil, fmt.Errorf("cannot clone repository: %w", err)
+		return nil, err
 	}
 
 	w, err := repo.Worktree()
@@ -230,18 +234,21 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		return nil, fmt.Errorf("cannot get worktree: %w", err)
 	}
 
-	branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
-		Create: false,
-	})
-	if err != nil {
+	// Checkout or create branch (skip for freshly initialized empty repos)
+	if !isEmpty {
+		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
 		err = w.Checkout(&git.CheckoutOptions{
 			Branch: branchRef,
-			Create: true,
+			Create: false,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
+			err = w.Checkout(&git.CheckoutOptions{
+				Branch: branchRef,
+				Create: true,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
+			}
 		}
 	}
 
@@ -277,6 +284,16 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		}
 	}
 
+	if _, err := os.Stat(profilesDir); err == nil {
+		profilesDst := filepath.Join(tempDir, "profiles")
+		if err := os.MkdirAll(profilesDst, 0755); err != nil {
+			return nil, fmt.Errorf("cannot create profiles dir: %w", err)
+		}
+		if err := copyDirRecursive(profilesDir, profilesDst); err != nil {
+			return nil, fmt.Errorf("cannot copy profiles: %w", err)
+		}
+	}
+
 	if err := w.AddGlob("."); err != nil {
 		return nil, fmt.Errorf("cannot stage files: %w", err)
 	}
@@ -295,15 +312,26 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "clean working tree") {
+			return &PublishResult{NoChanges: true}, nil
+		}
 		return nil, fmt.Errorf("cannot commit: %w", err)
 	}
 
+	// For empty repos, create the branch reference before pushing
+	if isEmpty {
+		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
+		ref := plumbing.NewHashReference(branchRef, commit)
+		if err := repo.Storer.SetReference(ref); err != nil {
+			return nil, fmt.Errorf("cannot create branch reference: %w", err)
+		}
+	}
+
+	refSpec := config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch))
 	err = repo.Push(&git.PushOptions{
 		RemoteName: "origin",
-		RefSpecs: []config.RefSpec{
-			config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch)),
-		},
-		Auth: auth,
+		RefSpecs:   []config.RefSpec{refSpec},
+		Auth:       auth,
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return nil, fmt.Errorf("cannot push: %w", err)
@@ -337,32 +365,30 @@ func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Clone repository
+	// Clone or init repository (handles empty repos)
 	auth := &http.BasicAuth{
 		Username: "git",
 		Password: cfg.AuthToken,
 	}
 
-	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
-		URL:      cfg.RepoURL,
-		Auth:     auth,
-		Progress: nil,
-	})
+	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
 	if err != nil {
-		return nil, fmt.Errorf("cannot clone repository: %w", err)
+		return nil, err
 	}
 
-	// Checkout branch
 	w, err := repo.Worktree()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get worktree: %w", err)
 	}
 
-	branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-	_ = w.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
-		Create: false,
-	})
+	// Checkout branch (skip for freshly initialized empty repos)
+	if !isEmpty {
+		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
+		_ = w.Checkout(&git.CheckoutOptions{
+			Branch: branchRef,
+			Create: false,
+		})
+	}
 
 	// Clean directory (except .git)
 	entries, err := os.ReadDir(tempDir)
@@ -411,6 +437,42 @@ func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string
 		len(result.Added), len(result.Modified), len(result.Deleted))
 
 	return result, nil
+}
+
+// cloneOrInit attempts to clone a repository. If the remote is empty, it initializes
+// a new local repo and adds the remote origin instead.
+// Returns the repo and a boolean indicating if the repo was freshly initialized (empty).
+func cloneOrInit(tempDir, repoURL string, auth *http.BasicAuth) (*git.Repository, bool, error) {
+	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
+		URL:      repoURL,
+		Auth:     auth,
+		Progress: nil,
+	})
+	if err == nil {
+		return repo, false, nil
+	}
+
+	// Check if error is due to empty remote repository
+	if err == transport.ErrEmptyRemoteRepository || strings.Contains(err.Error(), "remote repository is empty") {
+		// Initialize new repository locally
+		repo, err = git.PlainInit(tempDir, false)
+		if err != nil {
+			return nil, false, fmt.Errorf("cannot init repository: %w", err)
+		}
+
+		// Add remote origin
+		_, err = repo.CreateRemote(&config.RemoteConfig{
+			Name: "origin",
+			URLs: []string{repoURL},
+		})
+		if err != nil {
+			return nil, false, fmt.Errorf("cannot add remote: %w", err)
+		}
+
+		return repo, true, nil
+	}
+
+	return nil, false, fmt.Errorf("cannot clone repository: %w", err)
 }
 
 // copyDirRecursive copies the contents of src to dst recursively.
