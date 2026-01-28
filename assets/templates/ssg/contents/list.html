@@ -7,6 +7,19 @@
         {{ if $canEdit }}<a href="/ssg/new-content?site_id={{ .Site.ID }}" class="btn">New Content</a>{{ end }}
     </div>
 
+    <div class="search-box">
+        <input type="search"
+               name="q"
+               placeholder="Search contents..."
+               value="{{ .Search }}"
+               hx-get="/ssg/list-contents?site_id={{ .Site.ID }}"
+               hx-trigger="input changed delay:300ms, search"
+               hx-target="#contents-table"
+               hx-select="#contents-table"
+               hx-push-url="true">
+    </div>
+
+    <div id="contents-table">
     {{ if .Contents }}
     <table>
         <thead>
@@ -41,17 +54,19 @@
     {{ if gt .TotalPages 1 }}
     <div class="pagination">
         {{ if .HasPrev }}
-        <a href="?site_id={{ .Site.ID }}&page={{ subtract .CurrentPage 1 }}" class="btn btn-sm">&larr; Previous</a>
+        <a href="?site_id={{ .Site.ID }}&page={{ subtract .CurrentPage 1 }}{{ if .Search }}&q={{ .Search }}{{ end }}" class="btn btn-sm">&larr; Previous</a>
         {{ end }}
         <span>Page {{ .CurrentPage }} of {{ .TotalPages }}</span>
         {{ if .HasNext }}
-        <a href="?site_id={{ .Site.ID }}&page={{ add .CurrentPage 1 }}" class="btn btn-sm">Next &rarr;</a>
+        <a href="?site_id={{ .Site.ID }}&page={{ add .CurrentPage 1 }}{{ if .Search }}&q={{ .Search }}{{ end }}" class="btn btn-sm">Next &rarr;</a>
         {{ end }}
     </div>
     {{ end }}
     {{ else }}
-    <p class="empty-state">No content yet.{{ if $canEdit }} <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.{{ end }}</p>
+    <p class="empty-state">{{ if .Search }}No results for "{{ .Search }}".{{ else }}No content yet.{{ if $canEdit }} <a href="/ssg/new-content?site_id={{ .Site.ID }}">Create your first content</a>.{{ end }}{{ end }}</p>
     {{ end }}
+    </div>
 
 </div>
+<script src="/static/js/vendor/htmx.min.js"></script>
 {{ end }}

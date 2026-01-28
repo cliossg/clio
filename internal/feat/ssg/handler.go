@@ -338,6 +338,7 @@ type PageData struct {
 	TotalPages      int
 	HasPrev         bool
 	HasNext         bool
+	Search          string
 }
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName string, data PageData) {
@@ -862,7 +863,7 @@ func (h *Handler) HandleListContents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	limit := 20
+	limit := 25
 	offset := (page - 1) * limit
 	search := r.URL.Query().Get("q")
 
@@ -883,6 +884,7 @@ func (h *Handler) HandleListContents(w http.ResponseWriter, r *http.Request) {
 		TotalPages:  totalPages,
 		HasPrev:     page > 1,
 		HasNext:     page < totalPages,
+		Search:      search,
 	})
 }
 

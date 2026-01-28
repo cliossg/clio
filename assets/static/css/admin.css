@@ -500,6 +500,26 @@ button.nav-card {
     border-top: 1px solid var(--stone-beige);
 }
 
+/* Search Box */
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.search-box input[type="search"] {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--stone-beige);
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.search-box input[type="search"]:focus {
+    outline: none;
+    border-color: var(--blue-intense);
+    box-shadow: 0 0 0 2px rgba(0, 107, 189, 0.2);
+}
+
 /* Image Grid */
 .image-grid {
     display: grid;
