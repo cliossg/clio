@@ -199,16 +199,18 @@ type Session struct {
 }
 
 type Site struct {
-	ID        string    `json:"id"`
-	ShortID   string    `json:"short_id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	Mode      string    `json:"mode"`
-	Active    int64     `json:"active"`
-	CreatedBy string    `json:"created_by"`
-	UpdatedBy string    `json:"updated_by"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                string         `json:"id"`
+	ShortID           string         `json:"short_id"`
+	Name              string         `json:"name"`
+	Slug              string         `json:"slug"`
+	Mode              string         `json:"mode"`
+	Active            int64          `json:"active"`
+	CreatedBy         string         `json:"created_by"`
+	UpdatedBy         string         `json:"updated_by"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	DefaultLayoutID   sql.NullString `json:"default_layout_id"`
+	DefaultLayoutName sql.NullString `json:"default_layout_name"`
 }
 
 type Tag struct {

@@ -230,13 +230,15 @@ func (s *service) UpdateSite(ctx context.Context, site *Site) error {
 	s.ensureQueries()
 
 	params := sqlc.UpdateSiteParams{
-		Name:      site.Name,
-		Slug:      site.Slug,
-		Mode:      site.Mode,
-		Active:    boolToInt(site.Active),
-		UpdatedBy: site.UpdatedBy.String(),
-		UpdatedAt: site.UpdatedAt,
-		ID:        site.ID.String(),
+		Name:              site.Name,
+		Slug:              site.Slug,
+		Mode:              site.Mode,
+		Active:            boolToInt(site.Active),
+		DefaultLayoutID:   nullString(site.DefaultLayoutID.String()),
+		DefaultLayoutName: nullString(site.DefaultLayoutName),
+		UpdatedBy:         site.UpdatedBy.String(),
+		UpdatedAt:         site.UpdatedAt,
+		ID:                site.ID.String(),
 	}
 
 	_, err := s.queries.UpdateSite(ctx, params)
@@ -1565,6 +1567,11 @@ func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) erro
 		return fmt.Errorf("cannot get sections: %w", err)
 	}
 
+	layouts, err := s.GetLayouts(ctx, site.ID)
+	if err != nil {
+		layouts = []*Layout{}
+	}
+
 	params, err := s.GetParams(ctx, site.ID)
 	if err != nil {
 		params = []*Param{}
@@ -1577,7 +1584,7 @@ func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) erro
 
 	userAuthors := s.BuildUserAuthorsMap(ctx, contents, contributors)
 
-	_, err = s.htmlGen.GenerateHTML(ctx, site, contents, sections, params, contributors, userAuthors)
+	_, err = s.htmlGen.GenerateHTML(ctx, site, contents, sections, layouts, params, contributors, userAuthors)
 	if err != nil {
 		return fmt.Errorf("cannot generate HTML: %w", err)
 	}

@@ -6,6 +6,7 @@
     </div>
 
     <form method="POST" action="/ssg/update-section">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Section.ID }}">
 
         <div class="form-group">
@@ -27,11 +28,12 @@
         <div class="form-group">
             <label for="layout_id">Layout</label>
             <select id="layout_id" name="layout_id">
-                <option value="">-- No Layout --</option>
+                <option value="">-- Default --</option>
                 {{ range .Layouts }}
                 <option value="{{ .ID }}" {{ if eq .ID $.Section.LayoutID }}selected{{ end }}>{{ .Name }}</option>
                 {{ end }}
             </select>
+            <small>Uses site default layout if set, otherwise embedded template</small>
         </div>
 
         <!-- Header Image Section -->

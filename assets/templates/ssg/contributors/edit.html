@@ -9,6 +9,7 @@
     {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
 
     <form method="POST" action="/ssg/update-contributor">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Contributor.ID }}">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
 

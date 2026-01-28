@@ -4,6 +4,7 @@
     <h1>Edit Layout</h1>
 
     <form method="POST" action="/ssg/update-layout">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Layout.ID }}">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">

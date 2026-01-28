@@ -8,6 +8,7 @@
     </div>
 
     <form method="POST" action="/ssg/update-image">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Image.ID }}">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">

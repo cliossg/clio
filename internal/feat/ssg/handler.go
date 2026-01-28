@@ -554,9 +554,15 @@ func (h *Handler) HandleEditSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	layouts, err := h.service.GetLayouts(r.Context(), siteID)
+	if err != nil {
+		layouts = []*Layout{}
+	}
+
 	h.render(w, r, "ssg/sites/edit", PageData{
-		Title: "Edit " + site.Name,
-		Site:  site,
+		Title:   "Edit " + site.Name,
+		Site:    site,
+		Layouts: layouts,
 	})
 }
 
@@ -583,6 +589,18 @@ func (h *Handler) HandleUpdateSite(w http.ResponseWriter, r *http.Request) {
 	site.Slug = r.FormValue("slug")
 	site.Mode = r.FormValue("mode")
 	site.Active = r.FormValue("active") == "on"
+
+	if layoutID := r.FormValue("default_layout_id"); layoutID != "" {
+		if id, err := uuid.Parse(layoutID); err == nil {
+			site.DefaultLayoutID = id
+			if layout, err := h.service.GetLayout(r.Context(), id); err == nil {
+				site.DefaultLayoutName = layout.Name
+			}
+		}
+	} else {
+		site.DefaultLayoutID = uuid.Nil
+		site.DefaultLayoutName = ""
+	}
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -3216,6 +3234,12 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	layouts, err := h.service.GetLayouts(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get layouts for HTML generation: %v", err)
+		layouts = []*Layout{}
+	}
+
 	params, err := h.service.GetParams(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get params for HTML generation: %v", err)
@@ -3230,7 +3254,7 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 
 	userAuthors := h.service.BuildUserAuthorsMap(r.Context(), contents, contributors)
 
-	result, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params, contributors, userAuthors)
+	result, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, layouts, params, contributors, userAuthors)
 	if err != nil {
 		h.log.Errorf("HTML generation failed: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "HTML generation failed")
@@ -3267,6 +3291,12 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	layouts, err := h.service.GetLayouts(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get layouts for publish: %v", err)
+		layouts = []*Layout{}
+	}
+
 	params, err := h.service.GetParams(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get params for publish: %v", err)
@@ -3281,7 +3311,7 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 
 	userAuthors := h.service.BuildUserAuthorsMap(r.Context(), contents, contributors)
 
-	htmlResult, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params, contributors, userAuthors)
+	htmlResult, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, layouts, params, contributors, userAuthors)
 	if err != nil {
 		h.log.Errorf("HTML generation failed: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "HTML generation failed")

@@ -21,6 +21,8 @@ UPDATE site SET
     slug = ?,
     mode = ?,
     active = ?,
+    default_layout_id = ?,
+    default_layout_name = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?

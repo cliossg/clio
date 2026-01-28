@@ -31,6 +31,16 @@
                 <input type="checkbox" name="active" {{ if .Site.Active }}checked{{ end }}> Active
             </label>
         </div>
+        <div class="form-group">
+            <label for="default_layout_id">Default Layout</label>
+            <select id="default_layout_id" name="default_layout_id">
+                <option value="">-- Embedded (default) --</option>
+                {{ range .Layouts }}
+                <option value="{{ .ID }}" {{ if eq .ID $.Site.DefaultLayoutID }}selected{{ end }}>{{ .Name }}</option>
+                {{ end }}
+            </select>
+            <small>Applied to all pages without a section-specific layout</small>
+        </div>
         <div class="form-actions">
             <button type="submit" class="btn">Save</button>
         </div>

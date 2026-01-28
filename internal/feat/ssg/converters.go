@@ -9,7 +9,7 @@ import (
 // Site converters
 
 func siteFromSQLC(s sqlc.Site) *Site {
-	return &Site{
+	site := &Site{
 		ID:        parseUUID(s.ID),
 		ShortID:   s.ShortID,
 		Name:      s.Name,
@@ -21,6 +21,13 @@ func siteFromSQLC(s sqlc.Site) *Site {
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
+	if s.DefaultLayoutID.Valid {
+		site.DefaultLayoutID = parseUUID(s.DefaultLayoutID.String)
+	}
+	if s.DefaultLayoutName.Valid {
+		site.DefaultLayoutName = s.DefaultLayoutName.String
+	}
+	return site
 }
 
 // Content converters

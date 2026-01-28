@@ -11,16 +11,18 @@ import (
 
 // Site represents a site in the multi-site system.
 type Site struct {
-	ID        uuid.UUID `json:"id"`
-	ShortID   string    `json:"short_id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	Mode      string    `json:"mode"` // "blog" or "structured"
-	Active    bool      `json:"active"`
-	CreatedBy uuid.UUID `json:"-"`
-	UpdatedBy uuid.UUID `json:"-"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                uuid.UUID `json:"id"`
+	ShortID           string    `json:"short_id"`
+	Name              string    `json:"name"`
+	Slug              string    `json:"slug"`
+	Mode              string    `json:"mode"` // "blog" or "structured"
+	Active            bool      `json:"active"`
+	DefaultLayoutID   uuid.UUID `json:"default_layout_id"`
+	DefaultLayoutName string    `json:"default_layout_name"`
+	CreatedBy         uuid.UUID `json:"-"`
+	UpdatedBy         uuid.UUID `json:"-"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // NewSite creates a new Site instance.

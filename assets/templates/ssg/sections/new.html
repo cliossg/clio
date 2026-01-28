@@ -23,11 +23,12 @@
         <div class="form-group">
             <label for="layout_id">Layout</label>
             <select id="layout_id" name="layout_id">
-                <option value="">-- No Layout --</option>
+                <option value="">-- Default --</option>
                 {{ range .Layouts }}
                 <option value="{{ .ID }}">{{ .Name }}</option>
                 {{ end }}
             </select>
+            <small>Uses site default layout if set, otherwise embedded template</small>
         </div>
 
         <div class="form-actions">

@@ -4,6 +4,7 @@
     <h1>Edit Parameter</h1>
 
     <form method="POST" action="/ssg/update-param">
+        <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Param.ID }}">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <div class="form-group">
