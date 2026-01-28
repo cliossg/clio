@@ -83,11 +83,11 @@ nav a:hover {
 }
 
 .btn-danger {
-    background: #c44536;
+    background: #e63946;
 }
 
 .btn-danger:hover {
-    background: #a33a2d;
+    background: #c52d3a;
 }
 
 .actions {
@@ -997,6 +997,10 @@ button.nav-card {
 }
 
 /* Zen Mode */
+body.zen-mode-active {
+    overflow: hidden;
+}
+
 body.zen-mode-active #editor-wrapper {
     position: fixed;
     inset: 0;
@@ -1007,22 +1011,27 @@ body.zen-mode-active #editor-wrapper {
     border-radius: 0;
 }
 
+body.zen-mode-active #editor-wrapper .editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 4rem;
+    overflow: hidden;
+}
+
 body.zen-mode-active #editor-wrapper .editor-splitter,
-body.zen-mode-active #editor-wrapper .editor-preview {
+body.zen-mode-active #editor-wrapper .editor-pane.editor-pane-preview {
     display: none;
 }
 
-body.zen-mode-active #editor-wrapper .editor-pane {
-    flex: 1;
-    padding: 2rem 4rem;
-}
-
 body.zen-mode-active #editor-wrapper .editor-textarea {
+    flex: 1;
     font-size: 1.1rem;
     line-height: 1.8;
     border: none;
     box-shadow: none;
-    height: 100%;
+    resize: none;
+    overflow-y: auto;
 }
 
 /* Zen Mode - Dark */

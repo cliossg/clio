@@ -1,0 +1,12 @@
+# Local Development Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up
+
+services:
+  app:
+    environment:
+      CLIO_ENV: dev
+      CLIO_LOG_LEVEL: debug
+      CLIO_AUTH_SESSION_SECRET: local-dev-session-secret-change-in-prod
+    ports:
+      - "8080:8080"
+      - "3000:3000"

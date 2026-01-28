@@ -97,6 +97,12 @@ func Load() *Config {
 	if v := os.Getenv("CLIO_CREDENTIALS_PATH"); v != "" {
 		cfg.Credentials.Path = v
 	}
+	if v := os.Getenv("CLIO_SSG_SITES_PATH"); v != "" {
+		cfg.SSG.SitesBasePath = v
+	}
+	if v := os.Getenv("CLIO_SSG_PREVIEW_ADDR"); v != "" {
+		cfg.SSG.PreviewAddr = v
+	}
 
 	return cfg
 }

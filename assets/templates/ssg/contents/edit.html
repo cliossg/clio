@@ -67,7 +67,7 @@
                     <textarea id="body" name="body" class="editor-textarea">{{ .Content.Body }}</textarea>
                 </div>
                 <div class="editor-splitter" id="splitter"></div>
-                <div class="editor-pane">
+                <div class="editor-pane editor-pane-preview">
                     <div id="preview" class="editor-preview prose"></div>
                 </div>
             </div>
@@ -299,6 +299,7 @@ const bodyTextarea = document.getElementById('body');
 const preview = document.getElementById('preview');
 const editorWrapper = document.getElementById('editor-wrapper');
 const splitter = document.getElementById('splitter');
+const previewPane = document.querySelector('.editor-pane-preview');
 const floatingButtons = document.getElementById('floating-buttons');
 
 // Initialize marked
@@ -392,8 +393,11 @@ function insertImageAtCursor(filePath, altText) {
 
 // Zen Mode
 function toggleZenMode() {
-    document.body.classList.toggle('zen-mode-active');
+    const isZen = document.body.classList.toggle('zen-mode-active');
     floatingButtons.classList.toggle('hidden');
+    // Hide/show preview pane and splitter directly
+    splitter.style.display = isZen ? 'none' : '';
+    previewPane.style.display = isZen ? 'none' : '';
 }
 
 function toggleDarkMode() {

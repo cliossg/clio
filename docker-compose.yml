@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clio-app
+    restart: unless-stopped
+    environment:
+      CLIO_ENV: ${CLIO_ENV:-prod}
+      CLIO_LOG_LEVEL: ${LOG_LEVEL:-info}
+      CLIO_SERVER_ADDR: ":8080"
+      CLIO_DATABASE_PATH: /app/data/db/clio.db
+      CLIO_SSG_SITES_PATH: /app/data/sites
+      CLIO_SSG_PREVIEW_ADDR: ":3000"
+      CLIO_AUTH_SESSION_SECRET: ${SESSION_SECRET}
+      CLIO_CREDENTIALS_PATH: /app/data/credentials.txt
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "${APP_PORT:-8080}:8080"
+      - "${PREVIEW_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - clio-network
+
+  # Cloudflare Tunnel with token (for production)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: clio-tunnel
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - clio-network
+    profiles:
+      - tunnel
+
+  # Cloudflare Quick Tunnel (for demos - auto-generates URL)
+  quick-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: clio-quick-tunnel
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    command: tunnel --url http://app:8080
+    networks:
+      - clio-network
+    profiles:
+      - quick-tunnel
+
+networks:
+  clio-network:
+    driver: bridge
