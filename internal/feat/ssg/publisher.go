@@ -9,24 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/cliossg/clio/pkg/cl/git"
 )
 
-// PublishConfig holds configuration for publishing.
 type PublishConfig struct {
-	RepoURL     string // Git repository URL
-	Branch      string // Target branch (e.g., "gh-pages")
-	AuthToken   string // Auth token (GitHub PAT)
-	CommitName  string // Commit author name
-	CommitEmail string // Commit author email
+	RepoURL     string
+	Branch      string
+	AuthToken   string
+	CommitName  string
+	CommitEmail string
+	UseSSH      bool
 }
 
-// PublishResult contains the result of a publish operation.
 type PublishResult struct {
 	CommitHash string
 	CommitURL  string
@@ -36,7 +30,6 @@ type PublishResult struct {
 	NoChanges  bool
 }
 
-// PlanResult contains the result of a dry-run plan.
 type PlanResult struct {
 	Added    []string
 	Modified []string
@@ -44,19 +37,18 @@ type PlanResult struct {
 	Summary  string
 }
 
-// Publisher handles publishing generated HTML to a Git repository.
 type Publisher struct {
 	workspace *Workspace
+	gitClient git.Client
 }
 
-// NewPublisher creates a new publisher.
-func NewPublisher(workspace *Workspace) *Publisher {
+func NewPublisher(workspace *Workspace, gitClient git.Client) *Publisher {
 	return &Publisher{
 		workspace: workspace,
+		gitClient: gitClient,
 	}
 }
 
-// Validate checks if the configuration is valid.
 func (p *Publisher) Validate(cfg PublishConfig) error {
 	if cfg.RepoURL == "" {
 		return fmt.Errorf("repository URL is required")
@@ -64,8 +56,8 @@ func (p *Publisher) Validate(cfg PublishConfig) error {
 	if cfg.Branch == "" {
 		return fmt.Errorf("branch name is required")
 	}
-	if cfg.AuthToken == "" {
-		return fmt.Errorf("auth token is required")
+	if !cfg.UseSSH && cfg.AuthToken == "" {
+		return fmt.Errorf("auth token is required when not using SSH")
 	}
 	if cfg.CommitEmail == "" {
 		return fmt.Errorf("commit email is required")
@@ -73,61 +65,43 @@ func (p *Publisher) Validate(cfg PublishConfig) error {
 	return nil
 }
 
-// Publish publishes the generated HTML to the configured repository.
 func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug string) (*PublishResult, error) {
 	if err := p.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	// Get the HTML source directory
 	sourceDir := p.workspace.GetHTMLPath(siteSlug)
 	if _, err := os.Stat(sourceDir); err != nil {
 		return nil, fmt.Errorf("source directory not found: %w", err)
 	}
 
-	// Create temp directory for clone
-	tempDir, err := os.MkdirTemp("", "clio-publish-*")
+	parentTempDir, err := os.MkdirTemp("", "clio-publish-*")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(parentTempDir)
 
-	// Clone or init repository (handles empty repos)
-	auth := &http.BasicAuth{
-		Username: "git", // Can be anything for token auth
-		Password: cfg.AuthToken,
+	tempDir := filepath.Join(parentTempDir, "repo")
+	env := os.Environ()
+
+	auth := git.Auth{
+		Method: git.AuthToken,
+		Token:  cfg.AuthToken,
+	}
+	if cfg.UseSSH {
+		auth = git.Auth{Method: git.AuthSSH}
 	}
 
-	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
-	if err != nil {
-		return nil, err
+	if err := p.gitClient.Clone(ctx, cfg.RepoURL, tempDir, auth, env); err != nil {
+		return nil, fmt.Errorf("cannot clone repo: %w", err)
 	}
 
-	w, err := repo.Worktree()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get worktree: %w", err)
-	}
-
-	// Checkout or create branch (skip for freshly initialized empty repos)
-	if !isEmpty {
-		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-		err = w.Checkout(&git.CheckoutOptions{
-			Branch: branchRef,
-			Create: false,
-		})
-		if err != nil {
-			// Try to create the branch
-			err = w.Checkout(&git.CheckoutOptions{
-				Branch: branchRef,
-				Create: true,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
-			}
+	if err := p.gitClient.Checkout(ctx, tempDir, cfg.Branch, false, env); err != nil {
+		if err := p.gitClient.Checkout(ctx, tempDir, cfg.Branch, true, env); err != nil {
+			return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
 		}
 	}
 
-	// Clean directory (except .git)
 	entries, err := os.ReadDir(tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read temp dir: %w", err)
@@ -142,64 +116,47 @@ func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug str
 		}
 	}
 
-	// Copy source to temp directory
 	if err := copyDirRecursive(sourceDir, tempDir); err != nil {
 		return nil, fmt.Errorf("cannot copy source: %w", err)
 	}
 
-	// Add all files
-	if err := w.AddGlob("."); err != nil {
+	if err := p.gitClient.Add(ctx, tempDir, ".", env); err != nil {
 		return nil, fmt.Errorf("cannot stage files: %w", err)
 	}
 
-	// Commit
-	commitMsg := fmt.Sprintf("Deploy site - %s", time.Now().Format("2006-01-02 15:04:05"))
 	commitName := cfg.CommitName
 	if commitName == "" {
 		commitName = "Clio Publisher"
 	}
 
-	commit, err := w.Commit(commitMsg, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  commitName,
-			Email: cfg.CommitEmail,
-			When:  time.Now(),
-		},
-	})
+	commit := git.Commit{
+		UserName:  commitName,
+		UserEmail: cfg.CommitEmail,
+		Message:   fmt.Sprintf("Deploy site - %s", time.Now().Format("2006-01-02 15:04:05")),
+	}
+
+	commitHash, err := p.gitClient.Commit(ctx, tempDir, commit, env)
 	if err != nil {
 		return nil, fmt.Errorf("cannot commit: %w", err)
 	}
 
-	// For empty repos, create the branch reference before pushing
-	if isEmpty {
-		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-		ref := plumbing.NewHashReference(branchRef, commit)
-		if err := repo.Storer.SetReference(ref); err != nil {
-			return nil, fmt.Errorf("cannot create branch reference: %w", err)
-		}
+	if commitHash == "" {
+		return &PublishResult{NoChanges: true}, nil
 	}
 
-	refSpec := config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch))
-	err = repo.Push(&git.PushOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{refSpec},
-		Auth:       auth,
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
+	if err := p.gitClient.Push(ctx, tempDir, auth, "origin", cfg.Branch, env); err != nil {
 		return nil, fmt.Errorf("cannot push: %w", err)
 	}
 
-	// Build commit URL
 	repoURL := strings.TrimSuffix(cfg.RepoURL, ".git")
-	commitURL := fmt.Sprintf("%s/commit/%s", repoURL, commit.String())
+	commitURL := fmt.Sprintf("%s/commit/%s", repoURL, commitHash)
 
 	return &PublishResult{
-		CommitHash: commit.String(),
+		CommitHash: commitHash,
 		CommitURL:  commitURL,
 	}, nil
 }
 
-// Backup backs up the generated markdown to the configured repository for versioning.
 func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug string) (*PublishResult, error) {
 	if err := p.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
@@ -213,42 +170,30 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 	imagesDir := p.workspace.GetImagesPath(siteSlug)
 	profilesDir := p.workspace.GetProfilesPath()
 
-	tempDir, err := os.MkdirTemp("", "clio-backup-*")
+	parentTempDir, err := os.MkdirTemp("", "clio-backup-*")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(parentTempDir)
 
-	auth := &http.BasicAuth{
-		Username: "git",
-		Password: cfg.AuthToken,
+	tempDir := filepath.Join(parentTempDir, "repo")
+	env := os.Environ()
+
+	auth := git.Auth{
+		Method: git.AuthToken,
+		Token:  cfg.AuthToken,
+	}
+	if cfg.UseSSH {
+		auth = git.Auth{Method: git.AuthSSH}
 	}
 
-	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
-	if err != nil {
-		return nil, err
+	if err := p.gitClient.Clone(ctx, cfg.RepoURL, tempDir, auth, env); err != nil {
+		return nil, fmt.Errorf("cannot clone repo: %w", err)
 	}
 
-	w, err := repo.Worktree()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get worktree: %w", err)
-	}
-
-	// Checkout or create branch (skip for freshly initialized empty repos)
-	if !isEmpty {
-		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-		err = w.Checkout(&git.CheckoutOptions{
-			Branch: branchRef,
-			Create: false,
-		})
-		if err != nil {
-			err = w.Checkout(&git.CheckoutOptions{
-				Branch: branchRef,
-				Create: true,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
-			}
+	if err := p.gitClient.Checkout(ctx, tempDir, cfg.Branch, false, env); err != nil {
+		if err := p.gitClient.Checkout(ctx, tempDir, cfg.Branch, true, env); err != nil {
+			return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
 		}
 	}
 
@@ -294,103 +239,76 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		}
 	}
 
-	if err := w.AddGlob("."); err != nil {
+	if err := p.gitClient.Add(ctx, tempDir, ".", env); err != nil {
 		return nil, fmt.Errorf("cannot stage files: %w", err)
 	}
 
-	commitMsg := fmt.Sprintf("Backup site - %s", time.Now().Format("2006-01-02 15:04:05"))
 	commitName := cfg.CommitName
 	if commitName == "" {
 		commitName = "Clio Publisher"
 	}
 
-	commit, err := w.Commit(commitMsg, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  commitName,
-			Email: cfg.CommitEmail,
-			When:  time.Now(),
-		},
-	})
+	commit := git.Commit{
+		UserName:  commitName,
+		UserEmail: cfg.CommitEmail,
+		Message:   fmt.Sprintf("Backup site - %s", time.Now().Format("2006-01-02 15:04:05")),
+	}
+
+	commitHash, err := p.gitClient.Commit(ctx, tempDir, commit, env)
 	if err != nil {
-		if strings.Contains(err.Error(), "clean working tree") {
-			return &PublishResult{NoChanges: true}, nil
-		}
 		return nil, fmt.Errorf("cannot commit: %w", err)
 	}
 
-	// For empty repos, create the branch reference before pushing
-	if isEmpty {
-		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-		ref := plumbing.NewHashReference(branchRef, commit)
-		if err := repo.Storer.SetReference(ref); err != nil {
-			return nil, fmt.Errorf("cannot create branch reference: %w", err)
-		}
+	if commitHash == "" {
+		return &PublishResult{NoChanges: true}, nil
 	}
 
-	refSpec := config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch))
-	err = repo.Push(&git.PushOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{refSpec},
-		Auth:       auth,
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
+	if err := p.gitClient.Push(ctx, tempDir, auth, "origin", cfg.Branch, env); err != nil {
 		return nil, fmt.Errorf("cannot push: %w", err)
 	}
 
 	repoURL := strings.TrimSuffix(cfg.RepoURL, ".git")
-	commitURL := fmt.Sprintf("%s/commit/%s", repoURL, commit.String())
+	commitURL := fmt.Sprintf("%s/commit/%s", repoURL, commitHash)
 
 	return &PublishResult{
-		CommitHash: commit.String(),
+		CommitHash: commitHash,
 		CommitURL:  commitURL,
 	}, nil
 }
 
-// Plan performs a dry-run showing what would change.
 func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string) (*PlanResult, error) {
 	if err := p.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	// Get the HTML source directory
 	sourceDir := p.workspace.GetHTMLPath(siteSlug)
 	if _, err := os.Stat(sourceDir); err != nil {
 		return nil, fmt.Errorf("source directory not found: %w", err)
 	}
 
-	// Create temp directory for clone
-	tempDir, err := os.MkdirTemp("", "clio-plan-*")
+	parentTempDir, err := os.MkdirTemp("", "clio-plan-*")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(parentTempDir)
 
-	// Clone or init repository (handles empty repos)
-	auth := &http.BasicAuth{
-		Username: "git",
-		Password: cfg.AuthToken,
+	tempDir := filepath.Join(parentTempDir, "repo")
+	env := os.Environ()
+
+	auth := git.Auth{
+		Method: git.AuthToken,
+		Token:  cfg.AuthToken,
+	}
+	if cfg.UseSSH {
+		auth = git.Auth{Method: git.AuthSSH}
 	}
 
-	repo, isEmpty, err := cloneOrInit(tempDir, cfg.RepoURL, auth)
-	if err != nil {
-		return nil, err
+	if err := p.gitClient.Clone(ctx, cfg.RepoURL, tempDir, auth, env); err != nil {
+		return nil, fmt.Errorf("cannot clone repo: %w", err)
 	}
 
-	w, err := repo.Worktree()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get worktree: %w", err)
-	}
+	_ = p.gitClient.Checkout(ctx, tempDir, cfg.Branch, false, env)
 
-	// Checkout branch (skip for freshly initialized empty repos)
-	if !isEmpty {
-		branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
-		_ = w.Checkout(&git.CheckoutOptions{
-			Branch: branchRef,
-			Create: false,
-		})
-	}
-
-	// Clean directory (except .git)
 	entries, err := os.ReadDir(tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read temp dir: %w", err)
@@ -405,31 +323,35 @@ func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string
 		}
 	}
 
-	// Copy source to temp directory
 	if err := copyDirRecursive(sourceDir, tempDir); err != nil {
 		return nil, fmt.Errorf("cannot copy source: %w", err)
 	}
 
-	// Add all files
-	if err := w.AddGlob("."); err != nil {
+	if err := p.gitClient.Add(ctx, tempDir, ".", env); err != nil {
 		return nil, fmt.Errorf("cannot stage files: %w", err)
 	}
 
-	// Get status
-	status, err := w.Status()
+	statusOutput, err := p.gitClient.Status(ctx, tempDir, env)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get status: %w", err)
 	}
 
 	result := &PlanResult{}
-	for file, s := range status {
-		switch s.Staging {
-		case git.Added, git.Untracked:
-			result.Added = append(result.Added, file)
-		case git.Modified:
-			result.Modified = append(result.Modified, file)
-		case git.Deleted:
-			result.Deleted = append(result.Deleted, file)
+	lines := strings.Split(statusOutput, "\n")
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+		status := line[0:2]
+		filename := strings.TrimSpace(line[3:])
+
+		switch status {
+		case "A ", "??":
+			result.Added = append(result.Added, filename)
+		case "M ":
+			result.Modified = append(result.Modified, filename)
+		case "D ":
+			result.Deleted = append(result.Deleted, filename)
 		}
 	}
 
@@ -439,50 +361,12 @@ func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string
 	return result, nil
 }
 
-// cloneOrInit attempts to clone a repository. If the remote is empty, it initializes
-// a new local repo and adds the remote origin instead.
-// Returns the repo and a boolean indicating if the repo was freshly initialized (empty).
-func cloneOrInit(tempDir, repoURL string, auth *http.BasicAuth) (*git.Repository, bool, error) {
-	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
-		URL:      repoURL,
-		Auth:     auth,
-		Progress: nil,
-	})
-	if err == nil {
-		return repo, false, nil
-	}
-
-	// Check if error is due to empty remote repository
-	if err == transport.ErrEmptyRemoteRepository || strings.Contains(err.Error(), "remote repository is empty") {
-		// Initialize new repository locally
-		repo, err = git.PlainInit(tempDir, false)
-		if err != nil {
-			return nil, false, fmt.Errorf("cannot init repository: %w", err)
-		}
-
-		// Add remote origin
-		_, err = repo.CreateRemote(&config.RemoteConfig{
-			Name: "origin",
-			URLs: []string{repoURL},
-		})
-		if err != nil {
-			return nil, false, fmt.Errorf("cannot add remote: %w", err)
-		}
-
-		return repo, true, nil
-	}
-
-	return nil, false, fmt.Errorf("cannot clone repository: %w", err)
-}
-
-// copyDirRecursive copies the contents of src to dst recursively.
 func copyDirRecursive(src, dst string) error {
 	return filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Calculate relative path
 		relPath, err := filepath.Rel(src, path)
 		if err != nil {
 			return err

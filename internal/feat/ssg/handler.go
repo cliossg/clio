@@ -16,6 +16,7 @@ import (
 
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/config"
+	"github.com/cliossg/clio/pkg/cl/git"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
 	"github.com/cliossg/clio/pkg/cl/render"
@@ -49,13 +50,14 @@ type Handler struct {
 
 func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
+	gitClient := git.NewClient(log)
 	return &Handler{
 		service:        service,
 		profileService: profileService,
 		workspace:      workspace,
 		generator:      NewGenerator(workspace),
 		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
-		publisher:      NewPublisher(workspace),
+		publisher:      NewPublisher(workspace, gitClient),
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
 		userNameFn:     userNameFn,
@@ -520,13 +522,19 @@ func (h *Handler) HandleShowSite(w http.ResponseWriter, r *http.Request) {
 		data.Success = "No changes to backup"
 	case "html":
 		data.Success = "HTML site generated successfully"
+	case "publish":
+		data.Success = "Site published successfully"
+	case "publish_no_changes":
+		data.Success = "No changes to publish"
 	}
 
 	switch r.URL.Query().Get("error") {
 	case "backup_failed":
 		data.Error = "Failed to backup markdown to git repository"
-	case "publish_not_implemented":
-		data.Error = "Publish feature not yet implemented"
+	case "publish_not_configured":
+		data.Error = "Publish repository not configured"
+	case "publish_failed":
+		data.Error = "Failed to publish site to git repository"
 	}
 
 	h.render(w, r, "ssg/sites/show", data)
@@ -3124,9 +3132,9 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 
 	// Check if backup repo is configured
 	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.repo.url")
-	authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
 
-	if repoURL != nil && repoURL.Value != "" && authToken != nil && authToken.Value != "" {
+	if repoURL != nil && repoURL.Value != "" {
+		authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
 		branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.branch")
 		commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.name")
 		commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.email")
@@ -3146,12 +3154,20 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 			commitEmailValue = commitEmail.Value
 		}
 
+		authTokenValue := ""
+		useSSH := true
+		if authToken != nil && authToken.Value != "" && strings.HasPrefix(repoURL.Value, "https://") {
+			authTokenValue = authToken.Value
+			useSSH = false
+		}
+
 		cfg := PublishConfig{
 			RepoURL:     repoURL.Value,
 			Branch:      branchValue,
-			AuthToken:   authToken.Value,
+			AuthToken:   authTokenValue,
 			CommitName:  commitNameValue,
 			CommitEmail: commitEmailValue,
+			UseSSH:      useSSH,
 		}
 
 		backupResult, err := h.publisher.Backup(r.Context(), cfg, site.Slug)
@@ -3236,10 +3252,65 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement publishing with go-git
-	// For now, just redirect back with a message
-	h.log.Info("Publish requested but not yet implemented", "site", site.Slug)
-	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=publish_not_implemented", http.StatusSeeOther)
+	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.repo.url")
+
+	if repoURL == nil || repoURL.Value == "" {
+		h.log.Error("Publish repo not configured")
+		http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=publish_not_configured", http.StatusSeeOther)
+		return
+	}
+
+	authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.auth.token")
+	branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.branch")
+	commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.name")
+	commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.email")
+
+	branchValue := "gh-pages"
+	if branch != nil && branch.Value != "" {
+		branchValue = branch.Value
+	}
+
+	commitNameValue := "Clio Bot"
+	if commitName != nil && commitName.Value != "" {
+		commitNameValue = commitName.Value
+	}
+
+	commitEmailValue := "clio@localhost"
+	if commitEmail != nil && commitEmail.Value != "" {
+		commitEmailValue = commitEmail.Value
+	}
+
+	authTokenValue := ""
+	useSSH := true
+	if authToken != nil && authToken.Value != "" && strings.HasPrefix(repoURL.Value, "https://") {
+		authTokenValue = authToken.Value
+		useSSH = false
+	}
+
+	cfg := PublishConfig{
+		RepoURL:     repoURL.Value,
+		Branch:      branchValue,
+		AuthToken:   authTokenValue,
+		CommitName:  commitNameValue,
+		CommitEmail: commitEmailValue,
+		UseSSH:      useSSH,
+	}
+
+	publishResult, err := h.publisher.Publish(r.Context(), cfg, site.Slug)
+	if err != nil {
+		h.log.Errorf("Publish to git failed: %v", err)
+		http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=publish_failed", http.StatusSeeOther)
+		return
+	}
+
+	if publishResult.NoChanges {
+		h.log.Info("Publish: no changes to commit")
+		http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=publish_no_changes", http.StatusSeeOther)
+		return
+	}
+
+	h.log.Infof("Publish complete: %s", publishResult.CommitURL)
+	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=publish", http.StatusSeeOther)
 }
 
 type profileSocialLink struct {
