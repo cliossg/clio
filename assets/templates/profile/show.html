@@ -2,14 +2,14 @@
 <div class="card">
     <div class="card-header">
         <h1>My Profile</h1>
-        <a href="/profile/edit" class="btn">Edit</a>
+        <a href="/edit-profile" class="btn">Edit</a>
     </div>
 
     <!-- Profile Photo -->
     <div style="margin-bottom: 1.5rem;">
         {{ if .Profile.PhotoPath }}
         <div style="display: flex; align-items: center; gap: 1rem;">
-            <img src="/profile/photo/{{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <img src="/get-profile-photo?filename={{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
             <div>
                 <strong>{{ .Profile.FullName }}</strong>
                 <div style="color: var(--stone-beige); font-size: 0.875rem;">@{{ .Profile.Slug }}</div>

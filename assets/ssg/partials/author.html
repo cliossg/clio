@@ -1,0 +1,48 @@
+{{define "author"}}
+<div class="author-page">
+    <header class="author-header">
+        {{if .Author.PhotoPath}}
+        <img src="/profiles/{{.Author.PhotoPath}}" alt="{{.Author.Name}} {{.Author.Surname}}" class="author-photo">
+        {{end}}
+        <h1 class="author-name">{{.Author.Name}} {{.Author.Surname}}</h1>
+        <p class="author-handle">@{{.Author.Handle}}</p>
+        {{if .Author.Bio}}
+        <div class="author-bio">{{.Author.Bio}}</div>
+        {{end}}
+        {{if .Author.SocialLinks}}
+        <div class="author-social">
+            {{range .Author.SocialLinks}}
+            <a href="{{.URL}}" class="social-link" target="_blank" rel="noopener">{{.Platform}}</a>
+            {{end}}
+        </div>
+        {{end}}
+    </header>
+
+    {{if .Contents}}
+    <section class="author-posts">
+        <h2>Posts by @{{.Author.Handle}}</h2>
+        <div class="content-list">
+            {{range .Contents}}
+            <article class="content-card">
+                <h3 class="content-title">
+                    <a href="{{.URL}}">{{.Heading}}</a>
+                </h3>
+                {{if .Summary}}
+                <p class="content-summary">{{.Summary}}</p>
+                {{end}}
+                <div class="content-meta">
+                    {{if .PublishedAt}}
+                    <time datetime="{{.PublishedAt.Format "2006-01-02"}}">
+                        {{.PublishedAt.Format "Jan 02, 2006"}}
+                    </time>
+                    {{end}}
+                </div>
+            </article>
+            {{end}}
+        </div>
+    </section>
+    {{else}}
+    <p class="empty-state">No posts yet.</p>
+    {{end}}
+</div>
+{{end}}

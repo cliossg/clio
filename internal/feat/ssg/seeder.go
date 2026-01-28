@@ -2,22 +2,30 @@ package ssg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/google/uuid"
 )
 
-type Seeder struct {
-	service Service
-	log     logger.Logger
+type SeederProfileService interface {
+	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
-func NewSeeder(service Service, log logger.Logger) *Seeder {
+type Seeder struct {
+	service        Service
+	profileService SeederProfileService
+	log            logger.Logger
+}
+
+func NewSeeder(service Service, profileService SeederProfileService, log logger.Logger) *Seeder {
 	return &Seeder{
-		service: service,
-		log:     log,
+		service:        service,
+		profileService: profileService,
+		log:            log,
 	}
 }
 
@@ -89,15 +97,50 @@ func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
 func (s *Seeder) seedContributors(ctx context.Context, siteID uuid.UUID) error {
 	contributors := []struct {
 		handle, name, surname, bio, role string
+		socialLinks                      []SocialLink
 	}{
-		{"johndoe", "John", "Doe", "Senior software engineer and Go enthusiast", "editor"},
-		{"janesmith", "Jane", "Smith", "Technical writer and documentation specialist", "author"},
+		{
+			handle:  "johndoe",
+			name:    "John",
+			surname: "Doe",
+			bio:     "Senior software engineer and Go enthusiast. Building tools for developers and writing about backend architecture.",
+			role:    "editor",
+			socialLinks: []SocialLink{
+				{Platform: "GitHub", URL: "https://github.com/johndoe"},
+				{Platform: "X", URL: "https://x.com/johndoe"},
+				{Platform: "LinkedIn", URL: "https://linkedin.com/in/johndoe"},
+			},
+		},
+		{
+			handle:  "janesmith",
+			name:    "Jane",
+			surname: "Smith",
+			bio:     "Technical writer and documentation specialist. Passionate about making complex topics accessible to everyone.",
+			role:    "author",
+			socialLinks: []SocialLink{
+				{Platform: "GitHub", URL: "https://github.com/janesmith"},
+				{Platform: "X", URL: "https://x.com/janesmith"},
+				{Platform: "Website", URL: "https://janesmith.dev"},
+			},
+		},
 	}
 
 	for _, c := range contributors {
+		socialLinksJSON, err := json.Marshal(c.socialLinks)
+		if err != nil {
+			return fmt.Errorf("cannot marshal social links for %s: %w", c.handle, err)
+		}
+
+		p, err := s.profileService.CreateProfile(ctx, c.handle, c.name, c.surname, c.bio, string(socialLinksJSON), "", "")
+		if err != nil {
+			return fmt.Errorf("cannot create profile for %s: %w", c.handle, err)
+		}
+
 		contributor := NewContributor(siteID, c.handle, c.name, c.surname)
+		contributor.ProfileID = &p.ID
 		contributor.Bio = c.bio
 		contributor.Role = c.role
+		contributor.SocialLinks = c.socialLinks
 		if err := s.service.CreateContributor(ctx, contributor); err != nil {
 			return fmt.Errorf("cannot create contributor %s: %w", c.handle, err)
 		}
@@ -128,6 +171,9 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.publish.commit.user.name", false},
 		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.publish.commit.user.email", false},
 		{"Commit message", "Default commit message", "Update site content", "ssg.publish.commit.message", false},
+		{"Backup repository URL", "Git repository URL for markdown backup", "", "ssg.backup.repo.url", false},
+		{"Backup branch", "Git branch for markdown backup", "main", "ssg.backup.branch", false},
+		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", false},
 	}
 
 	for _, d := range defaults {
@@ -315,7 +361,10 @@ func (s *Seeder) seedDemoContent(ctx context.Context, site *Site) error {
 			if p.contributor != "" {
 				if c, ok := contributorMap[p.contributor]; ok {
 					post.ContributorID = &c.ID
+					post.ContributorHandle = c.Handle
 				}
+			} else {
+				post.AuthorUsername = "admin"
 			}
 			if err := s.service.CreateContent(ctx, post); err != nil {
 				return err

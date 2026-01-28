@@ -12,7 +12,10 @@
     {{ end }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {{ if .IsIndex }}
+    {{ if .IsAuthor }}
+    <title>@{{ .Author.Handle }} - {{ .Site.Name }}</title>
+    <meta name="description" content="{{ .Author.Bio }}">
+    {{ else if .IsIndex }}
     <title>{{ .Site.Name }}</title>
     <meta name="description" content="{{ .Params.site_description }}">
     {{ else }}
@@ -36,7 +39,9 @@
         </div>
     </nav>
 
-    {{ if .IsIndex }}
+    {{ if .IsAuthor }}
+    {{ template "author" . }}
+    {{ else if .IsIndex }}
     {{ template "hero.html" . }}
     {{ template "list.html" . }}
     {{ else }}

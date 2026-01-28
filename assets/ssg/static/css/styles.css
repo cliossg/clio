@@ -552,6 +552,137 @@ nav a.active {
 }
 
 /* ============================================
+   AUTHOR PAGE
+   ============================================ */
+
+.author-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.author-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.author-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+    border: 4px solid #e5e7eb;
+}
+
+.author-name {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+}
+
+.author-handle {
+    font-size: 1.125rem;
+    color: #6b7280;
+    margin: 0 0 1.5rem 0;
+}
+
+.author-bio {
+    font-size: 1.125rem;
+    color: #4b5563;
+    max-width: 600px;
+    margin: 0 auto 1.5rem auto;
+    line-height: 1.6;
+}
+
+.author-social {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    color: #374151;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.social-link:hover {
+    background-color: #e5e7eb;
+    color: #1f2937;
+    text-decoration: none;
+}
+
+.author-posts h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+.content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.content-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.content-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.content-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.content-title a {
+    color: #1f2937;
+    text-decoration: none;
+}
+
+.content-title a:hover {
+    color: #2563eb;
+}
+
+.content-summary {
+    font-size: 0.95rem;
+    color: #4b5563;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+}
+
+.content-meta {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.empty-state {
+    text-align: center;
+    color: #6b7280;
+    font-size: 1.125rem;
+    padding: 2rem;
+}
+
+/* ============================================
    FOOTER
    ============================================ */
 

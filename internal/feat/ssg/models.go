@@ -80,8 +80,10 @@ type Content struct {
 	UserID        uuid.UUID  `json:"user_id"`
 	ShortID       string     `json:"short_id"`
 	SectionID     uuid.UUID  `json:"section_id"`
-	ContributorID *uuid.UUID `json:"contributor_id,omitempty"`
-	Kind          string     `json:"kind"` // "post", "page", "series"
+	ContributorID     *uuid.UUID `json:"contributor_id,omitempty"`
+	ContributorHandle string     `json:"contributor_handle,omitempty"`
+	AuthorUsername    string     `json:"author_username,omitempty"`
+	Kind              string     `json:"kind"` // "post", "page", "series"
 	Heading       string     `json:"heading"`
 	Summary       string     `json:"summary"`
 	Body          string     `json:"body"`
@@ -129,6 +131,14 @@ func NewContent(siteID, sectionID uuid.UUID, heading, body string) *Content {
 // Slug returns a URL-friendly slug for the content.
 func (c *Content) Slug() string {
 	return Slugify(c.Heading) + "-" + c.ShortID
+}
+
+// DisplayHandle returns the handle to display (contributor takes precedence).
+func (c *Content) DisplayHandle() string {
+	if c.ContributorHandle != "" {
+		return c.ContributorHandle
+	}
+	return c.AuthorUsername
 }
 
 // Layout represents a content layout template.
@@ -396,6 +406,7 @@ type Contributor struct {
 	Bio         string       `json:"bio"`
 	SocialLinks []SocialLink `json:"social_links"`
 	Role        string       `json:"role"`
+	PhotoPath   string       `json:"photo_path,omitempty"`
 	CreatedBy   uuid.UUID    `json:"-"`
 	UpdatedBy   uuid.UUID    `json:"-"`
 	CreatedAt   time.Time    `json:"created_at"`

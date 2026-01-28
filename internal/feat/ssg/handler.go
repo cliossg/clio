@@ -36,6 +36,7 @@ type Handler struct {
 	workspace      *Workspace
 	generator      *Generator
 	htmlGen        *HTMLGenerator
+	publisher      *Publisher
 	siteCtxMw      func(http.Handler) http.Handler
 	sessionMw      func(http.Handler) http.Handler
 	userNameFn     func(context.Context) string
@@ -54,6 +55,7 @@ func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessi
 		workspace:      workspace,
 		generator:      NewGenerator(workspace),
 		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
+		publisher:      NewPublisher(workspace),
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
 		userNameFn:     userNameFn,
@@ -243,7 +245,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Post("/ssg/update-meta", h.HandleUpdateMeta)
 
 				// Generation
-				r.Post("/ssg/generate-markdown", h.HandleGenerateMarkdown)
+				r.Post("/ssg/backup-markdown", h.HandleBackupMarkdown)
 				r.Post("/ssg/generate-html", h.HandleGenerateHTML)
 				r.Post("/ssg/publish", h.HandlePublish)
 			})
@@ -504,10 +506,28 @@ func (h *Handler) HandleShowSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.render(w, r, "ssg/sites/show", PageData{
+	data := PageData{
 		Title: site.Name,
 		Site:  site,
-	})
+	}
+
+	switch r.URL.Query().Get("success") {
+	case "markdown":
+		data.Success = "Markdown files generated successfully"
+	case "backup":
+		data.Success = "Markdown backed up to git repository"
+	case "html":
+		data.Success = "HTML site generated successfully"
+	}
+
+	switch r.URL.Query().Get("error") {
+	case "backup_failed":
+		data.Error = "Failed to backup markdown to git repository"
+	case "publish_not_implemented":
+		data.Error = "Publish feature not yet implemented"
+	}
+
+	h.render(w, r, "ssg/sites/show", data)
 }
 
 func (h *Handler) HandleEditSite(w http.ResponseWriter, r *http.Request) {
@@ -940,6 +960,9 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 	if cid := r.FormValue("contributor_id"); cid != "" {
 		if id, err := uuid.Parse(cid); err == nil {
 			content.ContributorID = &id
+			if contributor, err := h.service.GetContributor(r.Context(), id); err == nil {
+				content.ContributorHandle = contributor.Handle
+			}
 		}
 	}
 
@@ -957,6 +980,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 			content.UpdatedBy = userID
 		}
 	}
+	content.AuthorUsername = h.userNameFn(r.Context())
 
 	if err := h.service.CreateContent(r.Context(), content); err != nil {
 		h.log.Errorf("Cannot create content: %v", err)
@@ -1106,9 +1130,13 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 	if cid := r.FormValue("contributor_id"); cid != "" {
 		if id, err := uuid.Parse(cid); err == nil {
 			content.ContributorID = &id
+			if contributor, err := h.service.GetContributor(r.Context(), id); err == nil {
+				content.ContributorHandle = contributor.Handle
+			}
 		}
 	} else {
 		content.ContributorID = nil
+		content.ContributorHandle = ""
 	}
 
 	if order := r.FormValue("series_order"); order != "" {
@@ -1205,9 +1233,13 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 	if cid := r.FormValue("contributor_id"); cid != "" {
 		if id, err := uuid.Parse(cid); err == nil {
 			content.ContributorID = &id
+			if contributor, err := h.service.GetContributor(r.Context(), id); err == nil {
+				content.ContributorHandle = contributor.Handle
+			}
 		}
 	} else {
 		content.ContributorID = nil
+		content.ContributorHandle = ""
 	}
 
 	if seriesOrder := r.FormValue("series_order"); seriesOrder != "" {
@@ -1221,6 +1253,7 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 		if userID, err := uuid.Parse(userIDStr); err == nil {
 			if isNew {
 				content.CreatedBy = userID
+				content.AuthorUsername = h.userNameFn(r.Context())
 			}
 			content.UpdatedBy = userID
 		}
@@ -3058,7 +3091,7 @@ func (h *Handler) HandleRemoveContributorPhoto(w http.ResponseWriter, r *http.Re
 
 // --- Generation Handlers ---
 
-func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 	site := getSiteFromContext(r.Context())
 	if site == nil {
 		h.renderError(w, r, http.StatusBadRequest, "Site context required")
@@ -3086,7 +3119,51 @@ func (h *Handler) HandleGenerateMarkdown(w http.ResponseWriter, r *http.Request)
 		h.log.Infof("Markdown generation had %d errors", len(result.Errors))
 	}
 
-	// Redirect back to site with success message
+	// Check if backup repo is configured
+	repoURL, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.repo.url")
+	authToken, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.auth.token")
+
+	if repoURL != nil && repoURL.Value != "" && authToken != nil && authToken.Value != "" {
+		branch, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.backup.branch")
+		commitName, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.name")
+		commitEmail, _ := h.service.GetParamByRefKey(r.Context(), site.ID, "ssg.publish.commit.user.email")
+
+		branchValue := "main"
+		if branch != nil && branch.Value != "" {
+			branchValue = branch.Value
+		}
+
+		commitNameValue := "Clio Bot"
+		if commitName != nil && commitName.Value != "" {
+			commitNameValue = commitName.Value
+		}
+
+		commitEmailValue := "clio@localhost"
+		if commitEmail != nil && commitEmail.Value != "" {
+			commitEmailValue = commitEmail.Value
+		}
+
+		cfg := PublishConfig{
+			RepoURL:     repoURL.Value,
+			Branch:      branchValue,
+			AuthToken:   authToken.Value,
+			CommitName:  commitNameValue,
+			CommitEmail: commitEmailValue,
+		}
+
+		backupResult, err := h.publisher.Backup(r.Context(), cfg, site.Slug)
+		if err != nil {
+			h.log.Errorf("Markdown backup to git failed: %v", err)
+			http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&error=backup_failed", http.StatusSeeOther)
+			return
+		}
+
+		h.log.Infof("Markdown backup complete: %s", backupResult.CommitURL)
+		http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=backup", http.StatusSeeOther)
+		return
+	}
+
+	// No backup repo configured, just redirect with markdown success
 	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=markdown", http.StatusSeeOther)
 }
 
@@ -3113,23 +3190,28 @@ func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get params
 	params, err := h.service.GetParams(r.Context(), site.ID)
 	if err != nil {
 		h.log.Errorf("Cannot get params for HTML generation: %v", err)
-		// Continue without params
 		params = []*Param{}
 	}
 
-	// Generate HTML site
-	result, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params)
+	contributors, err := h.service.GetContributors(r.Context(), site.ID)
+	if err != nil {
+		h.log.Errorf("Cannot get contributors for HTML generation: %v", err)
+		contributors = []*Contributor{}
+	}
+
+	userAuthors := h.service.BuildUserAuthorsMap(r.Context(), contents, contributors)
+
+	result, err := h.htmlGen.GenerateHTML(r.Context(), site, contents, sections, params, contributors, userAuthors)
 	if err != nil {
 		h.log.Errorf("HTML generation failed: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "HTML generation failed")
 		return
 	}
 
-	h.log.Infof("HTML generation complete: %d pages, %d index pages", result.PagesGenerated, result.IndexPages)
+	h.log.Infof("HTML generation complete: %d pages, %d index pages, %d author pages", result.PagesGenerated, result.IndexPages, result.AuthorPages)
 	if len(result.Errors) > 0 {
 		h.log.Infof("HTML generation had %d errors", len(result.Errors))
 	}

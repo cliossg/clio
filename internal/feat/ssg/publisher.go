@@ -192,6 +192,132 @@ func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug str
 	}, nil
 }
 
+// Backup backs up the generated markdown to the configured repository for versioning.
+func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug string) (*PublishResult, error) {
+	if err := p.Validate(cfg); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	markdownDir := p.workspace.GetMarkdownPath(siteSlug)
+	if _, err := os.Stat(markdownDir); err != nil {
+		return nil, fmt.Errorf("markdown directory not found: %w", err)
+	}
+
+	imagesDir := p.workspace.GetImagesPath(siteSlug)
+
+	tempDir, err := os.MkdirTemp("", "clio-backup-*")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	auth := &http.BasicAuth{
+		Username: "git",
+		Password: cfg.AuthToken,
+	}
+
+	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{
+		URL:      cfg.RepoURL,
+		Auth:     auth,
+		Progress: nil,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot clone repository: %w", err)
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get worktree: %w", err)
+	}
+
+	branchRef := plumbing.NewBranchReferenceName(cfg.Branch)
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: branchRef,
+		Create: false,
+	})
+	if err != nil {
+		err = w.Checkout(&git.CheckoutOptions{
+			Branch: branchRef,
+			Create: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("cannot checkout branch %s: %w", cfg.Branch, err)
+		}
+	}
+
+	entries, err := os.ReadDir(tempDir)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read temp dir: %w", err)
+	}
+	for _, entry := range entries {
+		if entry.Name() == ".git" {
+			continue
+		}
+		entryPath := filepath.Join(tempDir, entry.Name())
+		if err := os.RemoveAll(entryPath); err != nil {
+			return nil, fmt.Errorf("cannot clean %s: %w", entry.Name(), err)
+		}
+	}
+
+	contentDst := filepath.Join(tempDir, "content")
+	if err := os.MkdirAll(contentDst, 0755); err != nil {
+		return nil, fmt.Errorf("cannot create content dir: %w", err)
+	}
+	if err := copyDirRecursive(markdownDir, contentDst); err != nil {
+		return nil, fmt.Errorf("cannot copy markdown: %w", err)
+	}
+
+	if _, err := os.Stat(imagesDir); err == nil {
+		imagesDst := filepath.Join(tempDir, "images")
+		if err := os.MkdirAll(imagesDst, 0755); err != nil {
+			return nil, fmt.Errorf("cannot create images dir: %w", err)
+		}
+		if err := copyDirRecursive(imagesDir, imagesDst); err != nil {
+			return nil, fmt.Errorf("cannot copy images: %w", err)
+		}
+	}
+
+	if err := w.AddGlob("."); err != nil {
+		return nil, fmt.Errorf("cannot stage files: %w", err)
+	}
+
+	commitMsg := fmt.Sprintf("Backup site - %s", time.Now().Format("2006-01-02 15:04:05"))
+	commitName := cfg.CommitName
+	if commitName == "" {
+		commitName = "Clio Publisher"
+	}
+
+	commit, err := w.Commit(commitMsg, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  commitName,
+			Email: cfg.CommitEmail,
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot commit: %w", err)
+	}
+
+	err = repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", cfg.Branch, cfg.Branch)),
+		},
+		Auth: auth,
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		return nil, fmt.Errorf("cannot push: %w", err)
+	}
+
+	repoURL := strings.TrimSuffix(cfg.RepoURL, ".git")
+	commitURL := fmt.Sprintf("%s/commit/%s", repoURL, commit.String())
+
+	return &PublishResult{
+		CommitHash: commit.String(),
+		CommitURL:  commitURL,
+	}, nil
+}
+
 // Plan performs a dry-run showing what would change.
 func (p *Publisher) Plan(ctx context.Context, cfg PublishConfig, siteSlug string) (*PlanResult, error) {
 	if err := p.Validate(cfg); err != nil {

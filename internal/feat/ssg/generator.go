@@ -25,19 +25,31 @@ func NewGenerator(workspace *Workspace) *Generator {
 
 // ContentFrontmatter represents the YAML frontmatter for a content file.
 type ContentFrontmatter struct {
-	Title       string     `yaml:"title"`
-	Slug        string     `yaml:"slug"`
-	Draft       bool       `yaml:"draft"`
-	Featured    bool       `yaml:"featured"`
-	Tags        []string   `yaml:"tags,omitempty"`
-	Section     string     `yaml:"section,omitempty"`
-	Kind        string     `yaml:"kind,omitempty"`
-	Series      string     `yaml:"series,omitempty"`
-	SeriesOrder int        `yaml:"series_order,omitempty"`
-	Summary     string     `yaml:"summary,omitempty"`
-	PublishedAt *time.Time `yaml:"published_at,omitempty"`
-	CreatedAt   time.Time  `yaml:"created_at"`
-	UpdatedAt   time.Time  `yaml:"updated_at"`
+	Title           string     `yaml:"title"`
+	Slug            string     `yaml:"slug"`
+	Author          string     `yaml:"author,omitempty"`
+	Contributor     string     `yaml:"contributor,omitempty"`
+	Tags            []string   `yaml:"tags,omitempty"`
+	Layout          string     `yaml:"layout,omitempty"`
+	Draft           bool       `yaml:"draft"`
+	Featured        bool       `yaml:"featured"`
+	Summary         string     `yaml:"summary,omitempty"`
+	Description     string     `yaml:"description,omitempty"`
+	Image           string     `yaml:"image,omitempty"`
+	SocialImage     string     `yaml:"social-image,omitempty"`
+	PublishedAt     *time.Time `yaml:"published-at,omitempty"`
+	CreatedAt       time.Time  `yaml:"created-at"`
+	UpdatedAt       time.Time  `yaml:"updated-at"`
+	Robots          string     `yaml:"robots,omitempty"`
+	Keywords        string     `yaml:"keywords,omitempty"`
+	CanonicalURL    string     `yaml:"canonical-url,omitempty"`
+	Sitemap         string     `yaml:"sitemap,omitempty"`
+	TableOfContents bool       `yaml:"table-of-contents,omitempty"`
+	Comments        bool       `yaml:"comments,omitempty"`
+	Share           bool       `yaml:"share,omitempty"`
+	Kind            string     `yaml:"kind,omitempty"`
+	Series          string     `yaml:"series,omitempty"`
+	SeriesOrder     int        `yaml:"series-order,omitempty"`
 }
 
 // GenerateMarkdownResult contains the result of markdown generation.
@@ -74,23 +86,36 @@ func (g *Generator) GenerateMarkdown(ctx context.Context, siteSlug string, conte
 
 // generateContentMarkdown generates a single markdown file for a content item.
 func (g *Generator) generateContentMarkdown(basePath string, content *Content) error {
-	// Build frontmatter
 	frontmatter := ContentFrontmatter{
 		Title:       content.Heading,
 		Slug:        content.Slug(),
+		Author:      content.AuthorUsername,
+		Contributor: content.ContributorHandle,
+		Layout:      content.SectionName,
 		Draft:       content.Draft,
 		Featured:    content.Featured,
-		Section:     content.SectionName,
-		Kind:        content.Kind,
-		Series:      content.Series,
-		SeriesOrder: content.SeriesOrder,
 		Summary:     content.Summary,
+		Image:       content.HeaderImageURL,
+		SocialImage: content.HeaderImageURL,
 		PublishedAt: content.PublishedAt,
 		CreatedAt:   content.CreatedAt,
 		UpdatedAt:   content.UpdatedAt,
+		Kind:        content.Kind,
+		Series:      content.Series,
+		SeriesOrder: content.SeriesOrder,
 	}
 
-	// Extract tag names
+	if content.Meta != nil {
+		frontmatter.Description = content.Meta.Description
+		frontmatter.Robots = content.Meta.Robots
+		frontmatter.Keywords = content.Meta.Keywords
+		frontmatter.CanonicalURL = content.Meta.CanonicalURL
+		frontmatter.Sitemap = content.Meta.Sitemap
+		frontmatter.TableOfContents = content.Meta.TableOfContents
+		frontmatter.Comments = content.Meta.Comments
+		frontmatter.Share = content.Meta.Share
+	}
+
 	for _, tag := range content.Tags {
 		frontmatter.Tags = append(frontmatter.Tags, tag.Name)
 	}

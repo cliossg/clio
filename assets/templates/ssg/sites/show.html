@@ -73,11 +73,11 @@
         {{ if $canEdit }}
         <h3>Generation</h3>
         <div class="nav-grid">
-            <form method="POST" action="/ssg/generate-markdown" class="nav-card-form">
+            <form method="POST" action="/ssg/backup-markdown" class="nav-card-form">
                 <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
-                    <strong>Generate Markdown</strong>
-                    <span>Export content to .md files</span>
+                    <strong>Backup Markdown</strong>
+                    <span>Export and version content as .md files</span>
                 </button>
             </form>
             <a href="http://{{ .Site.Slug }}.localhost:3000/" target="_blank" class="nav-card">

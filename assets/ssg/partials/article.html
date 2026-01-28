@@ -21,11 +21,13 @@
                     {{ if .Content.PublishedAt }}
                     <span>{{ .Content.PublishedAt.Format "January 2, 2006" }}</span>
                     {{ end }}
-                    {{ if and .Content.Contributor .Content.PublishedAt }}
+                    {{ if and .Content.DisplayHandle .Content.PublishedAt }}
                     <span class="article-separator">·</span>
                     {{ end }}
-                    {{ if .Content.Contributor }}
-                    <span class="article-author">@{{ .Content.Contributor.Handle }}</span>
+                    {{ if .Content.ContributorHandle }}
+                    <a href="/authors/{{ .Content.ContributorHandle }}/" class="article-author">@{{ .Content.ContributorHandle }}</a>
+                    {{ else if .Content.AuthorUsername }}
+                    <a href="/authors/{{ .Content.AuthorUsername }}/" class="article-author">@{{ .Content.AuthorUsername }}</a>
                     {{ end }}
                 </div>
                 <div class="article-tags">

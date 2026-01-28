@@ -1135,6 +1135,10 @@ body.zen-mode-active.dark-mode .floating-buttons .floating-btn:hover {
     height: 100%;
     opacity: 0;
     cursor: pointer;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
 }
 
 .file-input-wrapper .btn {

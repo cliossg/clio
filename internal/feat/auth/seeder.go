@@ -56,7 +56,7 @@ func (s *Seeder) Start(ctx context.Context) error {
 	// Create default admin user
 	email := "admin@local"
 	password := generateRandomPassword()
-	name := "Admin"
+	name := "admin"
 
 	user, err := s.service.CreateUser(ctx, email, password, name, RoleAdmin, true)
 	if err != nil {
@@ -64,7 +64,9 @@ func (s *Seeder) Start(ctx context.Context) error {
 	}
 
 	slug := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
-	userProfile, err := s.profileService.CreateProfile(ctx, slug, name, "", "", "[]", "", user.ID.String())
+	bio := "Site administrator and content curator."
+	socialLinks := `[{"Platform":"GitHub","URL":"https://github.com/admin"},{"Platform":"X","URL":"https://x.com/admin"}]`
+	userProfile, err := s.profileService.CreateProfile(ctx, slug, "Site", "Admin", bio, socialLinks, "", user.ID.String())
 	if err != nil {
 		s.log.Errorf("Cannot create profile for admin user: %v", err)
 	} else {

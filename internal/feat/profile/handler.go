@@ -58,15 +58,15 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 	r.Group(func(r chi.Router) {
 		r.Use(h.sessionMw)
-		r.Get("/profile", h.HandleShowProfile)
-		r.Get("/profile/edit", h.HandleEditProfile)
-		r.Post("/profile/create", h.HandleCreateProfile)
-		r.Post("/profile/update", h.HandleUpdateProfile)
-		r.Post("/profile/upload-photo", h.HandleUploadPhoto)
-		r.Post("/profile/remove-photo", h.HandleRemovePhoto)
+		r.Get("/get-profile", h.HandleShowProfile)
+		r.Get("/edit-profile", h.HandleEditProfile)
+		r.Post("/create-profile", h.HandleCreateProfile)
+		r.Post("/update-profile", h.HandleUpdateProfile)
+		r.Post("/upload-profile-photo", h.HandleUploadPhoto)
+		r.Post("/remove-profile-photo", h.HandleRemovePhoto)
 	})
 
-	r.Get("/profile/photo/{filename}", h.HandleServePhoto)
+	r.Get("/get-profile-photo", h.HandleServePhoto)
 }
 
 type PageData struct {
@@ -128,14 +128,14 @@ func (h *Handler) HandleEditProfile(w http.ResponseWriter, r *http.Request) {
 
 	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
-		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
 	}
 
 	profile, err := h.service.GetProfile(ctx, *profileID)
 	if err != nil {
 		h.log.Errorf("Cannot get profile: %v", err)
-		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 		h.log.Errorf("Cannot link profile to user: %v", err)
 	}
 
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+	http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 }
 
 func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -196,13 +196,13 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
-		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
 	}
 
 	profile, err := h.service.GetProfile(ctx, *profileID)
 	if err != nil {
-		http.Redirect(w, r, "/profile", http.StatusSeeOther)
+		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
 	}
 
@@ -232,7 +232,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+	http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 }
 
 func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +304,7 @@ func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Infof("Profile photo uploaded: %s", fileName)
-	http.Redirect(w, r, "/profile/edit", http.StatusSeeOther)
+	http.Redirect(w, r, "/edit-profile", http.StatusSeeOther)
 }
 
 func (h *Handler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
@@ -338,11 +338,11 @@ func (h *Handler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Info("Profile photo removed")
-	http.Redirect(w, r, "/profile/edit", http.StatusSeeOther)
+	http.Redirect(w, r, "/edit-profile", http.StatusSeeOther)
 }
 
 func (h *Handler) HandleServePhoto(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "filename")
+	filename := r.URL.Query().Get("filename")
 	if filename == "" {
 		http.Error(w, "Filename required", http.StatusBadRequest)
 		return

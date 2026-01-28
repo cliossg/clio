@@ -1,6 +1,6 @@
 -- name: CreateContent :one
-INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, contributor_handle, author_username, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetContent :one
@@ -64,6 +64,8 @@ SELECT COUNT(*) FROM content WHERE site_id = ? AND heading LIKE ?;
 UPDATE content SET
     section_id = ?,
     contributor_id = ?,
+    contributor_handle = ?,
+    author_username = ?,
     kind = ?,
     heading = ?,
     summary = ?,

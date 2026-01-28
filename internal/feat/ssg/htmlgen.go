@@ -30,7 +30,7 @@ func NewHTMLGenerator(workspace *Workspace, assetsFS embed.FS) *HTMLGenerator {
 	}
 }
 
-// PageData holds data for rendering a page.
+// SSGPageData holds data for rendering a page.
 type SSGPageData struct {
 	Site        *Site
 	Content     *RenderedContent
@@ -38,7 +38,9 @@ type SSGPageData struct {
 	Section     *Section
 	Sections    []*Section
 	Menu        []*Section
+	Author      *Contributor
 	IsIndex     bool
+	IsAuthor    bool
 	IsPaginated bool
 	CurrentPage int
 	TotalPages  int
@@ -62,43 +64,38 @@ type GenerateHTMLResult struct {
 	TotalContent   int
 	PagesGenerated int
 	IndexPages     int
+	AuthorPages    int
 	Errors         []string
 }
 
 // GenerateHTML generates the static HTML site.
-func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents []*Content, sections []*Section, params []*Param) (*GenerateHTMLResult, error) {
+func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents []*Content, sections []*Section, params []*Param, contributors []*Contributor, userAuthors map[string]*Contributor) (*GenerateHTMLResult, error) {
 	result := &GenerateHTMLResult{
 		TotalContent: len(contents),
 	}
 
 	htmlPath := g.workspace.GetHTMLPath(site.Slug)
 
-	// Clean existing HTML files
 	if err := CleanDir(htmlPath); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to clean html directory: %w", err)
 	}
 
-	// Copy static assets
 	if err := g.copyStaticAssets(htmlPath); err != nil {
 		return nil, fmt.Errorf("failed to copy static assets: %w", err)
 	}
 
-	// Parse templates
 	tmpl, err := g.parseTemplates()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse templates: %w", err)
 	}
 
-	// Build menu from sections
 	menu := g.buildMenu(sections, site.Mode)
 
-	// Build params map
 	paramsMap := make(map[string]string)
 	for _, p := range params {
 		paramsMap[p.Name] = p.Value
 	}
 
-	// Render individual content pages
 	for _, content := range contents {
 		if content.Draft {
 			continue
@@ -111,12 +108,21 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		result.PagesGenerated++
 	}
 
-	// Render index pages
 	indexCount, err := g.renderIndexPages(tmpl, htmlPath, site, contents, sections, menu, paramsMap)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("index pages: %v", err))
 	}
 	result.IndexPages = indexCount
+
+	authorCount, err := g.renderAuthorPages(tmpl, htmlPath, site, contents, contributors, userAuthors, menu, paramsMap)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("author pages: %v", err))
+	}
+	result.AuthorPages = authorCount
+
+	if err := g.copyProfilePhotos(htmlPath, contributors, userAuthors); err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("profile photos: %v", err))
+	}
 
 	return result, nil
 }
@@ -170,6 +176,55 @@ func (g *HTMLGenerator) copyStaticAssets(htmlPath string) error {
 
 		return os.WriteFile(destPath, data, 0644)
 	})
+}
+
+func (g *HTMLGenerator) copyProfilePhotos(htmlPath string, contributors []*Contributor, userAuthors map[string]*Contributor) error {
+	profilesPath := filepath.Join(htmlPath, "profiles")
+	if err := os.MkdirAll(profilesPath, 0755); err != nil {
+		return err
+	}
+
+	copied := make(map[string]bool)
+
+	for _, c := range contributors {
+		if c.PhotoPath == "" || copied[c.PhotoPath] {
+			continue
+		}
+
+		srcPath := filepath.Join("_workspace", "profiles", c.PhotoPath)
+		dstPath := filepath.Join(profilesPath, c.PhotoPath)
+
+		data, err := os.ReadFile(srcPath)
+		if err != nil {
+			continue
+		}
+
+		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			return err
+		}
+		copied[c.PhotoPath] = true
+	}
+
+	for _, u := range userAuthors {
+		if u == nil || u.PhotoPath == "" || copied[u.PhotoPath] {
+			continue
+		}
+
+		srcPath := filepath.Join("_workspace", "profiles", u.PhotoPath)
+		dstPath := filepath.Join(profilesPath, u.PhotoPath)
+
+		data, err := os.ReadFile(srcPath)
+		if err != nil {
+			continue
+		}
+
+		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			return err
+		}
+		copied[u.PhotoPath] = true
+	}
+
+	return nil
 }
 
 // buildMenu builds the navigation menu from sections.
@@ -384,6 +439,127 @@ func (g *HTMLGenerator) getPaginationURL(indexPath string, page int) string {
 
 func (g *HTMLGenerator) getAssetPath() string {
 	return "/"
+}
+
+func (g *HTMLGenerator) renderAuthorPages(tmpl *template.Template, htmlPath string, site *Site, contents []*Content, contributors []*Contributor, userAuthors map[string]*Contributor, menu []*Section, params map[string]string) (int, error) {
+	count := 0
+	generatedHandles := make(map[string]bool)
+
+	for _, contributor := range contributors {
+		authorContents := g.getContentsByAuthor(contents, contributor.Handle)
+		generatedHandles[contributor.Handle] = true
+
+		var renderedContents []*RenderedContent
+		for _, c := range authorContents {
+			htmlBody, _ := g.processor.ProcessContent(c)
+			renderedContents = append(renderedContents, &RenderedContent{
+				Content:  c,
+				HTMLBody: template.HTML(htmlBody),
+				URL:      g.getContentURL(c, site.Mode),
+			})
+		}
+
+		data := SSGPageData{
+			Site:      site,
+			Author:    contributor,
+			Contents:  renderedContents,
+			Menu:      menu,
+			IsAuthor:  true,
+			AssetPath: g.getAssetPath(),
+			Params:    params,
+		}
+
+		outputPath := filepath.Join(htmlPath, "authors", contributor.Handle, "index.html")
+		if err := EnsureDir(outputPath); err != nil {
+			return count, err
+		}
+
+		f, err := os.Create(outputPath)
+		if err != nil {
+			return count, err
+		}
+
+		if err := tmpl.ExecuteTemplate(f, "layout.html", data); err != nil {
+			f.Close()
+			return count, err
+		}
+		f.Close()
+		count++
+	}
+
+	usernames := g.getUniqueUserAuthors(contents, generatedHandles)
+	for _, username := range usernames {
+		authorContents := g.getContentsByAuthor(contents, username)
+
+		var renderedContents []*RenderedContent
+		for _, c := range authorContents {
+			htmlBody, _ := g.processor.ProcessContent(c)
+			renderedContents = append(renderedContents, &RenderedContent{
+				Content:  c,
+				HTMLBody: template.HTML(htmlBody),
+				URL:      g.getContentURL(c, site.Mode),
+			})
+		}
+
+		userAuthor := userAuthors[username]
+		if userAuthor == nil {
+			userAuthor = &Contributor{
+				Handle: username,
+				Name:   username,
+			}
+		}
+
+		data := SSGPageData{
+			Site:      site,
+			Author:    userAuthor,
+			Contents:  renderedContents,
+			Menu:      menu,
+			IsAuthor:  true,
+			AssetPath: g.getAssetPath(),
+			Params:    params,
+		}
+
+		outputPath := filepath.Join(htmlPath, "authors", username, "index.html")
+		if err := EnsureDir(outputPath); err != nil {
+			return count, err
+		}
+
+		f, err := os.Create(outputPath)
+		if err != nil {
+			return count, err
+		}
+
+		if err := tmpl.ExecuteTemplate(f, "layout.html", data); err != nil {
+			f.Close()
+			return count, err
+		}
+		f.Close()
+		count++
+	}
+
+	return count, nil
+}
+
+func (g *HTMLGenerator) getUniqueUserAuthors(contents []*Content, excludeHandles map[string]bool) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, c := range contents {
+		if c.AuthorUsername != "" && !excludeHandles[c.AuthorUsername] && !seen[c.AuthorUsername] {
+			seen[c.AuthorUsername] = true
+			result = append(result, c.AuthorUsername)
+		}
+	}
+	return result
+}
+
+func (g *HTMLGenerator) getContentsByAuthor(contents []*Content, handle string) []*Content {
+	var result []*Content
+	for _, c := range contents {
+		if c.ContributorHandle == handle || c.AuthorUsername == handle {
+			result = append(result, c)
+		}
+	}
+	return result
 }
 
 // HTMLGeneratorService provides HTML generation functionality for the service layer.

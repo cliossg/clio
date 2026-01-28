@@ -10,7 +10,7 @@
         <label>Profile Photo</label>
         <div style="display: flex; align-items: center; gap: 1rem;">
             {{ if .ContributorProfile.PhotoPath }}
-            <img src="/profile/photo/{{ .ContributorProfile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <img src="/get-profile-photo?filename={{ .ContributorProfile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
             <div>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Change Photo</button>
                 <form method="POST" action="/ssg/remove-contributor-photo?site_id={{ .Site.ID }}" style="display: inline;">
@@ -125,8 +125,12 @@
             <input type="hidden" name="contributor_id" value="{{ .Contributor.ID }}">
             <div class="form-group">
                 <label for="photo">Select Image</label>
-                <input type="file" id="photo" name="photo" accept="image/*" required>
-                <small>Recommended: Square image, at least 200x200 pixels</small>
+                <div class="file-input-wrapper">
+                    <button type="button" class="btn btn-secondary">Choose File</button>
+                    <input type="file" id="photo" name="photo" accept="image/*" required onchange="updateFileName(this)">
+                </div>
+                <small id="photo-filename" style="display: block; margin-top: 0.5rem; color: var(--navy-deep);"></small>
+                <small style="color: var(--stone-beige);">Recommended: Square image, at least 200x200 pixels</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closePhotoModal()">Cancel</button>
@@ -143,6 +147,17 @@ function openPhotoModal() {
 
 function closePhotoModal() {
     document.getElementById('photo-modal').classList.add('hidden');
+    document.getElementById('photo').value = '';
+    document.getElementById('photo-filename').textContent = '';
+}
+
+function updateFileName(input) {
+    const filenameDisplay = document.getElementById('photo-filename');
+    if (input.files && input.files.length > 0) {
+        filenameDisplay.textContent = input.files[0].name;
+    } else {
+        filenameDisplay.textContent = '';
+    }
 }
 
 document.getElementById('photo-modal').addEventListener('click', function(e) {

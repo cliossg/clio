@@ -71,6 +71,7 @@ type Service interface {
 	CreateParam(ctx context.Context, param *Param) error
 	GetParam(ctx context.Context, id uuid.UUID) (*Param, error)
 	GetParamByName(ctx context.Context, siteID uuid.UUID, name string) (*Param, error)
+	GetParamByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Param, error)
 	GetParams(ctx context.Context, siteID uuid.UUID) ([]*Param, error)
 	UpdateParam(ctx context.Context, param *Param) error
 	DeleteParam(ctx context.Context, id uuid.UUID) error
@@ -106,6 +107,7 @@ type Service interface {
 
 	// HTML generation
 	GenerateHTMLForSite(ctx context.Context, siteSlug string) error
+	BuildUserAuthorsMap(ctx context.Context, contents []*Content, contributors []*Contributor) map[string]*Contributor
 }
 
 // DBProvider provides access to the database.
@@ -267,25 +269,27 @@ func (s *service) CreateContent(ctx context.Context, content *Content) error {
 	}
 
 	params := sqlc.CreateContentParams{
-		ID:            content.ID.String(),
-		SiteID:        content.SiteID.String(),
-		UserID:        nullString(content.UserID.String()),
-		ShortID:       nullString(content.ShortID),
-		SectionID:     nullString(content.SectionID.String()),
-		ContributorID: contributorID,
-		Kind:          nullString(content.Kind),
-		Heading:       content.Heading,
-		Summary:       nullString(content.Summary),
-		Body:          nullString(content.Body),
-		Draft:         nullInt(boolToInt(content.Draft)),
-		Featured:      nullInt(boolToInt(content.Featured)),
-		Series:        nullString(content.Series),
-		SeriesOrder:   nullInt(int64(content.SeriesOrder)),
-		PublishedAt:   nullTime(content.PublishedAt),
-		CreatedBy:     nullString(content.CreatedBy.String()),
-		UpdatedBy:     nullString(content.UpdatedBy.String()),
-		CreatedAt:     nullTime(&content.CreatedAt),
-		UpdatedAt:     nullTime(&content.UpdatedAt),
+		ID:                content.ID.String(),
+		SiteID:            content.SiteID.String(),
+		UserID:            nullString(content.UserID.String()),
+		ShortID:           nullString(content.ShortID),
+		SectionID:         nullString(content.SectionID.String()),
+		ContributorID:     contributorID,
+		ContributorHandle: content.ContributorHandle,
+		AuthorUsername:    content.AuthorUsername,
+		Kind:              nullString(content.Kind),
+		Heading:           content.Heading,
+		Summary:           nullString(content.Summary),
+		Body:              nullString(content.Body),
+		Draft:             nullInt(boolToInt(content.Draft)),
+		Featured:          nullInt(boolToInt(content.Featured)),
+		Series:            nullString(content.Series),
+		SeriesOrder:       nullInt(int64(content.SeriesOrder)),
+		PublishedAt:       nullTime(content.PublishedAt),
+		CreatedBy:         nullString(content.CreatedBy.String()),
+		UpdatedBy:         nullString(content.UpdatedBy.String()),
+		CreatedAt:         nullTime(&content.CreatedAt),
+		UpdatedAt:         nullTime(&content.UpdatedAt),
 	}
 
 	_, err := s.queries.CreateContent(ctx, params)
@@ -405,20 +409,22 @@ func (s *service) UpdateContent(ctx context.Context, content *Content) error {
 	}
 
 	params := sqlc.UpdateContentParams{
-		SectionID:     nullString(content.SectionID.String()),
-		ContributorID: contributorID,
-		Kind:          nullString(content.Kind),
-		Heading:       content.Heading,
-		Summary:       nullString(content.Summary),
-		Body:          nullString(content.Body),
-		Draft:         nullInt(boolToInt(content.Draft)),
-		Featured:      nullInt(boolToInt(content.Featured)),
-		Series:        nullString(content.Series),
-		SeriesOrder:   nullInt(int64(content.SeriesOrder)),
-		PublishedAt:   nullTime(content.PublishedAt),
-		UpdatedBy:     nullString(content.UpdatedBy.String()),
-		UpdatedAt:     nullTime(&content.UpdatedAt),
-		ID:            content.ID.String(),
+		SectionID:         nullString(content.SectionID.String()),
+		ContributorID:     contributorID,
+		ContributorHandle: content.ContributorHandle,
+		AuthorUsername:    content.AuthorUsername,
+		Kind:              nullString(content.Kind),
+		Heading:           content.Heading,
+		Summary:           nullString(content.Summary),
+		Body:              nullString(content.Body),
+		Draft:             nullInt(boolToInt(content.Draft)),
+		Featured:          nullInt(boolToInt(content.Featured)),
+		Series:            nullString(content.Series),
+		SeriesOrder:       nullInt(int64(content.SeriesOrder)),
+		PublishedAt:       nullTime(content.PublishedAt),
+		UpdatedBy:         nullString(content.UpdatedBy.String()),
+		UpdatedAt:         nullTime(&content.UpdatedAt),
+		ID:                content.ID.String(),
 	}
 
 	_, err := s.queries.UpdateContent(ctx, params)
@@ -863,6 +869,23 @@ func (s *service) GetParamByName(ctx context.Context, siteID uuid.UUID, name str
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("cannot get param by name: %w", err)
+	}
+
+	return paramFromSQLC(sqlcParam), nil
+}
+
+func (s *service) GetParamByRefKey(ctx context.Context, siteID uuid.UUID, refKey string) (*Param, error) {
+	s.ensureQueries()
+
+	sqlcParam, err := s.queries.GetParamByRefKey(ctx, sqlc.GetParamByRefKeyParams{
+		SiteID: siteID.String(),
+		RefKey: sql.NullString{String: refKey, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get param by ref key: %w", err)
 	}
 
 	return paramFromSQLC(sqlcParam), nil
@@ -1368,14 +1391,14 @@ func (s *service) GetContributor(ctx context.Context, id uuid.UUID) (*Contributo
 func (s *service) GetContributors(ctx context.Context, siteID uuid.UUID) ([]*Contributor, error) {
 	s.ensureQueries()
 
-	rows, err := s.queries.ListContributorsBySiteID(ctx, siteID.String())
+	rows, err := s.queries.ListContributorsWithProfile(ctx, siteID.String())
 	if err != nil {
 		return nil, fmt.Errorf("cannot list contributors: %w", err)
 	}
 
 	contributors := make([]*Contributor, 0, len(rows))
 	for _, row := range rows {
-		c, err := contributorFromSQLC(row)
+		c, err := contributorWithProfileFromSQLC(row)
 		if err != nil {
 			return nil, err
 		}
@@ -1471,6 +1494,44 @@ func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 	}, nil
 }
 
+func contributorWithProfileFromSQLC(row sqlc.ListContributorsWithProfileRow) (*Contributor, error) {
+	var socialLinks []SocialLink
+	if row.SocialLinks != "" && row.SocialLinks != "[]" {
+		if err := json.Unmarshal([]byte(row.SocialLinks), &socialLinks); err != nil {
+			return nil, fmt.Errorf("cannot unmarshal social links: %w", err)
+		}
+	}
+
+	var profileID *uuid.UUID
+	if row.ProfileID.Valid {
+		id := uuid.MustParse(row.ProfileID.String)
+		profileID = &id
+	}
+
+	var photoPath string
+	if row.ProfilePhotoPath.Valid {
+		photoPath = row.ProfilePhotoPath.String
+	}
+
+	return &Contributor{
+		ID:          uuid.MustParse(row.ID),
+		SiteID:      uuid.MustParse(row.SiteID),
+		ProfileID:   profileID,
+		ShortID:     row.ShortID,
+		Handle:      row.Handle,
+		Name:        row.Name,
+		Surname:     row.Surname,
+		Bio:         row.Bio,
+		SocialLinks: socialLinks,
+		Role:        row.Role,
+		PhotoPath:   photoPath,
+		CreatedBy:   uuid.MustParse(row.CreatedBy),
+		UpdatedBy:   uuid.MustParse(row.UpdatedBy),
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+	}, nil
+}
+
 func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) error {
 	site, err := s.GetSiteBySlug(ctx, siteSlug)
 	if err != nil {
@@ -1505,10 +1566,65 @@ func (s *service) GenerateHTMLForSite(ctx context.Context, siteSlug string) erro
 		params = []*Param{}
 	}
 
-	_, err = s.htmlGen.GenerateHTML(ctx, site, contents, sections, params)
+	contributors, err := s.GetContributors(ctx, site.ID)
+	if err != nil {
+		contributors = []*Contributor{}
+	}
+
+	userAuthors := s.BuildUserAuthorsMap(ctx, contents, contributors)
+
+	_, err = s.htmlGen.GenerateHTML(ctx, site, contents, sections, params, contributors, userAuthors)
 	if err != nil {
 		return fmt.Errorf("cannot generate HTML: %w", err)
 	}
 
 	return nil
+}
+
+func (s *service) BuildUserAuthorsMap(ctx context.Context, contents []*Content, contributors []*Contributor) map[string]*Contributor {
+	contributorHandles := make(map[string]bool)
+	for _, c := range contributors {
+		contributorHandles[c.Handle] = true
+	}
+
+	usernames := make(map[string]bool)
+	for _, c := range contents {
+		if c.AuthorUsername != "" && !contributorHandles[c.AuthorUsername] {
+			usernames[c.AuthorUsername] = true
+		}
+	}
+
+	result := make(map[string]*Contributor)
+	for username := range usernames {
+		row, err := s.queries.GetUserWithProfile(ctx, username)
+		if err != nil {
+			result[username] = &Contributor{
+				Handle: username,
+				Name:   username,
+			}
+			continue
+		}
+
+		author := &Contributor{
+			Handle:  row.Name,
+			Name:    row.ProfileName.String,
+			Surname: row.ProfileSurname.String,
+			Bio:     row.ProfileBio.String,
+		}
+		if author.Name == "" {
+			author.Name = username
+		}
+		if row.ProfilePhotoPath.Valid && row.ProfilePhotoPath.String != "" {
+			author.PhotoPath = row.ProfilePhotoPath.String
+		}
+		if row.ProfileSocialLinks.Valid && row.ProfileSocialLinks.String != "" {
+			var links []SocialLink
+			if err := json.Unmarshal([]byte(row.ProfileSocialLinks.String), &links); err == nil {
+				author.SocialLinks = links
+			}
+		}
+		result[username] = author
+	}
+
+	return result
 }

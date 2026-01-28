@@ -10,25 +10,27 @@ import (
 )
 
 type Content struct {
-	ID            string         `json:"id"`
-	SiteID        string         `json:"site_id"`
-	UserID        sql.NullString `json:"user_id"`
-	ShortID       sql.NullString `json:"short_id"`
-	SectionID     sql.NullString `json:"section_id"`
-	Kind          sql.NullString `json:"kind"`
-	Heading       string         `json:"heading"`
-	Summary       sql.NullString `json:"summary"`
-	Body          sql.NullString `json:"body"`
-	Draft         sql.NullInt64  `json:"draft"`
-	Featured      sql.NullInt64  `json:"featured"`
-	Series        sql.NullString `json:"series"`
-	SeriesOrder   sql.NullInt64  `json:"series_order"`
-	PublishedAt   sql.NullTime   `json:"published_at"`
-	CreatedBy     sql.NullString `json:"created_by"`
-	UpdatedBy     sql.NullString `json:"updated_by"`
-	CreatedAt     sql.NullTime   `json:"created_at"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	ContributorID sql.NullString `json:"contributor_id"`
+	ID                string         `json:"id"`
+	SiteID            string         `json:"site_id"`
+	UserID            sql.NullString `json:"user_id"`
+	ShortID           sql.NullString `json:"short_id"`
+	SectionID         sql.NullString `json:"section_id"`
+	Kind              sql.NullString `json:"kind"`
+	Heading           string         `json:"heading"`
+	Summary           sql.NullString `json:"summary"`
+	Body              sql.NullString `json:"body"`
+	Draft             sql.NullInt64  `json:"draft"`
+	Featured          sql.NullInt64  `json:"featured"`
+	Series            sql.NullString `json:"series"`
+	SeriesOrder       sql.NullInt64  `json:"series_order"`
+	PublishedAt       sql.NullTime   `json:"published_at"`
+	CreatedBy         sql.NullString `json:"created_by"`
+	UpdatedBy         sql.NullString `json:"updated_by"`
+	CreatedAt         sql.NullTime   `json:"created_at"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	ContributorID     sql.NullString `json:"contributor_id"`
+	ContributorHandle string         `json:"contributor_handle"`
+	AuthorUsername    string         `json:"author_username"`
 }
 
 type ContentImage struct {

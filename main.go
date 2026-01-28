@@ -64,7 +64,7 @@ func main() {
 		authSeeder.SetCredentialsPath(cfg.Credentials.Path)
 	}
 
-	ssgSeeder := ssg.NewSeeder(ssgService, log)
+	ssgSeeder := ssg.NewSeeder(ssgService, profileService, log)
 
 	router := chi.NewRouter()
 	middleware.DefaultStack(router)

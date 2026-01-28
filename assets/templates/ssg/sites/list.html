@@ -17,7 +17,7 @@
         </thead>
         <tbody>
             {{ range .Sites }}
-            <tr class="clickable-row" onclick="window.location='/ssg/get-site?id={{ .ID }}'">
+            <tr class="clickable-row" onclick="localStorage.setItem('currentSiteId', '{{ .ID }}'); window.location='/ssg/get-site?id={{ .ID }}'">
                 <td>{{ .Name }}</td>
                 <td>{{ .Slug }}</td>
                 <td>{{ .Mode }}</td>

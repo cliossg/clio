@@ -9,6 +9,16 @@ SELECT * FROM user WHERE id = ?;
 -- name: GetUserByEmail :one
 SELECT * FROM user WHERE email = ?;
 
+-- name: GetUserByName :one
+SELECT * FROM user WHERE name = ?;
+
+-- name: GetUserWithProfile :one
+SELECT u.*, p.slug as profile_slug, p.name as profile_name, p.surname as profile_surname,
+       p.bio as profile_bio, p.social_links as profile_social_links, p.photo_path as profile_photo_path
+FROM user u
+LEFT JOIN profile p ON u.profile_id = p.id
+WHERE u.name = ?;
+
 -- name: ListUsers :many
 SELECT * FROM user ORDER BY created_at DESC;
 

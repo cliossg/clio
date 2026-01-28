@@ -1,6 +1,6 @@
 {{ define "content" }}
 <div class="card">
-    <p class="breadcrumb"><a href="/profile">&larr; Profile</a></p>
+    <p class="breadcrumb"><a href="/get-profile">&larr; Profile</a></p>
     <h1>Edit Profile</h1>
 
     {{ if .Error }}<div class="error">{{ .Error }}</div>{{ end }}
@@ -10,10 +10,10 @@
         <label>Profile Photo</label>
         <div style="display: flex; align-items: center; gap: 1rem;">
             {{ if .Profile.PhotoPath }}
-            <img src="/profile/photo/{{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
+            <img src="/get-profile-photo?filename={{ .Profile.PhotoPath }}" alt="Profile photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 2px solid var(--stone-beige);">
             <div>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="openPhotoModal()">Change Photo</button>
-                <form method="POST" action="/profile/remove-photo" style="display: inline;">
+                <form method="POST" action="/remove-profile-photo" style="display: inline;">
                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove profile photo?')">Remove</button>
                 </form>
             </div>
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <form method="POST" action="/profile/update">
+    <form method="POST" action="/update-profile">
         <div class="form-group">
             <label for="slug">Slug</label>
             <input type="text" id="slug" name="slug" value="{{ .Profile.Slug }}" required>
@@ -105,7 +105,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save</button>
-            <a href="/profile" class="btn">Cancel</a>
+            <a href="/get-profile" class="btn">Cancel</a>
         </div>
     </form>
 </div>
@@ -117,11 +117,15 @@
             <h2>Upload Photo</h2>
             <button type="button" class="modal-close" onclick="closePhotoModal()">&times;</button>
         </div>
-        <form method="POST" action="/profile/upload-photo" enctype="multipart/form-data">
+        <form method="POST" action="/upload-profile-photo" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="photo">Select Image</label>
-                <input type="file" id="photo" name="photo" accept="image/*" required>
-                <small>Recommended: Square image, at least 200x200 pixels</small>
+                <div class="file-input-wrapper">
+                    <button type="button" class="btn btn-secondary">Choose File</button>
+                    <input type="file" id="photo" name="photo" accept="image/*" required onchange="updateFileName(this)">
+                </div>
+                <small id="photo-filename" style="display: block; margin-top: 0.5rem; color: var(--navy-deep);"></small>
+                <small style="color: var(--stone-beige);">Recommended: Square image, at least 200x200 pixels</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closePhotoModal()">Cancel</button>
@@ -138,6 +142,18 @@ function openPhotoModal() {
 
 function closePhotoModal() {
     document.getElementById('photo-modal').classList.add('hidden');
+    // Reset file input and filename display when closing
+    document.getElementById('photo').value = '';
+    document.getElementById('photo-filename').textContent = '';
+}
+
+function updateFileName(input) {
+    const filenameDisplay = document.getElementById('photo-filename');
+    if (input.files && input.files.length > 0) {
+        filenameDisplay.textContent = input.files[0].name;
+    } else {
+        filenameDisplay.textContent = '';
+    }
 }
 
 document.getElementById('photo-modal').addEventListener('click', function(e) {

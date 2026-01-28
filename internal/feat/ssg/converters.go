@@ -130,6 +130,8 @@ func contentWithMetaFromSQLC(row sqlc.GetContentWithMetaRow) *Content {
 		id := parseUUID(row.ContributorID.String)
 		content.ContributorID = &id
 	}
+	content.ContributorHandle = row.ContributorHandle
+	content.AuthorUsername = row.AuthorUsername
 
 	return content
 }
@@ -193,6 +195,8 @@ func contentWithMetaFromSQLCAll(row sqlc.GetAllContentWithMetaRow) *Content {
 		id := parseUUID(row.ContributorID.String)
 		content.ContributorID = &id
 	}
+	content.ContributorHandle = row.ContributorHandle
+	content.AuthorUsername = row.AuthorUsername
 
 	return content
 }

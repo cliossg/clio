@@ -10,7 +10,7 @@
 <body>
     {{ if not .HideNav }}
     <nav>
-        <a href="/ssg/list-sites">Sites</a>
+        <a href="/ssg/list-sites" id="sites-link">Sites</a>
         {{ if .Site }}
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-sections?site_id={{ .Site.ID }}">Sections</a>{{ end }}
         <a href="/ssg/list-contents?site_id={{ .Site.ID }}">Contents</a>
@@ -19,9 +19,9 @@
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-params?site_id={{ .Site.ID }}">Params</a>{{ end }}
         <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-contributors?site_id={{ .Site.ID }}">Contributors</a>{{ end }}
-        {{ end }}
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/admin/list-users">Users</a>{{ end }}
-        <a href="/profile">Profile</a>
+        <a href="/get-profile">Profile</a>
+        {{ end }}
         <span style="float: right;">
             {{ if .CurrentUserName }}{{ .CurrentUserName }} &middot; {{ end }}
             <form action="/signout" method="POST" style="display: inline;">
@@ -35,5 +35,16 @@
     <div class="{{ if .AuthPage }}auth-container{{ else }}container{{ end }}">
         {{ template "content" . }}
     </div>
+<script>
+(function() {
+    var link = document.getElementById('sites-link');
+    if (link) {
+        var siteId = localStorage.getItem('currentSiteId');
+        if (siteId) {
+            link.href = '/ssg/get-site?id=' + siteId;
+        }
+    }
+})();
+</script>
 </body>
 </html>

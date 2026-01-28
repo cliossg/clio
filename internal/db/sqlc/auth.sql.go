@@ -188,6 +188,82 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserByName = `-- name: GetUserByName :one
+SELECT id, short_id, email, password_hash, name, status, created_at, updated_at, must_change_password, roles, profile_id FROM user WHERE name = ?
+`
+
+func (q *Queries) GetUserByName(ctx context.Context, name string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByName, name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.ShortID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MustChangePassword,
+		&i.Roles,
+		&i.ProfileID,
+	)
+	return i, err
+}
+
+const getUserWithProfile = `-- name: GetUserWithProfile :one
+SELECT u.id, u.short_id, u.email, u.password_hash, u.name, u.status, u.created_at, u.updated_at, u.must_change_password, u.roles, u.profile_id, p.slug as profile_slug, p.name as profile_name, p.surname as profile_surname,
+       p.bio as profile_bio, p.social_links as profile_social_links, p.photo_path as profile_photo_path
+FROM user u
+LEFT JOIN profile p ON u.profile_id = p.id
+WHERE u.name = ?
+`
+
+type GetUserWithProfileRow struct {
+	ID                 string         `json:"id"`
+	ShortID            string         `json:"short_id"`
+	Email              string         `json:"email"`
+	PasswordHash       string         `json:"password_hash"`
+	Name               string         `json:"name"`
+	Status             string         `json:"status"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	MustChangePassword int64          `json:"must_change_password"`
+	Roles              string         `json:"roles"`
+	ProfileID          sql.NullString `json:"profile_id"`
+	ProfileSlug        sql.NullString `json:"profile_slug"`
+	ProfileName        sql.NullString `json:"profile_name"`
+	ProfileSurname     sql.NullString `json:"profile_surname"`
+	ProfileBio         sql.NullString `json:"profile_bio"`
+	ProfileSocialLinks sql.NullString `json:"profile_social_links"`
+	ProfilePhotoPath   sql.NullString `json:"profile_photo_path"`
+}
+
+func (q *Queries) GetUserWithProfile(ctx context.Context, name string) (GetUserWithProfileRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserWithProfile, name)
+	var i GetUserWithProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.ShortID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MustChangePassword,
+		&i.Roles,
+		&i.ProfileID,
+		&i.ProfileSlug,
+		&i.ProfileName,
+		&i.ProfileSurname,
+		&i.ProfileBio,
+		&i.ProfileSocialLinks,
+		&i.ProfilePhotoPath,
+	)
+	return i, err
+}
+
 const getValidSession = `-- name: GetValidSession :one
 SELECT id, user_id, expires_at, created_at FROM session WHERE id = ? AND expires_at > datetime('now')
 `

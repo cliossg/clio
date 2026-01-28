@@ -179,6 +179,71 @@ func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) (
 	return items, nil
 }
 
+const listContributorsWithProfile = `-- name: ListContributorsWithProfile :many
+SELECT c.id, c.short_id, c.site_id, c.profile_id, c.handle, c.name, c.surname, c.bio, c.social_links, c.created_by, c.updated_by, c.created_at, c.updated_at, c.role, p.photo_path as profile_photo_path
+FROM contributor c
+LEFT JOIN profile p ON c.profile_id = p.id
+WHERE c.site_id = ?
+ORDER BY c.name, c.surname
+`
+
+type ListContributorsWithProfileRow struct {
+	ID               string         `json:"id"`
+	ShortID          string         `json:"short_id"`
+	SiteID           string         `json:"site_id"`
+	ProfileID        sql.NullString `json:"profile_id"`
+	Handle           string         `json:"handle"`
+	Name             string         `json:"name"`
+	Surname          string         `json:"surname"`
+	Bio              string         `json:"bio"`
+	SocialLinks      string         `json:"social_links"`
+	CreatedBy        string         `json:"created_by"`
+	UpdatedBy        string         `json:"updated_by"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	Role             string         `json:"role"`
+	ProfilePhotoPath sql.NullString `json:"profile_photo_path"`
+}
+
+func (q *Queries) ListContributorsWithProfile(ctx context.Context, siteID string) ([]ListContributorsWithProfileRow, error) {
+	rows, err := q.db.QueryContext(ctx, listContributorsWithProfile, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListContributorsWithProfileRow
+	for rows.Next() {
+		var i ListContributorsWithProfileRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortID,
+			&i.SiteID,
+			&i.ProfileID,
+			&i.Handle,
+			&i.Name,
+			&i.Surname,
+			&i.Bio,
+			&i.SocialLinks,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Role,
+			&i.ProfilePhotoPath,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setContributorProfile = `-- name: SetContributorProfile :exec
 UPDATE contributor SET profile_id = ?, updated_by = ?, updated_at = ? WHERE id = ?
 `

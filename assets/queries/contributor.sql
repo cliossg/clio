@@ -12,6 +12,13 @@ SELECT * FROM contributor WHERE site_id = ? AND handle = ?;
 -- name: ListContributorsBySiteID :many
 SELECT * FROM contributor WHERE site_id = ? ORDER BY name, surname;
 
+-- name: ListContributorsWithProfile :many
+SELECT c.*, p.photo_path as profile_photo_path
+FROM contributor c
+LEFT JOIN profile p ON c.profile_id = p.id
+WHERE c.site_id = ?
+ORDER BY c.name, c.surname;
+
 -- name: UpdateContributor :one
 UPDATE contributor SET
     handle = ?,
