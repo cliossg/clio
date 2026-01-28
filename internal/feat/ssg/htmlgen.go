@@ -39,6 +39,7 @@ type SSGPageData struct {
 	Sections    []*Section
 	Menu        []*Section
 	Author      *Contributor
+	Blocks      *GeneratedBlocks
 	IsIndex     bool
 	IsAuthor    bool
 	IsPaginated bool
@@ -96,12 +97,26 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		paramsMap[p.RefKey] = p.Value
 	}
 
+	basePath := g.getAssetPath(paramsMap)
+	allRendered := g.preRenderAllContent(contents, basePath)
+
+	blocksCfg := BlocksConfig{
+		Enabled:      paramsMap["ssg.blocks.enabled"] != "false",
+		MultiSection: paramsMap["ssg.blocks.multisection"] != "false",
+		MaxItems:     5,
+	}
+	if v, ok := paramsMap["ssg.blocks.maxitems"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			blocksCfg.MaxItems = n
+		}
+	}
+
 	for _, content := range contents {
 		if content.Draft {
 			continue
 		}
 
-		if err := g.renderContentPage(tmpl, htmlPath, site, content, sections, menu, paramsMap); err != nil {
+		if err := g.renderContentPage(tmpl, htmlPath, site, content, sections, menu, paramsMap, allRendered, blocksCfg); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("content %s: %v", content.Heading, err))
 			continue
 		}
@@ -238,22 +253,45 @@ func (g *HTMLGenerator) buildMenu(sections []*Section, mode string) []*Section {
 	return menu
 }
 
-// renderContentPage renders a single content page.
-func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath string, site *Site, content *Content, sections []*Section, menu []*Section, params map[string]string) error {
-	htmlBody, err := g.processor.ProcessContent(content)
-	if err != nil {
-		return err
+func (g *HTMLGenerator) preRenderAllContent(contents []*Content, basePath string) []*RenderedContent {
+	var rendered []*RenderedContent
+	for _, c := range contents {
+		if c.Draft {
+			continue
+		}
+		htmlBody, _ := g.processor.ProcessContent(c)
+		rendered = append(rendered, &RenderedContent{
+			Content:  c,
+			HTMLBody: template.HTML(htmlBody),
+			URL:      g.getContentURL(c, basePath),
+		})
 	}
+	return rendered
+}
 
+// renderContentPage renders a single content page.
+func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath string, site *Site, content *Content, sections []*Section, menu []*Section, params map[string]string, allRendered []*RenderedContent, blocksCfg BlocksConfig) error {
 	basePath := g.getAssetPath(params)
 
-	rendered := &RenderedContent{
-		Content:  content,
-		HTMLBody: template.HTML(htmlBody),
-		URL:      g.getContentURL(content, basePath),
+	var rendered *RenderedContent
+	for _, r := range allRendered {
+		if r.ID == content.ID {
+			rendered = r
+			break
+		}
+	}
+	if rendered == nil {
+		htmlBody, err := g.processor.ProcessContent(content)
+		if err != nil {
+			return err
+		}
+		rendered = &RenderedContent{
+			Content:  content,
+			HTMLBody: template.HTML(htmlBody),
+			URL:      g.getContentURL(content, basePath),
+		}
 	}
 
-	// Find section
 	var section *Section
 	for _, s := range sections {
 		if s.ID == content.SectionID {
@@ -262,24 +300,25 @@ func (g *HTMLGenerator) renderContentPage(tmpl *template.Template, htmlPath stri
 		}
 	}
 
+	blocks := BuildBlocks(rendered, allRendered, blocksCfg)
+
 	data := SSGPageData{
 		Site:      site,
 		Content:   rendered,
 		Section:   section,
 		Sections:  sections,
 		Menu:      menu,
+		Blocks:    blocks,
 		IsIndex:   false,
 		AssetPath: basePath,
 		Params:    params,
 	}
 
-	// Determine output path
 	outputPath := g.workspace.GetContentHTMLPath(site.Slug, content.SectionPath, content.Slug())
 	if err := EnsureDir(outputPath); err != nil {
 		return err
 	}
 
-	// Write file
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return err

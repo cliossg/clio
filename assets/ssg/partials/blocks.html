@@ -1,0 +1,60 @@
+{{ define "blocks.html" }}
+{{ if and .Blocks .Blocks.HasContent }}
+<aside class="blocks">
+    <div class="blocks-separator">• • •</div>
+    {{ if .Content.Series }}
+        {{ template "series-blocks.html" . }}
+    {{ else }}
+        {{ template "related-blocks.html" . }}
+    {{ end }}
+</aside>
+{{ end }}
+{{ end }}
+
+{{ define "related-blocks.html" }}
+{{ if .Blocks.Related }}
+<div class="blocks-container">
+    <div class="block-section">
+        <h3 class="block-title">Related</h3>
+        <ul class="block-list">
+            {{ range .Blocks.Related }}
+            <li><a href="{{ .URL }}">{{ .Heading }}</a></li>
+            {{ end }}
+        </ul>
+    </div>
+</div>
+{{ end }}
+{{ end }}
+
+{{ define "series-blocks.html" }}
+<div class="blocks-container">
+    {{ if or .Blocks.SeriesPrev .Blocks.SeriesNext }}
+    <div class="block-section series-nav">
+        <h3 class="block-title">Series: {{ .Content.Series }}</h3>
+        <div class="series-nav-links">
+            {{ if .Blocks.SeriesPrev }}
+            <a href="{{ .Blocks.SeriesPrev.URL }}" class="series-prev">&larr; {{ .Blocks.SeriesPrev.Heading }}</a>
+            {{ end }}
+            {{ if .Blocks.SeriesNext }}
+            <a href="{{ .Blocks.SeriesNext.URL }}" class="series-next">{{ .Blocks.SeriesNext.Heading }} &rarr;</a>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    {{ if or .Blocks.SeriesIndexBackward .Blocks.SeriesIndexForward }}
+    <div class="block-section">
+        <h3 class="block-title">All in series</h3>
+        <ul class="block-list series-index">
+            {{ range .Blocks.SeriesIndexBackward }}
+            <li><a href="{{ .URL }}">{{ .Heading }}</a></li>
+            {{ end }}
+            <li class="series-current">{{ .Content.Heading }}</li>
+            {{ range .Blocks.SeriesIndexForward }}
+            <li><a href="{{ .URL }}">{{ .Heading }}</a></li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ end }}
+</div>
+{{ end }}

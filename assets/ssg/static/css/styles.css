@@ -794,3 +794,80 @@ footer .generator a:hover {
         text-align: center;
     }
 }
+
+/* ============================================
+   BLOCKS (Related Content)
+   ============================================ */
+
+.blocks {
+    margin-top: 3rem;
+}
+
+.blocks-separator {
+    text-align: center;
+    color: #999;
+    font-size: 1.25rem;
+    letter-spacing: 0.5em;
+    margin-bottom: 2rem;
+}
+
+.blocks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.block-section {
+    background: var(--blocks-bgcolor, #f0f4f8);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+.block-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1rem;
+    color: #333;
+}
+
+.block-list {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin: 0;
+}
+
+.block-list li {
+    padding: 0.25rem 0;
+}
+
+.block-list a {
+    color: #333;
+    text-decoration: none;
+}
+
+.block-list a:hover {
+    color: #2563eb;
+}
+
+.series-nav .series-nav-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.series-nav-links a {
+    color: #2563eb;
+}
+
+.series-index .series-current {
+    font-weight: 600;
+    color: #2563eb;
+}
+
+@media (max-width: 640px) {
+    .series-nav .series-nav-links {
+        flex-direction: column;
+    }
+}
