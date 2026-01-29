@@ -59,8 +59,8 @@ func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
 		return nil, err
 	}
 
-	// Create root section
-	root := NewSection(site.ID, "/ (root)", "Root section for top-level content", "")
+	// Create main section
+	root := NewSection(site.ID, "main", "Main section for top-level content", "")
 	if err := s.service.CreateSection(ctx, root); err != nil {
 		return nil, err
 	}

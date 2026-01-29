@@ -16,7 +16,7 @@
                         {{ if .PublishedAt }}
                         <span>{{ .PublishedAt.Format "January 2, 2006" }}</span>
                         {{ end }}
-                        {{ if and .SectionName (ne .SectionName "/ (root)") }}
+                        {{ if .SectionName }}
                         <span class="list-card-section">{{ .SectionName }}</span>
                         {{ end }}
                     </div>

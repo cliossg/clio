@@ -85,6 +85,10 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		return nil, fmt.Errorf("failed to copy static assets: %w", err)
 	}
 
+	if err := g.copyUserImages(site.Slug, htmlPath); err != nil {
+		return nil, fmt.Errorf("failed to copy user images: %w", err)
+	}
+
 	embeddedTmpl, err := g.parseTemplates()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse templates: %w", err)
@@ -207,6 +211,45 @@ func (g *HTMLGenerator) copyStaticAssets(htmlPath string) error {
 	})
 }
 
+func (g *HTMLGenerator) copyUserImages(siteSlug, htmlPath string) error {
+	srcPath := g.workspace.GetImagesPath(siteSlug)
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	if err := os.MkdirAll(htmlPath, 0755); err != nil {
+		return err
+	}
+
+	dstPath := filepath.Join(htmlPath, "images")
+	if err := os.MkdirAll(dstPath, 0755); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(srcPath)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		srcFile := filepath.Join(srcPath, entry.Name())
+		dstFile := filepath.Join(dstPath, entry.Name())
+
+		data, err := os.ReadFile(srcFile)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(dstFile, data, 0644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (g *HTMLGenerator) copyProfilePhotos(htmlPath string, contributors []*Contributor, userAuthors map[string]*Contributor) error {
 	profilesPath := filepath.Join(htmlPath, "profiles")
 	if err := os.MkdirAll(profilesPath, 0755); err != nil {
@@ -260,7 +303,7 @@ func (g *HTMLGenerator) copyProfilePhotos(htmlPath string, contributors []*Contr
 func (g *HTMLGenerator) buildMenu(sections []*Section, mode string) []*Section {
 	var menu []*Section
 	for _, s := range sections {
-		if s.Name != "/ (root)" && s.Path != "/" && s.Path != "" {
+		if s.Name != "main" && s.Path != "/" && s.Path != "" {
 			menu = append(menu, s)
 		}
 	}
@@ -416,23 +459,23 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 		}
 	}
 
-	// Find root section to use its layout if set
-	var rootSectionID uuid.UUID
+	// Find main section to use its layout if set
+	var mainSectionID uuid.UUID
 	for _, s := range sections {
 		if s.Path == "" || s.Path == "/" {
-			rootSectionID = s.ID
+			mainSectionID = s.ID
 			break
 		}
 	}
 
-	// Render main index (uses root section layout, then site default, then embedded)
-	mainTmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, rootSectionID)
+	// Render main index (uses main section layout, then site default, then embedded)
+	mainTmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, mainSectionID)
 	if err := g.renderIndex(mainTmpl, htmlPath, site, "", nil, publishedContents, sections, menu, params, pageSize); err != nil {
 		return count, err
 	}
 	count++
 
-	// Render section indices (skip root section to avoid overwriting main index)
+	// Render section indices (skip main section to avoid overwriting main index)
 	for _, section := range sections {
 		if section.Path == "" || section.Path == "/" {
 			continue

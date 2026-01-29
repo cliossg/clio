@@ -484,10 +484,10 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create root section
-	rootSection := NewSection(site.ID, "/ (root)", "Root section for top-level content", "")
+	// Create main section
+	rootSection := NewSection(site.ID, "main", "Main section for top-level content", "")
 	if err := h.service.CreateSection(r.Context(), rootSection); err != nil {
-		h.log.Errorf("Cannot create root section: %v", err)
+		h.log.Errorf("Cannot create main section: %v", err)
 	}
 
 	h.log.Infof("Created site %s with directories", site.Slug)
