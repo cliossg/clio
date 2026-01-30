@@ -34,16 +34,17 @@ func siteFromSQLC(s sqlc.Site) *Site {
 
 func contentFromSQLC(c sqlc.Content) *Content {
 	content := &Content{
-		ID:        parseUUID(c.ID),
-		SiteID:    parseUUID(c.SiteID),
-		ShortID:   c.ShortID.String,
-		Heading:   c.Heading,
-		Summary:   c.Summary.String,
-		Body:      c.Body.String,
-		Draft:     intToBool(c.Draft.Int64),
-		Featured:  intToBool(c.Featured.Int64),
-		Series:    c.Series.String,
-		Kind:      c.Kind.String,
+		ID:            parseUUID(c.ID),
+		SiteID:        parseUUID(c.SiteID),
+		ShortID:       c.ShortID.String,
+		Heading:       c.Heading,
+		Summary:       c.Summary.String,
+		Body:          c.Body.String,
+		Draft:         intToBool(c.Draft.Int64),
+		Featured:      intToBool(c.Featured.Int64),
+		Series:        c.Series.String,
+		Kind:          c.Kind.String,
+		HeroTitleDark: intToBool(c.HeroTitleDark.Int64),
 	}
 
 	if c.UserID.Valid {
@@ -80,16 +81,17 @@ func contentFromSQLC(c sqlc.Content) *Content {
 
 func contentWithMetaFromSQLC(row sqlc.GetContentWithMetaRow) *Content {
 	content := &Content{
-		ID:        parseUUID(row.ID),
-		SiteID:    parseUUID(row.SiteID),
-		ShortID:   row.ShortID.String,
-		Heading:   row.Heading,
-		Summary:   row.Summary.String,
-		Body:      row.Body.String,
-		Draft:     intToBool(row.Draft.Int64),
-		Featured:  intToBool(row.Featured.Int64),
-		Series:    row.Series.String,
-		Kind:      row.Kind.String,
+		ID:            parseUUID(row.ID),
+		SiteID:        parseUUID(row.SiteID),
+		ShortID:       row.ShortID.String,
+		Heading:       row.Heading,
+		Summary:       row.Summary.String,
+		Body:          row.Body.String,
+		Draft:         intToBool(row.Draft.Int64),
+		Featured:      intToBool(row.Featured.Int64),
+		Series:        row.Series.String,
+		Kind:          row.Kind.String,
+		HeroTitleDark: intToBool(row.HeroTitleDark.Int64),
 	}
 
 	if row.UserID.Valid {
@@ -145,16 +147,17 @@ func contentWithMetaFromSQLC(row sqlc.GetContentWithMetaRow) *Content {
 
 func contentWithMetaFromSQLCAll(row sqlc.GetAllContentWithMetaRow) *Content {
 	content := &Content{
-		ID:        parseUUID(row.ID),
-		SiteID:    parseUUID(row.SiteID),
-		ShortID:   row.ShortID.String,
-		Heading:   row.Heading,
-		Summary:   row.Summary.String,
-		Body:      row.Body.String,
-		Draft:     intToBool(row.Draft.Int64),
-		Featured:  intToBool(row.Featured.Int64),
-		Series:    row.Series.String,
-		Kind:      row.Kind.String,
+		ID:            parseUUID(row.ID),
+		SiteID:        parseUUID(row.SiteID),
+		ShortID:       row.ShortID.String,
+		Heading:       row.Heading,
+		Summary:       row.Summary.String,
+		Body:          row.Body.String,
+		Draft:         intToBool(row.Draft.Int64),
+		Featured:      intToBool(row.Featured.Int64),
+		Series:        row.Series.String,
+		Kind:          row.Kind.String,
+		HeroTitleDark: intToBool(row.HeroTitleDark.Int64),
 	}
 
 	if row.UserID.Valid {
@@ -204,6 +207,13 @@ func contentWithMetaFromSQLCAll(row sqlc.GetAllContentWithMetaRow) *Content {
 	}
 	content.ContributorHandle = row.ContributorHandle
 	content.AuthorUsername = row.AuthorUsername
+
+	if row.HeaderImagePath.Valid {
+		content.HeaderImageURL = "/images/" + row.HeaderImagePath.String
+	}
+	if row.HeaderImageAlt.Valid {
+		content.HeaderImageAlt = row.HeaderImageAlt.String
+	}
 
 	return content
 }

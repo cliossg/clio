@@ -20,7 +20,13 @@
 
         <!-- Basic Fields -->
         <div class="form-group">
-            <label for="heading">Title</label>
+            <div class="form-group-header">
+                <label for="heading">Title</label>
+                <label class="checkbox-label discrete" title="Use dark text when hero image is bright">
+                    <input type="checkbox" name="hero_title_dark">
+                    <span>Dark hero text</span>
+                </label>
+            </div>
             <input type="text" id="heading" name="heading" required placeholder="Enter content title">
         </div>
 

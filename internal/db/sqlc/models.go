@@ -31,6 +31,7 @@ type Content struct {
 	ContributorID     sql.NullString `json:"contributor_id"`
 	ContributorHandle string         `json:"contributor_handle"`
 	AuthorUsername    string         `json:"author_username"`
+	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
 }
 
 type ContentImage struct {

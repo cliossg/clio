@@ -38,9 +38,9 @@ func (q *Queries) CountSearchContent(ctx context.Context, arg CountSearchContent
 }
 
 const createContent = `-- name: CreateContent :one
-INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, contributor_handle, author_username, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username
+INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, contributor_handle, author_username, kind, heading, summary, body, draft, featured, series, series_order, published_at, hero_title_dark, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark
 `
 
 type CreateContentParams struct {
@@ -61,6 +61,7 @@ type CreateContentParams struct {
 	Series            sql.NullString `json:"series"`
 	SeriesOrder       sql.NullInt64  `json:"series_order"`
 	PublishedAt       sql.NullTime   `json:"published_at"`
+	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
 	CreatedBy         sql.NullString `json:"created_by"`
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	CreatedAt         sql.NullTime   `json:"created_at"`
@@ -86,6 +87,7 @@ func (q *Queries) CreateContent(ctx context.Context, arg CreateContentParams) (C
 		arg.Series,
 		arg.SeriesOrder,
 		arg.PublishedAt,
+		arg.HeroTitleDark,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 		arg.CreatedAt,
@@ -114,6 +116,7 @@ func (q *Queries) CreateContent(ctx context.Context, arg CreateContentParams) (C
 		&i.ContributorID,
 		&i.ContributorHandle,
 		&i.AuthorUsername,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }
@@ -129,15 +132,19 @@ func (q *Queries) DeleteContent(ctx context.Context, id string) error {
 
 const getAllContentWithMeta = `-- name: GetAllContentWithMeta :many
 SELECT
-    c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username,
+    c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username, c.hero_title_dark,
     s.path as section_path,
     s.name as section_name,
     m.summary as meta_summary,
     m.description as meta_description,
-    m.keywords as meta_keywords
+    m.keywords as meta_keywords,
+    hi.file_path as header_image_path,
+    hi.alt_text as header_image_alt
 FROM content c
 LEFT JOIN section s ON c.section_id = s.id
 LEFT JOIN meta m ON c.id = m.content_id
+LEFT JOIN content_images ci ON c.id = ci.content_id AND ci.is_header = 1
+LEFT JOIN image hi ON ci.image_id = hi.id
 WHERE c.site_id = ?
 ORDER BY c.created_at DESC
 `
@@ -164,11 +171,14 @@ type GetAllContentWithMetaRow struct {
 	ContributorID     sql.NullString `json:"contributor_id"`
 	ContributorHandle string         `json:"contributor_handle"`
 	AuthorUsername    string         `json:"author_username"`
+	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
 	SectionPath       sql.NullString `json:"section_path"`
 	SectionName       sql.NullString `json:"section_name"`
 	MetaSummary       sql.NullString `json:"meta_summary"`
 	MetaDescription   sql.NullString `json:"meta_description"`
 	MetaKeywords      sql.NullString `json:"meta_keywords"`
+	HeaderImagePath   sql.NullString `json:"header_image_path"`
+	HeaderImageAlt    sql.NullString `json:"header_image_alt"`
 }
 
 func (q *Queries) GetAllContentWithMeta(ctx context.Context, siteID string) ([]GetAllContentWithMetaRow, error) {
@@ -202,11 +212,14 @@ func (q *Queries) GetAllContentWithMeta(ctx context.Context, siteID string) ([]G
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 			&i.SectionPath,
 			&i.SectionName,
 			&i.MetaSummary,
 			&i.MetaDescription,
 			&i.MetaKeywords,
+			&i.HeaderImagePath,
+			&i.HeaderImageAlt,
 		); err != nil {
 			return nil, err
 		}
@@ -222,7 +235,7 @@ func (q *Queries) GetAllContentWithMeta(ctx context.Context, siteID string) ([]G
 }
 
 const getContent = `-- name: GetContent :one
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content WHERE id = ?
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content WHERE id = ?
 `
 
 func (q *Queries) GetContent(ctx context.Context, id string) (Content, error) {
@@ -250,12 +263,13 @@ func (q *Queries) GetContent(ctx context.Context, id string) (Content, error) {
 		&i.ContributorID,
 		&i.ContributorHandle,
 		&i.AuthorUsername,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }
 
 const getContentBySectionID = `-- name: GetContentBySectionID :many
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content WHERE section_id = ? ORDER BY created_at DESC
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content WHERE section_id = ? ORDER BY created_at DESC
 `
 
 func (q *Queries) GetContentBySectionID(ctx context.Context, sectionID sql.NullString) ([]Content, error) {
@@ -289,6 +303,7 @@ func (q *Queries) GetContentBySectionID(ctx context.Context, sectionID sql.NullS
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -304,7 +319,7 @@ func (q *Queries) GetContentBySectionID(ctx context.Context, sectionID sql.NullS
 }
 
 const getContentBySiteID = `-- name: GetContentBySiteID :many
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content WHERE site_id = ? ORDER BY created_at DESC
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content WHERE site_id = ? ORDER BY created_at DESC
 `
 
 func (q *Queries) GetContentBySiteID(ctx context.Context, siteID string) ([]Content, error) {
@@ -338,6 +353,7 @@ func (q *Queries) GetContentBySiteID(ctx context.Context, siteID string) ([]Cont
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -354,7 +370,7 @@ func (q *Queries) GetContentBySiteID(ctx context.Context, siteID string) ([]Cont
 
 const getContentWithMeta = `-- name: GetContentWithMeta :one
 SELECT
-    c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username,
+    c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username, c.hero_title_dark,
     s.path as section_path,
     s.name as section_name,
     m.summary as meta_summary,
@@ -388,6 +404,7 @@ type GetContentWithMetaRow struct {
 	ContributorID     sql.NullString `json:"contributor_id"`
 	ContributorHandle string         `json:"contributor_handle"`
 	AuthorUsername    string         `json:"author_username"`
+	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
 	SectionPath       sql.NullString `json:"section_path"`
 	SectionName       sql.NullString `json:"section_name"`
 	MetaSummary       sql.NullString `json:"meta_summary"`
@@ -420,6 +437,7 @@ func (q *Queries) GetContentWithMeta(ctx context.Context, id string) (GetContent
 		&i.ContributorID,
 		&i.ContributorHandle,
 		&i.AuthorUsername,
+		&i.HeroTitleDark,
 		&i.SectionPath,
 		&i.SectionName,
 		&i.MetaSummary,
@@ -430,7 +448,7 @@ func (q *Queries) GetContentWithMeta(ctx context.Context, id string) (GetContent
 }
 
 const getContentWithPagination = `-- name: GetContentWithPagination :many
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content
 WHERE site_id = ?
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?
@@ -473,6 +491,7 @@ func (q *Queries) GetContentWithPagination(ctx context.Context, arg GetContentWi
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -488,7 +507,7 @@ func (q *Queries) GetContentWithPagination(ctx context.Context, arg GetContentWi
 }
 
 const getPublishedContentBySiteID = `-- name: GetPublishedContentBySiteID :many
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content WHERE site_id = ? AND draft = 0 ORDER BY published_at DESC
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content WHERE site_id = ? AND draft = 0 ORDER BY published_at DESC
 `
 
 func (q *Queries) GetPublishedContentBySiteID(ctx context.Context, siteID string) ([]Content, error) {
@@ -522,6 +541,7 @@ func (q *Queries) GetPublishedContentBySiteID(ctx context.Context, siteID string
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -537,7 +557,7 @@ func (q *Queries) GetPublishedContentBySiteID(ctx context.Context, siteID string
 }
 
 const searchContent = `-- name: SearchContent :many
-SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username FROM content
+SELECT id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark FROM content
 WHERE site_id = ? AND heading LIKE ?
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?
@@ -586,6 +606,7 @@ func (q *Queries) SearchContent(ctx context.Context, arg SearchContentParams) ([
 			&i.ContributorID,
 			&i.ContributorHandle,
 			&i.AuthorUsername,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -615,10 +636,11 @@ UPDATE content SET
     series = ?,
     series_order = ?,
     published_at = ?,
+    hero_title_dark = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username
+RETURNING id, site_id, user_id, short_id, section_id, kind, heading, summary, body, draft, featured, series, series_order, published_at, created_by, updated_by, created_at, updated_at, contributor_id, contributor_handle, author_username, hero_title_dark
 `
 
 type UpdateContentParams struct {
@@ -635,6 +657,7 @@ type UpdateContentParams struct {
 	Series            sql.NullString `json:"series"`
 	SeriesOrder       sql.NullInt64  `json:"series_order"`
 	PublishedAt       sql.NullTime   `json:"published_at"`
+	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	UpdatedAt         sql.NullTime   `json:"updated_at"`
 	ID                string         `json:"id"`
@@ -655,6 +678,7 @@ func (q *Queries) UpdateContent(ctx context.Context, arg UpdateContentParams) (C
 		arg.Series,
 		arg.SeriesOrder,
 		arg.PublishedAt,
+		arg.HeroTitleDark,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
 		arg.ID,
@@ -682,6 +706,7 @@ func (q *Queries) UpdateContent(ctx context.Context, arg UpdateContentParams) (C
 		&i.ContributorID,
 		&i.ContributorHandle,
 		&i.AuthorUsername,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }

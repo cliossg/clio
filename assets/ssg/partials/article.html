@@ -6,7 +6,7 @@
         {{ else }}
         <div class="hero-image-gradient"></div>
         {{ end }}
-        <div class="hero-title-box">
+        <div class="hero-title-box{{ if .Content.HeroTitleDark }} hero-title-dark{{ end }}">
             <h1 class="hero-title">{{ .Content.Heading }}</h1>
             {{ if .Content.Summary }}
             <p class="hero-subtitle">{{ .Content.Summary }}</p>

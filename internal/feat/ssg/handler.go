@@ -983,6 +983,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 	}
 	content.Draft = r.FormValue("draft") == "on"
 	content.Featured = r.FormValue("featured") == "on"
+	content.HeroTitleDark = r.FormValue("hero_title_dark") == "on"
 	content.Series = r.FormValue("series")
 
 	if cid := r.FormValue("contributor_id"); cid != "" {
@@ -1147,6 +1148,7 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 	content.Kind = r.FormValue("kind")
 	content.Draft = r.FormValue("draft") == "on"
 	content.Featured = r.FormValue("featured") == "on"
+	content.HeroTitleDark = r.FormValue("hero_title_dark") == "on"
 	content.Series = r.FormValue("series")
 
 	if sid := r.FormValue("section_id"); sid != "" {
@@ -1249,6 +1251,7 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 	content.Body = r.FormValue("body")
 	content.Draft = r.FormValue("draft") == "on"
 	content.Featured = r.FormValue("featured") == "on"
+	content.HeroTitleDark = r.FormValue("hero_title_dark") == "on"
 	content.Series = r.FormValue("series")
 	content.Kind = r.FormValue("kind")
 

@@ -346,6 +346,30 @@ h1, h2, h3 {
     padding: 0.25rem 0;
 }
 
+/* Form Group Header (for inline label + control) */
+.form-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.form-group-header label {
+    margin-bottom: 0;
+}
+
+/* Discrete checkbox for secondary options */
+.checkbox-label.discrete {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--stone-beige-dark);
+}
+
+.checkbox-label.discrete input[type="checkbox"] {
+    width: auto;
+    margin-right: 0.25rem;
+}
+
 /* Alerts */
 .flash-container {
     max-width: 1200px;

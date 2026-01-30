@@ -107,6 +107,9 @@ type Content struct {
 	HeaderImageAlt     string `json:"header_image_alt,omitempty"`
 	HeaderImageCaption string `json:"header_image_caption,omitempty"`
 
+	// Hero styling
+	HeroTitleDark bool `json:"hero_title_dark"` // true = dark text, false = light text
+
 	CreatedBy uuid.UUID `json:"-"`
 	UpdatedBy uuid.UUID `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
