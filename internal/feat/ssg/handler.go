@@ -3398,7 +3398,7 @@ func parseSocialLinksToMap(jsonStr string) map[string]string {
 		return result
 	}
 	for _, link := range links {
-		result[link.Platform] = link.URL
+		result[strings.ToLower(link.Platform)] = link.URL
 	}
 	return result
 }

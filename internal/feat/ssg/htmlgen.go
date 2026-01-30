@@ -77,17 +77,10 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 
 	htmlPath := g.workspace.GetHTMLPath(site.Slug)
 
-	if err := CleanDir(htmlPath); err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to clean html directory: %w", err)
-	}
-
-	if err := g.copyStaticAssets(htmlPath); err != nil {
-		return nil, fmt.Errorf("failed to copy static assets: %w", err)
-	}
-
-	if err := g.copyUserImages(site.Slug, htmlPath); err != nil {
-		return nil, fmt.Errorf("failed to copy user images: %w", err)
-	}
+	// Best-effort cleanup and copy - don't fail on these, regeneration overwrites
+	_ = CleanDir(htmlPath)
+	_ = g.copyStaticAssets(htmlPath)
+	_ = g.copyUserImages(site.Slug, htmlPath)
 
 	embeddedTmpl, err := g.parseTemplates()
 	if err != nil {
@@ -459,18 +452,22 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 		}
 	}
 
-	// Find main section to use its layout if set
-	var mainSectionID uuid.UUID
+	// Find main section to use its layout and header image
+	var mainSection *Section
 	for _, s := range sections {
 		if s.Path == "" || s.Path == "/" {
-			mainSectionID = s.ID
+			mainSection = s
 			break
 		}
 	}
 
 	// Render main index (uses main section layout, then site default, then embedded)
+	var mainSectionID uuid.UUID
+	if mainSection != nil {
+		mainSectionID = mainSection.ID
+	}
 	mainTmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, mainSectionID)
-	if err := g.renderIndex(mainTmpl, htmlPath, site, "", nil, publishedContents, sections, menu, params, pageSize); err != nil {
+	if err := g.renderIndex(mainTmpl, htmlPath, site, "", mainSection, publishedContents, sections, menu, params, pageSize); err != nil {
 		return count, err
 	}
 	count++

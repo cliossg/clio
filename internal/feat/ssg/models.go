@@ -42,18 +42,19 @@ func NewSite(name, slug, mode string) *Site {
 
 // Section represents a content section (e.g., /blog, /docs).
 type Section struct {
-	ID          uuid.UUID `json:"id"`
-	SiteID      uuid.UUID `json:"site_id"`
-	ShortID     string    `json:"short_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Path        string    `json:"path"`
-	LayoutID    uuid.UUID `json:"layout_id"`
-	LayoutName  string    `json:"layout_name"`
-	CreatedBy   uuid.UUID `json:"-"`
-	UpdatedBy   uuid.UUID `json:"-"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	SiteID         uuid.UUID `json:"site_id"`
+	ShortID        string    `json:"short_id"`
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	Path           string    `json:"path"`
+	LayoutID       uuid.UUID `json:"layout_id"`
+	LayoutName     string    `json:"layout_name"`
+	HeaderImageURL string    `json:"header_image_url,omitempty"`
+	CreatedBy      uuid.UUID `json:"-"`
+	UpdatedBy      uuid.UUID `json:"-"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 func normalizePath(path string) string {

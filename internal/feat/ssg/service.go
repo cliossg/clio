@@ -350,6 +350,11 @@ func (s *service) GetAllContentWithMeta(ctx context.Context, siteID uuid.UUID) (
 	contents := make([]*Content, len(rows))
 	for i, row := range rows {
 		contents[i] = contentWithMetaFromSQLCAll(row)
+		// Load tags for each content
+		tags, err := s.GetTagsForContent(ctx, contents[i].ID)
+		if err == nil {
+			contents[i].Tags = tags
+		}
 	}
 
 	return contents, nil
@@ -495,14 +500,43 @@ func (s *service) GetSection(ctx context.Context, id uuid.UUID) (*Section, error
 func (s *service) GetSections(ctx context.Context, siteID uuid.UUID) ([]*Section, error) {
 	s.ensureQueries()
 
-	sqlcSections, err := s.queries.GetSectionsBySiteID(ctx, siteID.String())
+	rows, err := s.queries.GetSectionsWithHeaderImage(ctx, siteID.String())
 	if err != nil {
 		return nil, fmt.Errorf("cannot get sections: %w", err)
 	}
 
-	sections := make([]*Section, len(sqlcSections))
-	for i, sqlcSection := range sqlcSections {
-		sections[i] = sectionFromSQLC(sqlcSection)
+	sections := make([]*Section, len(rows))
+	for i, row := range rows {
+		section := &Section{
+			ID:     parseUUID(row.ID),
+			SiteID: parseUUID(row.SiteID),
+			Name:   row.Name,
+		}
+		if row.ShortID.Valid {
+			section.ShortID = row.ShortID.String
+		}
+		if row.Description.Valid {
+			section.Description = row.Description.String
+		}
+		if row.Path.Valid {
+			section.Path = row.Path.String
+		}
+		if row.LayoutID.Valid {
+			section.LayoutID = parseUUID(row.LayoutID.String)
+		}
+		if row.LayoutName.Valid {
+			section.LayoutName = row.LayoutName.String
+		}
+		if row.HeaderImagePath.Valid {
+			section.HeaderImageURL = "/images/" + row.HeaderImagePath.String
+		}
+		if row.CreatedAt.Valid {
+			section.CreatedAt = row.CreatedAt.Time
+		}
+		if row.UpdatedAt.Valid {
+			section.UpdatedAt = row.UpdatedAt.Time
+		}
+		sections[i] = section
 	}
 
 	return sections, nil
@@ -1018,13 +1052,13 @@ func (s *service) GetContentImagesWithDetails(ctx context.Context, contentID uui
 	images := make([]*ContentImageWithDetails, len(rows))
 	for i, row := range rows {
 		images[i] = &ContentImageWithDetails{
-			ContentImageID: uuid.MustParse(row.ContentImageID),
-			ContentID:      uuid.MustParse(row.ContentID),
+			ContentImageID: parseUUID(row.ContentImageID),
+			ContentID:      parseUUID(row.ContentID),
 			IsHeader:       row.IsHeader.Int64 == 1,
 			IsFeatured:     row.IsFeatured.Int64 == 1,
 			OrderNum:       int(row.OrderNum.Int64),
-			ID:             uuid.MustParse(row.ID),
-			SiteID:         uuid.MustParse(row.SiteID),
+			ID:             parseUUID(row.ID),
+			SiteID:         parseUUID(row.SiteID),
 			ShortID:        row.ShortID.String,
 			FileName:       row.FileName,
 			FilePath:       row.FilePath,
@@ -1074,8 +1108,8 @@ func (s *service) GetContentImageDetails(ctx context.Context, contentImageID uui
 	}
 
 	return &ContentImageDetails{
-		ContentImageID: uuid.MustParse(row.ContentImageID),
-		ImageID:        uuid.MustParse(row.ImageID),
+		ContentImageID: parseUUID(row.ContentImageID),
+		ImageID:        parseUUID(row.ImageID),
 		FilePath:       row.FilePath,
 	}, nil
 }
@@ -1121,13 +1155,13 @@ func (s *service) GetSectionImagesWithDetails(ctx context.Context, sectionID uui
 	images := make([]*SectionImageWithDetails, len(rows))
 	for i, row := range rows {
 		images[i] = &SectionImageWithDetails{
-			SectionImageID: uuid.MustParse(row.SectionImageID),
-			SectionID:      uuid.MustParse(row.SectionID),
+			SectionImageID: parseUUID(row.SectionImageID),
+			SectionID:      parseUUID(row.SectionID),
 			IsHeader:       row.IsHeader.Int64 == 1,
 			IsFeatured:     row.IsFeatured.Int64 == 1,
 			OrderNum:       int(row.OrderNum.Int64),
-			ID:             uuid.MustParse(row.ID),
-			SiteID:         uuid.MustParse(row.SiteID),
+			ID:             parseUUID(row.ID),
+			SiteID:         parseUUID(row.SiteID),
 			ShortID:        row.ShortID.String,
 			FileName:       row.FileName,
 			FilePath:       row.FilePath,
@@ -1152,8 +1186,8 @@ func (s *service) GetSectionImageDetails(ctx context.Context, sectionImageID uui
 	}
 
 	return &SectionImageDetails{
-		SectionImageID: uuid.MustParse(row.SectionImageID),
-		ImageID:        uuid.MustParse(row.ImageID),
+		SectionImageID: parseUUID(row.SectionImageID),
+		ImageID:        parseUUID(row.ImageID),
 		FilePath:       row.FilePath,
 	}, nil
 }
@@ -1480,13 +1514,13 @@ func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 
 	var profileID *uuid.UUID
 	if row.ProfileID.Valid {
-		id := uuid.MustParse(row.ProfileID.String)
+		id := parseUUID(row.ProfileID.String)
 		profileID = &id
 	}
 
 	return &Contributor{
-		ID:          uuid.MustParse(row.ID),
-		SiteID:      uuid.MustParse(row.SiteID),
+		ID:          parseUUID(row.ID),
+		SiteID:      parseUUID(row.SiteID),
 		ProfileID:   profileID,
 		ShortID:     row.ShortID,
 		Handle:      row.Handle,
@@ -1495,8 +1529,8 @@ func contributorFromSQLC(row sqlc.Contributor) (*Contributor, error) {
 		Bio:         row.Bio,
 		SocialLinks: socialLinks,
 		Role:        row.Role,
-		CreatedBy:   uuid.MustParse(row.CreatedBy),
-		UpdatedBy:   uuid.MustParse(row.UpdatedBy),
+		CreatedBy:   parseUUID(row.CreatedBy),
+		UpdatedBy:   parseUUID(row.UpdatedBy),
 		CreatedAt:   row.CreatedAt,
 		UpdatedAt:   row.UpdatedAt,
 	}, nil
@@ -1512,7 +1546,7 @@ func contributorWithProfileFromSQLC(row sqlc.ListContributorsWithProfileRow) (*C
 
 	var profileID *uuid.UUID
 	if row.ProfileID.Valid {
-		id := uuid.MustParse(row.ProfileID.String)
+		id := parseUUID(row.ProfileID.String)
 		profileID = &id
 	}
 
@@ -1522,8 +1556,8 @@ func contributorWithProfileFromSQLC(row sqlc.ListContributorsWithProfileRow) (*C
 	}
 
 	return &Contributor{
-		ID:          uuid.MustParse(row.ID),
-		SiteID:      uuid.MustParse(row.SiteID),
+		ID:          parseUUID(row.ID),
+		SiteID:      parseUUID(row.SiteID),
 		ProfileID:   profileID,
 		ShortID:     row.ShortID,
 		Handle:      row.Handle,
@@ -1533,8 +1567,8 @@ func contributorWithProfileFromSQLC(row sqlc.ListContributorsWithProfileRow) (*C
 		SocialLinks: socialLinks,
 		Role:        row.Role,
 		PhotoPath:   photoPath,
-		CreatedBy:   uuid.MustParse(row.CreatedBy),
-		UpdatedBy:   uuid.MustParse(row.UpdatedBy),
+		CreatedBy:   parseUUID(row.CreatedBy),
+		UpdatedBy:   parseUUID(row.UpdatedBy),
 		CreatedAt:   row.CreatedAt,
 		UpdatedAt:   row.UpdatedAt,
 	}, nil

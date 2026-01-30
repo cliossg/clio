@@ -20,19 +20,22 @@
 
         <!-- Basic Fields -->
         <div class="form-group">
-            <div class="form-group-header">
-                <label for="heading">Title</label>
-                <label class="checkbox-label discrete" title="Use dark text when hero image is bright">
-                    <input type="checkbox" name="hero_title_dark" {{ if .Content.HeroTitleDark }}checked{{ end }}>
-                    <span>Dark hero text</span>
-                </label>
-            </div>
+            <label for="heading">Title</label>
             <input type="text" id="heading" name="heading" value="{{ .Content.Heading }}" required>
         </div>
 
         <!-- Header Image Section -->
         <div class="form-group">
-            <label>Header Image</label>
+            <div class="form-group-header">
+                <label>Header Image</label>
+                <label class="switch-label discrete" title="Select based on image brightness">
+                    <input type="checkbox" name="hero_title_dark" {{ if .Content.HeroTitleDark }}checked{{ end }}>
+                    <span class="switch-toggle">
+                        <span class="switch-option light">Light</span>
+                        <span class="switch-option dark">Dark</span>
+                    </span>
+                </label>
+            </div>
             <div id="header-image-container" class="header-image-container">
                 {{ if .HeaderImage }}
                 <img src="/ssg/workspace/{{ .Site.Slug }}/images/{{ .HeaderImage.FilePath }}" alt="{{ .HeaderImage.AltText }}">

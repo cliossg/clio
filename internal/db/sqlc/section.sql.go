@@ -166,6 +166,73 @@ func (q *Queries) GetSectionsBySiteID(ctx context.Context, siteID string) ([]Sec
 	return items, nil
 }
 
+const getSectionsWithHeaderImage = `-- name: GetSectionsWithHeaderImage :many
+SELECT
+    s.id, s.site_id, s.short_id, s.name, s.description, s.path, s.layout_id, s.layout_name, s.created_by, s.updated_by, s.created_at, s.updated_at,
+    hi.file_path as header_image_path,
+    hi.alt_text as header_image_alt
+FROM section s
+LEFT JOIN section_images si ON s.id = si.section_id AND si.is_header = 1
+LEFT JOIN image hi ON si.image_id = hi.id
+WHERE s.site_id = ?
+ORDER BY s.path
+`
+
+type GetSectionsWithHeaderImageRow struct {
+	ID              string         `json:"id"`
+	SiteID          string         `json:"site_id"`
+	ShortID         sql.NullString `json:"short_id"`
+	Name            string         `json:"name"`
+	Description     sql.NullString `json:"description"`
+	Path            sql.NullString `json:"path"`
+	LayoutID        sql.NullString `json:"layout_id"`
+	LayoutName      sql.NullString `json:"layout_name"`
+	CreatedBy       sql.NullString `json:"created_by"`
+	UpdatedBy       sql.NullString `json:"updated_by"`
+	CreatedAt       sql.NullTime   `json:"created_at"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	HeaderImagePath sql.NullString `json:"header_image_path"`
+	HeaderImageAlt  sql.NullString `json:"header_image_alt"`
+}
+
+func (q *Queries) GetSectionsWithHeaderImage(ctx context.Context, siteID string) ([]GetSectionsWithHeaderImageRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSectionsWithHeaderImage, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSectionsWithHeaderImageRow
+	for rows.Next() {
+		var i GetSectionsWithHeaderImageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.ShortID,
+			&i.Name,
+			&i.Description,
+			&i.Path,
+			&i.LayoutID,
+			&i.LayoutName,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.HeaderImagePath,
+			&i.HeaderImageAlt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSection = `-- name: UpdateSection :one
 UPDATE section SET
     name = ?,

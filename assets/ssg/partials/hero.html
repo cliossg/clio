@@ -1,11 +1,31 @@
 {{ define "hero.html" }}
-<div class="hero-wrapper boxed">
-    {{ if .Params.hero_image }}
+{{ if .Section }}{{ if .Section.HeaderImageURL }}
+<div class="hero-wrapper compact">
+    <img class="hero-image" src="{{ .Section.HeaderImageURL }}" alt="{{ .Section.Name }}">
+    <div class="hero-title-box">
+        <h1 class="hero-title">{{ if eq .Section.Name "main" }}{{ .Site.Name }}{{ else }}{{ .Section.Name }}{{ end }}</h1>
+        {{ if .Section.Description }}
+        <p class="hero-subtitle">{{ .Section.Description }}</p>
+        {{ else if .Params.site_description }}
+        <p class="hero-subtitle">{{ .Params.site_description }}</p>
+        {{ end }}
+    </div>
+</div>
+{{ else if .Params.hero_image }}
+<div class="hero-wrapper compact">
     <img class="hero-image" src="{{ .AssetPath }}{{ .Params.hero_image }}" alt="{{ .Site.Name }}">
-    {{ end }}
     <div class="hero-title-box">
         <h1 class="hero-title">{{ .Site.Name }}</h1>
         <p class="hero-subtitle">{{ .Params.site_description }}</p>
     </div>
 </div>
+{{ end }}{{ else if .Params.hero_image }}
+<div class="hero-wrapper compact">
+    <img class="hero-image" src="{{ .AssetPath }}{{ .Params.hero_image }}" alt="{{ .Site.Name }}">
+    <div class="hero-title-box">
+        <h1 class="hero-title">{{ .Site.Name }}</h1>
+        <p class="hero-subtitle">{{ .Params.site_description }}</p>
+    </div>
+</div>
+{{ end }}
 {{ end }}

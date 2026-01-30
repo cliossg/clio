@@ -79,6 +79,7 @@ type Querier interface {
 	GetSectionImagesBySectionID(ctx context.Context, sectionID string) ([]SectionImage, error)
 	GetSectionImagesWithDetails(ctx context.Context, sectionID string) ([]GetSectionImagesWithDetailsRow, error)
 	GetSectionsBySiteID(ctx context.Context, siteID string) ([]Section, error)
+	GetSectionsWithHeaderImage(ctx context.Context, siteID string) ([]GetSectionsWithHeaderImageRow, error)
 	GetSession(ctx context.Context, id string) (Session, error)
 	GetSetting(ctx context.Context, id string) (Setting, error)
 	GetSettingByName(ctx context.Context, arg GetSettingByNameParams) (Setting, error)

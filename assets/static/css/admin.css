@@ -358,16 +358,58 @@ h1, h2, h3 {
     margin-bottom: 0;
 }
 
-/* Discrete checkbox for secondary options */
-.checkbox-label.discrete {
+/* Discrete Light/Dark Switch */
+.switch-label.discrete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
     font-size: 0.75rem;
-    font-weight: 400;
     color: var(--stone-beige-dark);
 }
 
-.checkbox-label.discrete input[type="checkbox"] {
-    width: auto;
-    margin-right: 0.25rem;
+.switch-label.discrete .switch-text {
+    font-weight: 400;
+}
+
+.switch-label.discrete input[type="checkbox"] {
+    display: none;
+}
+
+.switch-label.discrete .switch-toggle {
+    display: inline-flex;
+    background: var(--white-warm-dark);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--stone-beige);
+}
+
+.switch-label.discrete .switch-option {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease;
+}
+
+.switch-label.discrete .switch-option.light {
+    background: var(--blue-intense);
+    color: white;
+}
+
+.switch-label.discrete .switch-option.dark {
+    background: transparent;
+    color: var(--stone-beige-dark);
+}
+
+.switch-label.discrete input[type="checkbox"]:checked ~ .switch-toggle .switch-option.light {
+    background: transparent;
+    color: var(--stone-beige-dark);
+}
+
+.switch-label.discrete input[type="checkbox"]:checked ~ .switch-toggle .switch-option.dark {
+    background: var(--navy-deep);
+    color: white;
 }
 
 /* Alerts */
@@ -674,6 +716,12 @@ button.nav-card {
     overflow-y: auto;
     background: #fafafa;
     border-left: 1px solid var(--stone-beige);
+}
+
+.editor-preview img {
+    max-width: 50%;
+    height: auto;
+    border-radius: 4px;
 }
 
 /* Editor Toolbar */

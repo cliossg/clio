@@ -20,19 +20,22 @@
 
         <!-- Basic Fields -->
         <div class="form-group">
-            <div class="form-group-header">
-                <label for="heading">Title</label>
-                <label class="checkbox-label discrete" title="Use dark text when hero image is bright">
-                    <input type="checkbox" name="hero_title_dark">
-                    <span>Dark hero text</span>
-                </label>
-            </div>
+            <label for="heading">Title</label>
             <input type="text" id="heading" name="heading" required placeholder="Enter content title">
         </div>
 
         <!-- Header Image Section -->
         <div class="form-group">
-            <label>Header Image</label>
+            <div class="form-group-header">
+                <label>Header Image</label>
+                <label class="switch-label discrete" title="Select based on image brightness">
+                    <input type="checkbox" name="hero_title_dark">
+                    <span class="switch-toggle">
+                        <span class="switch-option light">Light</span>
+                        <span class="switch-option dark">Dark</span>
+                    </span>
+                </label>
+            </div>
             <div id="header-image-container" class="header-image-container">
                 <div id="header-image-placeholder" class="header-image-placeholder">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

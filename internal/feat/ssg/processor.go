@@ -65,7 +65,17 @@ func (p *Processor) ProcessContent(content *Content) (string, error) {
 	// Post-process images with captions (using |||long description syntax)
 	html = p.enhanceImages(html)
 
+	// Transform workspace image paths to static site paths
+	html = p.transformImagePaths(html)
+
 	return html, nil
+}
+
+// transformImagePaths converts workspace paths to static site paths.
+// /ssg/workspace/{slug}/images/{file} -> /images/{file}
+func (p *Processor) transformImagePaths(html string) string {
+	re := regexp.MustCompile(`/ssg/workspace/[^/]+/images/`)
+	return re.ReplaceAllString(html, "/images/")
 }
 
 // enhanceImages post-processes HTML to enhance images with captions.

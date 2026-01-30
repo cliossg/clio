@@ -105,20 +105,20 @@ nav a.active {
 }
 
 .hero-wrapper .hero-title {
-    color: #ffffff;
+    color: #1f2937;
     margin: 0;
     text-align: center;
     font-size: 2.5rem;
     font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .hero-wrapper .hero-subtitle {
-    color: #f3f4f6;
+    color: #374151;
     margin: 0.5rem 0 0 0;
     text-align: center;
     font-size: 1.125rem;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .hero-image {
@@ -127,6 +127,27 @@ nav a.active {
     object-fit: cover;
     object-position: center;
     display: block;
+}
+
+/* Compact hero for list/index pages */
+.hero-wrapper.compact {
+    margin-top: 0;
+}
+
+.hero-wrapper.compact .hero-image {
+    max-height: 220px;
+}
+
+.hero-wrapper.compact .hero-title-box {
+    padding: 0.75rem 1rem;
+}
+
+.hero-wrapper.compact .hero-title {
+    font-size: 1.75rem;
+}
+
+.hero-wrapper.compact .hero-subtitle {
+    font-size: 1rem;
 }
 
 .hero-image-gradient {
@@ -165,15 +186,15 @@ nav a.active {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Dark Text Override (for bright/light hero images) */
+/* Light Text Override (for dark hero images) */
 .hero-wrapper .hero-title-box.hero-title-dark .hero-title {
-    color: #1f2937;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .hero-wrapper .hero-title-box.hero-title-dark .hero-subtitle {
-    color: #374151;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+    color: #f3f4f6;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* ============================================
