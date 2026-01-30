@@ -18,9 +18,14 @@ CREATE TABLE IF NOT EXISTS content (
     updated_by TEXT,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
+    contributor_id TEXT,
+    contributor_handle TEXT NOT NULL DEFAULT '',
+    author_username TEXT NOT NULL DEFAULT '',
+    hero_title_dark INTEGER DEFAULT 0,
     FOREIGN KEY (site_id) REFERENCES site(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id),
-    FOREIGN KEY (section_id) REFERENCES section(id)
+    FOREIGN KEY (section_id) REFERENCES section(id),
+    FOREIGN KEY (contributor_id) REFERENCES contributor(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_content_site_id ON content(site_id);

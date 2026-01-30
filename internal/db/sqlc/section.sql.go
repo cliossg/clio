@@ -11,24 +11,25 @@ import (
 )
 
 const createSection = `-- name: CreateSection :one
-INSERT INTO section (id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at
+INSERT INTO section (id, site_id, short_id, name, description, path, layout_id, layout_name, hero_title_dark, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at, hero_title_dark
 `
 
 type CreateSectionParams struct {
-	ID          string         `json:"id"`
-	SiteID      string         `json:"site_id"`
-	ShortID     sql.NullString `json:"short_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Path        sql.NullString `json:"path"`
-	LayoutID    sql.NullString `json:"layout_id"`
-	LayoutName  sql.NullString `json:"layout_name"`
-	CreatedBy   sql.NullString `json:"created_by"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	ID            string         `json:"id"`
+	SiteID        string         `json:"site_id"`
+	ShortID       sql.NullString `json:"short_id"`
+	Name          string         `json:"name"`
+	Description   sql.NullString `json:"description"`
+	Path          sql.NullString `json:"path"`
+	LayoutID      sql.NullString `json:"layout_id"`
+	LayoutName    sql.NullString `json:"layout_name"`
+	HeroTitleDark sql.NullInt64  `json:"hero_title_dark"`
+	CreatedBy     sql.NullString `json:"created_by"`
+	UpdatedBy     sql.NullString `json:"updated_by"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
 }
 
 func (q *Queries) CreateSection(ctx context.Context, arg CreateSectionParams) (Section, error) {
@@ -41,6 +42,7 @@ func (q *Queries) CreateSection(ctx context.Context, arg CreateSectionParams) (S
 		arg.Path,
 		arg.LayoutID,
 		arg.LayoutName,
+		arg.HeroTitleDark,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 		arg.CreatedAt,
@@ -60,6 +62,7 @@ func (q *Queries) CreateSection(ctx context.Context, arg CreateSectionParams) (S
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }
@@ -74,7 +77,7 @@ func (q *Queries) DeleteSection(ctx context.Context, id string) error {
 }
 
 const getSection = `-- name: GetSection :one
-SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at FROM section WHERE id = ?
+SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at, hero_title_dark FROM section WHERE id = ?
 `
 
 func (q *Queries) GetSection(ctx context.Context, id string) (Section, error) {
@@ -93,12 +96,13 @@ func (q *Queries) GetSection(ctx context.Context, id string) (Section, error) {
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }
 
 const getSectionByPath = `-- name: GetSectionByPath :one
-SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at FROM section WHERE site_id = ? AND path = ?
+SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at, hero_title_dark FROM section WHERE site_id = ? AND path = ?
 `
 
 type GetSectionByPathParams struct {
@@ -122,12 +126,13 @@ func (q *Queries) GetSectionByPath(ctx context.Context, arg GetSectionByPathPara
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }
 
 const getSectionsBySiteID = `-- name: GetSectionsBySiteID :many
-SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at FROM section WHERE site_id = ? ORDER BY path
+SELECT id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at, hero_title_dark FROM section WHERE site_id = ? ORDER BY path
 `
 
 func (q *Queries) GetSectionsBySiteID(ctx context.Context, siteID string) ([]Section, error) {
@@ -152,6 +157,7 @@ func (q *Queries) GetSectionsBySiteID(ctx context.Context, siteID string) ([]Sec
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HeroTitleDark,
 		); err != nil {
 			return nil, err
 		}
@@ -168,7 +174,7 @@ func (q *Queries) GetSectionsBySiteID(ctx context.Context, siteID string) ([]Sec
 
 const getSectionsWithHeaderImage = `-- name: GetSectionsWithHeaderImage :many
 SELECT
-    s.id, s.site_id, s.short_id, s.name, s.description, s.path, s.layout_id, s.layout_name, s.created_by, s.updated_by, s.created_at, s.updated_at,
+    s.id, s.site_id, s.short_id, s.name, s.description, s.path, s.layout_id, s.layout_name, s.created_by, s.updated_by, s.created_at, s.updated_at, s.hero_title_dark,
     hi.file_path as header_image_path,
     hi.alt_text as header_image_alt
 FROM section s
@@ -191,6 +197,7 @@ type GetSectionsWithHeaderImageRow struct {
 	UpdatedBy       sql.NullString `json:"updated_by"`
 	CreatedAt       sql.NullTime   `json:"created_at"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	HeroTitleDark   sql.NullInt64  `json:"hero_title_dark"`
 	HeaderImagePath sql.NullString `json:"header_image_path"`
 	HeaderImageAlt  sql.NullString `json:"header_image_alt"`
 }
@@ -217,6 +224,7 @@ func (q *Queries) GetSectionsWithHeaderImage(ctx context.Context, siteID string)
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HeroTitleDark,
 			&i.HeaderImagePath,
 			&i.HeaderImageAlt,
 		); err != nil {
@@ -240,21 +248,23 @@ UPDATE section SET
     path = ?,
     layout_id = ?,
     layout_name = ?,
+    hero_title_dark = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at, hero_title_dark
 `
 
 type UpdateSectionParams struct {
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Path        sql.NullString `json:"path"`
-	LayoutID    sql.NullString `json:"layout_id"`
-	LayoutName  sql.NullString `json:"layout_name"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	ID          string         `json:"id"`
+	Name          string         `json:"name"`
+	Description   sql.NullString `json:"description"`
+	Path          sql.NullString `json:"path"`
+	LayoutID      sql.NullString `json:"layout_id"`
+	LayoutName    sql.NullString `json:"layout_name"`
+	HeroTitleDark sql.NullInt64  `json:"hero_title_dark"`
+	UpdatedBy     sql.NullString `json:"updated_by"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	ID            string         `json:"id"`
 }
 
 func (q *Queries) UpdateSection(ctx context.Context, arg UpdateSectionParams) (Section, error) {
@@ -264,6 +274,7 @@ func (q *Queries) UpdateSection(ctx context.Context, arg UpdateSectionParams) (S
 		arg.Path,
 		arg.LayoutID,
 		arg.LayoutName,
+		arg.HeroTitleDark,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
 		arg.ID,
@@ -282,6 +293,7 @@ func (q *Queries) UpdateSection(ctx context.Context, arg UpdateSectionParams) (S
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HeroTitleDark,
 	)
 	return i, err
 }

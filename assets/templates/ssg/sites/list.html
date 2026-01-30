@@ -10,7 +10,6 @@
             <tr>
                 <th>Name</th>
                 <th>Slug</th>
-                <th>Mode</th>
                 <th>Active</th>
                 {{ if $isAdmin }}<th>Actions</th>{{ end }}
             </tr>
@@ -20,7 +19,6 @@
             <tr class="clickable-row" onclick="localStorage.setItem('currentSiteId', '{{ .ID }}'); window.location='/ssg/get-site?id={{ .ID }}'">
                 <td>{{ .Name }}</td>
                 <td>{{ .Slug }}</td>
-                <td>{{ .Mode }}</td>
                 <td>{{ if .Active }}Yes{{ else }}No{{ end }}</td>
                 {{ if $isAdmin }}
                 <td>

@@ -2,7 +2,7 @@
 {{ if .Section }}{{ if .Section.HeaderImageURL }}
 <div class="hero-wrapper compact">
     <img class="hero-image" src="{{ .Section.HeaderImageURL }}" alt="{{ .Section.Name }}">
-    <div class="hero-title-box">
+    <div class="hero-title-box{{ if .Section.HeroTitleDark }} hero-title-dark{{ end }}">
         <h1 class="hero-title">{{ if eq .Section.Name "main" }}{{ .Site.Name }}{{ else }}{{ .Section.Name }}{{ end }}</h1>
         {{ if .Section.Description }}
         <p class="hero-subtitle">{{ .Section.Description }}</p>

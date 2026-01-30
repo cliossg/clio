@@ -20,13 +20,6 @@
             <input type="text" id="slug" name="slug" value="{{ .Site.Slug }}" required>
         </div>
         <div class="form-group">
-            <label for="mode">Mode</label>
-            <select id="mode" name="mode">
-                <option value="blog" {{ if eq .Site.Mode "blog" }}selected{{ end }}>Blog</option>
-                <option value="structured" {{ if eq .Site.Mode "structured" }}selected{{ end }}>Structured</option>
-            </select>
-        </div>
-        <div class="form-group">
             <label class="checkbox-label">
                 <input type="checkbox" name="active" {{ if .Site.Active }}checked{{ end }}> Active
             </label>

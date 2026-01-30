@@ -54,7 +54,7 @@ func (s *Seeder) Start(ctx context.Context) error {
 }
 
 func (s *Seeder) seedDemoSite(ctx context.Context) (*Site, error) {
-	site := NewSite("Demo", "demo", "blog")
+	site := NewSite("Demo", "demo")
 	if err := s.service.CreateSite(ctx, site); err != nil {
 		return nil, err
 	}

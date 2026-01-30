@@ -88,7 +88,7 @@ func TestSeederStartWithExistingSites(t *testing.T) {
 	ctx := context.Background()
 
 	// Create an existing site
-	site := NewSite("Existing Site", "existing-site", "blog")
+	site := NewSite("Existing Site", "existing-site")
 	if err := svc.CreateSite(ctx, site); err != nil {
 		t.Fatalf("CreateSite failed: %v", err)
 	}

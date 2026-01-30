@@ -12,32 +12,28 @@ func TestNewSite(t *testing.T) {
 		name     string
 		siteName string
 		slug     string
-		mode     string
 	}{
 		{
-			name:     "blog mode site",
+			name:     "standard site",
 			siteName: "My Blog",
 			slug:     "my-blog",
-			mode:     "blog",
 		},
 		{
-			name:     "structured mode site",
+			name:     "documentation site",
 			siteName: "Documentation",
 			slug:     "docs",
-			mode:     "structured",
 		},
 		{
 			name:     "empty values",
 			siteName: "",
 			slug:     "",
-			mode:     "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			before := time.Now()
-			site := NewSite(tt.siteName, tt.slug, tt.mode)
+			site := NewSite(tt.siteName, tt.slug)
 			after := time.Now()
 
 			if site.Name != tt.siteName {
@@ -45,9 +41,6 @@ func TestNewSite(t *testing.T) {
 			}
 			if site.Slug != tt.slug {
 				t.Errorf("Slug = %q, want %q", site.Slug, tt.slug)
-			}
-			if site.Mode != tt.mode {
-				t.Errorf("Mode = %q, want %q", site.Mode, tt.mode)
 			}
 			if !site.Active {
 				t.Error("Active should be true by default")

@@ -121,8 +121,7 @@
                     <label for="kind">Kind</label>
                     <select id="kind" name="kind" onchange="toggleSeriesFields()">
                         <option value="page" {{ if eq .Content.Kind "page" }}selected{{ end }}>Page</option>
-                        <option value="article" {{ if eq .Content.Kind "article" }}selected{{ end }}>Article</option>
-                        <option value="blog" {{ if eq .Content.Kind "blog" }}selected{{ end }}>Blog</option>
+                        <option value="article" {{ if or (eq .Content.Kind "article") (eq .Content.Kind "blog") }}selected{{ end }}>Article</option>
                         <option value="series" {{ if eq .Content.Kind "series" }}selected{{ end }}>Series</option>
                     </select>
                 </div>

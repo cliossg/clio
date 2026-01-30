@@ -41,82 +41,29 @@ func BuildBlocks(current *RenderedContent, allContent []*RenderedContent, cfg Bl
 		return blocks
 	}
 
-	if current.Kind == "blog" {
-		buildBlogBlocks(blocks, current, allContent, cfg)
-	} else if current.Kind == "article" || current.Kind == "post" {
+	if current.Kind == "article" || current.Kind == "post" || current.Kind == "blog" {
 		buildArticleBlocks(blocks, current, allContent, cfg)
 	}
 
 	return blocks
 }
 
-func buildBlogBlocks(blocks *GeneratedBlocks, current *RenderedContent, allContent []*RenderedContent, cfg BlocksConfig) {
-	added := make(map[uuid.UUID]bool)
-	added[current.ID] = true
-
-	// Priority 1: Blog posts in same section with matching tags
-	for _, c := range allContent {
-		if len(blocks.Related) >= cfg.MaxItems {
-			break
-		}
-		if c.Kind == "blog" && c.SectionID == current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
-			blocks.Related = append(blocks.Related, *c)
-			added[c.ID] = true
-		}
-	}
-
-	// Priority 2: Articles in same section with matching tags
-	for _, c := range allContent {
-		if len(blocks.Related) >= cfg.MaxItems {
-			break
-		}
-		if (c.Kind == "article" || c.Kind == "post") && c.SectionID == current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
-			blocks.Related = append(blocks.Related, *c)
-			added[c.ID] = true
-		}
-	}
-
-	// Priority 3: Content from other sections with matching tags (if enabled)
-	if cfg.MultiSection {
-		for _, c := range allContent {
-			if len(blocks.Related) >= cfg.MaxItems {
-				break
-			}
-			if c.SectionID != current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
-				blocks.Related = append(blocks.Related, *c)
-				added[c.ID] = true
-			}
-		}
-	}
-}
-
 func buildArticleBlocks(blocks *GeneratedBlocks, current *RenderedContent, allContent []*RenderedContent, cfg BlocksConfig) {
 	added := make(map[uuid.UUID]bool)
 	added[current.ID] = true
 
-	// Priority 1: Articles in same section with matching tags
+	// Priority 1: Articles/posts/blogs in same section with matching tags
 	for _, c := range allContent {
 		if len(blocks.Related) >= cfg.MaxItems {
 			break
 		}
-		if (c.Kind == "article" || c.Kind == "post") && c.SectionID == current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
+		if (c.Kind == "article" || c.Kind == "post" || c.Kind == "blog") && c.SectionID == current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
 			blocks.Related = append(blocks.Related, *c)
 			added[c.ID] = true
 		}
 	}
 
-	// Priority 2: Blog posts in same section with matching tags
-	for _, c := range allContent {
-		if len(blocks.Related) >= cfg.MaxItems {
-			break
-		}
-		if c.Kind == "blog" && c.SectionID == current.SectionID && hasCommonTags(current, c) && !added[c.ID] {
-			blocks.Related = append(blocks.Related, *c)
-			added[c.ID] = true
-		}
-	}
-
-	// Priority 3: Content from other sections with matching tags (if enabled)
+	// Priority 2: Content from other sections with matching tags (if enabled)
 	if cfg.MultiSection {
 		for _, c := range allContent {
 			if len(blocks.Related) >= cfg.MaxItems {

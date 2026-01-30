@@ -101,7 +101,7 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		}
 	}
 
-	menu := g.buildMenu(sections, site.Mode)
+	menu := g.buildMenu(sections)
 
 	paramsMap := make(map[string]string)
 	for _, p := range params {
@@ -293,7 +293,7 @@ func (g *HTMLGenerator) copyProfilePhotos(htmlPath string, contributors []*Contr
 }
 
 // buildMenu builds the navigation menu from sections.
-func (g *HTMLGenerator) buildMenu(sections []*Section, mode string) []*Section {
+func (g *HTMLGenerator) buildMenu(sections []*Section) []*Section {
 	var menu []*Section
 	for _, s := range sections {
 		if s.Name != "main" && s.Path != "/" && s.Path != "" {

@@ -151,18 +151,19 @@ type Profile struct {
 }
 
 type Section struct {
-	ID          string         `json:"id"`
-	SiteID      string         `json:"site_id"`
-	ShortID     sql.NullString `json:"short_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Path        sql.NullString `json:"path"`
-	LayoutID    sql.NullString `json:"layout_id"`
-	LayoutName  sql.NullString `json:"layout_name"`
-	CreatedBy   sql.NullString `json:"created_by"`
-	UpdatedBy   sql.NullString `json:"updated_by"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	ID            string         `json:"id"`
+	SiteID        string         `json:"site_id"`
+	ShortID       sql.NullString `json:"short_id"`
+	Name          string         `json:"name"`
+	Description   sql.NullString `json:"description"`
+	Path          sql.NullString `json:"path"`
+	LayoutID      sql.NullString `json:"layout_id"`
+	LayoutName    sql.NullString `json:"layout_name"`
+	CreatedBy     sql.NullString `json:"created_by"`
+	UpdatedBy     sql.NullString `json:"updated_by"`
+	CreatedAt     sql.NullTime   `json:"created_at"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	HeroTitleDark sql.NullInt64  `json:"hero_title_dark"`
 }
 
 type SectionImage struct {
@@ -204,14 +205,13 @@ type Site struct {
 	ShortID           string         `json:"short_id"`
 	Name              string         `json:"name"`
 	Slug              string         `json:"slug"`
-	Mode              string         `json:"mode"`
 	Active            int64          `json:"active"`
+	DefaultLayoutID   sql.NullString `json:"default_layout_id"`
+	DefaultLayoutName sql.NullString `json:"default_layout_name"`
 	CreatedBy         string         `json:"created_by"`
 	UpdatedBy         string         `json:"updated_by"`
 	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt         time.Time      `json:"updated_at"`
-	DefaultLayoutID   sql.NullString `json:"default_layout_id"`
-	DefaultLayoutName sql.NullString `json:"default_layout_name"`
 }
 
 type Tag struct {

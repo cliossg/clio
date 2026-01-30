@@ -15,7 +15,6 @@ type Site struct {
 	ShortID           string    `json:"short_id"`
 	Name              string    `json:"name"`
 	Slug              string    `json:"slug"`
-	Mode              string    `json:"mode"` // "blog" or "structured"
 	Active            bool      `json:"active"`
 	DefaultLayoutID   uuid.UUID `json:"default_layout_id"`
 	DefaultLayoutName string    `json:"default_layout_name"`
@@ -26,14 +25,13 @@ type Site struct {
 }
 
 // NewSite creates a new Site instance.
-func NewSite(name, slug, mode string) *Site {
+func NewSite(name, slug string) *Site {
 	now := time.Now()
 	return &Site{
 		ID:        uuid.New(),
 		ShortID:   uuid.New().String()[:8],
 		Name:      name,
 		Slug:      slug,
-		Mode:      mode,
 		Active:    true,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -51,6 +49,7 @@ type Section struct {
 	LayoutID       uuid.UUID `json:"layout_id"`
 	LayoutName     string    `json:"layout_name"`
 	HeaderImageURL string    `json:"header_image_url,omitempty"`
+	HeroTitleDark  bool      `json:"hero_title_dark"`
 	CreatedBy      uuid.UUID `json:"-"`
 	UpdatedBy      uuid.UUID `json:"-"`
 	CreatedAt      time.Time `json:"created_at"`

@@ -445,12 +445,8 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 
 	name := r.FormValue("name")
 	slug := r.FormValue("slug")
-	mode := r.FormValue("mode")
-	if mode == "" {
-		mode = "blog"
-	}
 
-	site := NewSite(name, slug, mode)
+	site := NewSite(name, slug)
 
 	// Get user ID from context
 	userIDStr := middleware.GetUserID(r.Context())
@@ -587,7 +583,6 @@ func (h *Handler) HandleUpdateSite(w http.ResponseWriter, r *http.Request) {
 
 	site.Name = r.FormValue("name")
 	site.Slug = r.FormValue("slug")
-	site.Mode = r.FormValue("mode")
 	site.Active = r.FormValue("active") == "on"
 
 	if layoutID := r.FormValue("default_layout_id"); layoutID != "" {
@@ -709,6 +704,7 @@ func (h *Handler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	section := NewSection(site.ID, r.FormValue("name"), r.FormValue("description"), r.FormValue("path"))
+	section.HeroTitleDark = r.FormValue("hero_title_dark") == "on"
 
 	if layoutID := r.FormValue("layout_id"); layoutID != "" {
 		if id, err := uuid.Parse(layoutID); err == nil {
@@ -838,11 +834,15 @@ func (h *Handler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
 	section.Name = r.FormValue("name")
 	section.Description = r.FormValue("description")
 	section.Path = normalizePath(r.FormValue("path"))
+	section.HeroTitleDark = r.FormValue("hero_title_dark") == "on"
 
 	if layoutID := r.FormValue("layout_id"); layoutID != "" {
 		if id, err := uuid.Parse(layoutID); err == nil {
 			section.LayoutID = id
 		}
+	} else {
+		section.LayoutID = uuid.Nil
+		section.LayoutName = ""
 	}
 
 	userIDStr := middleware.GetUserID(r.Context())

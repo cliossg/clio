@@ -14,7 +14,6 @@ func siteFromSQLC(s sqlc.Site) *Site {
 		ShortID:   s.ShortID,
 		Name:      s.Name,
 		Slug:      s.Slug,
-		Mode:      s.Mode,
 		Active:    s.Active == 1,
 		CreatedBy: parseUUID(s.CreatedBy),
 		UpdatedBy: parseUUID(s.UpdatedBy),

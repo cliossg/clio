@@ -9,6 +9,7 @@ CREATE TABLE contributor (
     surname TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
     social_links TEXT NOT NULL DEFAULT '[]',
+    role TEXT NOT NULL DEFAULT 'editor',
     created_by TEXT NOT NULL,
     updated_by TEXT NOT NULL,
     created_at DATETIME NOT NULL,

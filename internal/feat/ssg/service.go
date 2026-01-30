@@ -166,7 +166,6 @@ func (s *service) CreateSite(ctx context.Context, site *Site) error {
 		ShortID:   site.ShortID,
 		Name:      site.Name,
 		Slug:      site.Slug,
-		Mode:      site.Mode,
 		Active:    boolToInt(site.Active),
 		CreatedBy: site.CreatedBy.String(),
 		UpdatedBy: site.UpdatedBy.String(),
@@ -232,7 +231,6 @@ func (s *service) UpdateSite(ctx context.Context, site *Site) error {
 	params := sqlc.UpdateSiteParams{
 		Name:              site.Name,
 		Slug:              site.Slug,
-		Mode:              site.Mode,
 		Active:            boolToInt(site.Active),
 		DefaultLayoutID:   nullString(site.DefaultLayoutID.String()),
 		DefaultLayoutName: nullString(site.DefaultLayoutName),
@@ -461,18 +459,19 @@ func (s *service) CreateSection(ctx context.Context, section *Section) error {
 	s.ensureQueries()
 
 	params := sqlc.CreateSectionParams{
-		ID:          section.ID.String(),
-		SiteID:      section.SiteID.String(),
-		ShortID:     nullString(section.ShortID),
-		Name:        section.Name,
-		Description: nullString(section.Description),
-		Path:        nullString(section.Path),
-		LayoutID:    nullString(section.LayoutID.String()),
-		LayoutName:  nullString(section.LayoutName),
-		CreatedBy:   nullString(section.CreatedBy.String()),
-		UpdatedBy:   nullString(section.UpdatedBy.String()),
-		CreatedAt:   nullTime(&section.CreatedAt),
-		UpdatedAt:   nullTime(&section.UpdatedAt),
+		ID:            section.ID.String(),
+		SiteID:        section.SiteID.String(),
+		ShortID:       nullString(section.ShortID),
+		Name:          section.Name,
+		Description:   nullString(section.Description),
+		Path:          nullString(section.Path),
+		LayoutID:      nullString(section.LayoutID.String()),
+		LayoutName:    nullString(section.LayoutName),
+		HeroTitleDark: nullInt(boolToInt(section.HeroTitleDark)),
+		CreatedBy:     nullString(section.CreatedBy.String()),
+		UpdatedBy:     nullString(section.UpdatedBy.String()),
+		CreatedAt:     nullTime(&section.CreatedAt),
+		UpdatedAt:     nullTime(&section.UpdatedAt),
 	}
 
 	_, err := s.queries.CreateSection(ctx, params)
@@ -530,6 +529,9 @@ func (s *service) GetSections(ctx context.Context, siteID uuid.UUID) ([]*Section
 		if row.HeaderImagePath.Valid {
 			section.HeaderImageURL = "/images/" + row.HeaderImagePath.String
 		}
+		if row.HeroTitleDark.Valid {
+			section.HeroTitleDark = row.HeroTitleDark.Int64 == 1
+		}
 		if row.CreatedAt.Valid {
 			section.CreatedAt = row.CreatedAt.Time
 		}
@@ -546,14 +548,15 @@ func (s *service) UpdateSection(ctx context.Context, section *Section) error {
 	s.ensureQueries()
 
 	params := sqlc.UpdateSectionParams{
-		Name:        section.Name,
-		Description: nullString(section.Description),
-		Path:        nullString(section.Path),
-		LayoutID:    nullString(section.LayoutID.String()),
-		LayoutName:  nullString(section.LayoutName),
-		UpdatedBy:   nullString(section.UpdatedBy.String()),
-		UpdatedAt:   nullTime(&section.UpdatedAt),
-		ID:          section.ID.String(),
+		Name:          section.Name,
+		Description:   nullString(section.Description),
+		Path:          nullString(section.Path),
+		LayoutID:      nullString(section.LayoutID.String()),
+		LayoutName:    nullString(section.LayoutName),
+		HeroTitleDark: nullInt(boolToInt(section.HeroTitleDark)),
+		UpdatedBy:     nullString(section.UpdatedBy.String()),
+		UpdatedAt:     nullTime(&section.UpdatedAt),
+		ID:            section.ID.String(),
 	}
 
 	_, err := s.queries.UpdateSection(ctx, params)

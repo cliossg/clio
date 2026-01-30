@@ -1,6 +1,6 @@
 -- name: CreateSection :one
-INSERT INTO section (id, site_id, short_id, name, description, path, layout_id, layout_name, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO section (id, site_id, short_id, name, description, path, layout_id, layout_name, hero_title_dark, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSection :one
@@ -30,6 +30,7 @@ UPDATE section SET
     path = ?,
     layout_id = ?,
     layout_name = ?,
+    hero_title_dark = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?

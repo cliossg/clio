@@ -1,6 +1,6 @@
 -- name: CreateSite :one
-INSERT INTO site (id, short_id, name, slug, mode, active, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO site (id, short_id, name, slug, active, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSite :one
@@ -19,7 +19,6 @@ SELECT * FROM site ORDER BY name;
 UPDATE site SET
     name = ?,
     slug = ?,
-    mode = ?,
     active = ?,
     default_layout_id = ?,
     default_layout_name = ?,

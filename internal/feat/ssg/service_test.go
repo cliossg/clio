@@ -42,7 +42,7 @@ func setupTestService(t *testing.T) (Service, *sql.DB, func()) {
 
 func createTestSite(t *testing.T, svc Service, name, slug string) *Site {
 	t.Helper()
-	site := NewSite(name, slug, "blog")
+	site := NewSite(name, slug)
 	site.CreatedBy = uuid.New()
 	site.UpdatedBy = site.CreatedBy
 	if err := svc.CreateSite(context.Background(), site); err != nil {
@@ -60,7 +60,7 @@ func TestServiceCreateSite(t *testing.T) {
 		{
 			name: "valid site",
 			site: func() *Site {
-				s := NewSite("Test Site", "test-site", "blog")
+				s := NewSite("Test Site", "test-site")
 				s.CreatedBy = uuid.New()
 				s.UpdatedBy = s.CreatedBy
 				return s
@@ -68,9 +68,9 @@ func TestServiceCreateSite(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "site with structured mode",
+			name: "another valid site",
 			site: func() *Site {
-				s := NewSite("Docs Site", "docs-site", "structured")
+				s := NewSite("Docs Site", "docs-site")
 				s.CreatedBy = uuid.New()
 				s.UpdatedBy = s.CreatedBy
 				return s
@@ -99,7 +99,7 @@ func TestServiceCreateSiteDuplicateSlug(t *testing.T) {
 	ctx := context.Background()
 	createTestSite(t, svc, "Site 1", "same-slug")
 
-	site2 := NewSite("Site 2", "same-slug", "blog")
+	site2 := NewSite("Site 2", "same-slug")
 	site2.CreatedBy = uuid.New()
 	site2.UpdatedBy = site2.CreatedBy
 
@@ -3280,14 +3280,14 @@ func TestServiceCreateSiteDuplicateSlugError(t *testing.T) {
 	ctx := context.Background()
 
 	// Create first site
-	site1 := NewSite("Site One", "same-slug-err", "blog")
+	site1 := NewSite("Site One", "same-slug-err")
 	err := svc.CreateSite(ctx, site1)
 	if err != nil {
 		t.Fatalf("First CreateSite() error = %v", err)
 	}
 
 	// Try to create second site with same slug
-	site2 := NewSite("Site Two", "same-slug-err", "blog")
+	site2 := NewSite("Site Two", "same-slug-err")
 	err = svc.CreateSite(ctx, site2)
 	if err == nil {
 		t.Error("Expected error for duplicate slug")

@@ -38,7 +38,16 @@
 
         <!-- Header Image Section -->
         <div class="form-group">
-            <label>Section Header Image</label>
+            <div class="form-group-header">
+                <label>Section Header Image</label>
+                <label class="switch-label discrete" title="Select based on image brightness">
+                    <input type="checkbox" name="hero_title_dark" {{ if .Section.HeroTitleDark }}checked{{ end }}>
+                    <span class="switch-toggle">
+                        <span class="switch-option light">Light</span>
+                        <span class="switch-option dark">Dark</span>
+                    </span>
+                </label>
+            </div>
             <div id="header-image-container" class="header-image-container">
                 {{ if .SectionHeader }}
                 <img src="/ssg/workspace/{{ .Site.Slug }}/images/{{ .SectionHeader.FilePath }}" alt="{{ .SectionHeader.AltText }}">

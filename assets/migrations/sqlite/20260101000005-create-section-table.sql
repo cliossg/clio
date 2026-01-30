@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS section (
     path TEXT,
     layout_id TEXT,
     layout_name TEXT,
+    hero_title_dark INTEGER DEFAULT 0,
     created_by TEXT,
     updated_by TEXT,
     created_at TIMESTAMP,
