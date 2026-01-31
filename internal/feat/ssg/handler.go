@@ -40,15 +40,13 @@ type Handler struct {
 	publisher      *Publisher
 	siteCtxMw      func(http.Handler) http.Handler
 	sessionMw      func(http.Handler) http.Handler
-	userNameFn     func(context.Context) string
-	userRolesFn    func(context.Context) string
 	templatesFS    embed.FS
 	ssgAssetsFS    embed.FS
 	cfg            *config.Config
 	log            logger.Logger
 }
 
-func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, userNameFn func(context.Context) string, userRolesFn func(context.Context) string, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	gitClient := git.NewClient(log)
 	return &Handler{
@@ -60,8 +58,6 @@ func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessi
 		publisher:      NewPublisher(workspace, gitClient),
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
-		userNameFn:     userNameFn,
-		userRolesFn:    userRolesFn,
 		templatesFS:    templatesFS,
 		ssgAssetsFS:    ssgAssetsFS,
 		cfg:            cfg,
@@ -135,10 +131,7 @@ func (h *Handler) processTagifyTags(ctx context.Context, siteID, contentID uuid.
 
 func (h *Handler) requireEditor(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		roles := ""
-		if h.userRolesFn != nil {
-			roles = h.userRolesFn(r.Context())
-		}
+		roles := middleware.GetUserRoles(r.Context())
 		isEditor := false
 		for _, role := range strings.Split(roles, ",") {
 			r := strings.TrimSpace(role)
@@ -157,10 +150,7 @@ func (h *Handler) requireEditor(next http.Handler) http.Handler {
 
 func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		roles := ""
-		if h.userRolesFn != nil {
-			roles = h.userRolesFn(r.Context())
-		}
+		roles := middleware.GetUserRoles(r.Context())
 		isAdmin := false
 		for _, role := range strings.Split(roles, ",") {
 			if strings.TrimSpace(role) == "admin" {
@@ -366,11 +356,11 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName st
 		},
 	})
 
-	if data.CurrentUserName == "" && h.userNameFn != nil {
-		data.CurrentUserName = h.userNameFn(r.Context())
+	if data.CurrentUserName == "" {
+		data.CurrentUserName = middleware.GetUserName(r.Context())
 	}
-	if data.CurrentUserRoles == "" && h.userRolesFn != nil {
-		data.CurrentUserRoles = h.userRolesFn(r.Context())
+	if data.CurrentUserRoles == "" {
+		data.CurrentUserRoles = middleware.GetUserRoles(r.Context())
 	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(h.templatesFS,
@@ -1009,7 +999,7 @@ func (h *Handler) HandleCreateContent(w http.ResponseWriter, r *http.Request) {
 			content.UpdatedBy = userID
 		}
 	}
-	content.AuthorUsername = h.userNameFn(r.Context())
+	content.AuthorUsername = middleware.GetUserName(r.Context())
 
 	if err := h.service.CreateContent(r.Context(), content); err != nil {
 		h.log.Errorf("Cannot create content: %v", err)
@@ -1284,7 +1274,7 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 		if userID, err := uuid.Parse(userIDStr); err == nil {
 			if isNew {
 				content.CreatedBy = userID
-				content.AuthorUsername = h.userNameFn(r.Context())
+				content.AuthorUsername = middleware.GetUserName(r.Context())
 			}
 			content.UpdatedBy = userID
 		}

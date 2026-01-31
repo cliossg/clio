@@ -10,6 +10,7 @@ import (
 	"github.com/cliossg/clio/internal/db/sqlc"
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
+	"github.com/cliossg/clio/pkg/cl/middleware"
 	"github.com/google/uuid"
 )
 
@@ -34,8 +35,9 @@ type Service interface {
 	UpdateUser(ctx context.Context, user *User) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	SetUserProfile(ctx context.Context, userID, profileID uuid.UUID) error
+	GetUserProfileID(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
 	CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error)
-	ValidateSession(ctx context.Context, sessionID string) (string, error)
+	ValidateSession(ctx context.Context, sessionID string) (*middleware.SessionInfo, error)
 	DeleteSession(ctx context.Context, sessionID string) error
 	GetSessionTTL() time.Duration
 }
@@ -252,18 +254,37 @@ func (s *service) CreateSession(ctx context.Context, userID uuid.UUID) (*Session
 	return session, nil
 }
 
-func (s *service) ValidateSession(ctx context.Context, sessionID string) (string, error) {
+func (s *service) ValidateSession(ctx context.Context, sessionID string) (*middleware.SessionInfo, error) {
 	s.ensureQueries()
 
 	sqlcSession, err := s.queries.GetValidSession(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrSessionNotFound
+			return nil, ErrSessionNotFound
 		}
-		return "", fmt.Errorf("cannot get session: %w", err)
+		return nil, fmt.Errorf("cannot get session: %w", err)
 	}
 
-	return sqlcSession.UserID, nil
+	userID, err := uuid.Parse(sqlcSession.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID in session: %w", err)
+	}
+
+	user, err := s.GetUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get user: %w", err)
+	}
+
+	userName := user.Name
+	if userName == "" {
+		userName = user.Email
+	}
+
+	return &middleware.SessionInfo{
+		UserID:    sqlcSession.UserID,
+		UserName:  userName,
+		UserRoles: user.Roles,
+	}, nil
 }
 
 func (s *service) DeleteSession(ctx context.Context, sessionID string) error {
@@ -294,6 +315,14 @@ func (s *service) SetUserProfile(ctx context.Context, userID, profileID uuid.UUI
 	}
 
 	return nil
+}
+
+func (s *service) GetUserProfileID(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error) {
+	user, err := s.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return user.ProfileID, nil
 }
 
 func toNullString(s string) sql.NullString {

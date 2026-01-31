@@ -22,11 +22,22 @@ const (
 
 	// SessionIDKey is the context key for the session ID.
 	SessionIDKey = contextKey("session_id")
+
+	// UserNameKey is the context key for the user name.
+	UserNameKey = contextKey("user_name")
+
+	// UserRolesKey is the context key for the user roles.
+	UserRolesKey = contextKey("user_roles")
 )
 
-// SessionValidator validates session tokens and returns user ID on success.
+type SessionInfo struct {
+	UserID    string
+	UserName  string
+	UserRoles string
+}
+
 type SessionValidator interface {
-	ValidateSession(ctx context.Context, sessionID string) (userID string, err error)
+	ValidateSession(ctx context.Context, sessionID string) (*SessionInfo, error)
 }
 
 // OptionalSession extracts user context from session cookie if present.
@@ -37,10 +48,12 @@ func OptionalSession(validator SessionValidator) func(http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(SessionCookieName)
 			if err == nil && cookie.Value != "" {
-				userID, err := validator.ValidateSession(r.Context(), cookie.Value)
+				info, err := validator.ValidateSession(r.Context(), cookie.Value)
 				if err == nil {
 					ctx := r.Context()
-					ctx = context.WithValue(ctx, UserIDKey, userID)
+					ctx = context.WithValue(ctx, UserIDKey, info.UserID)
+					ctx = context.WithValue(ctx, UserNameKey, info.UserName)
+					ctx = context.WithValue(ctx, UserRolesKey, info.UserRoles)
 					ctx = context.WithValue(ctx, SessionIDKey, cookie.Value)
 					r = r.WithContext(ctx)
 				}
@@ -62,7 +75,7 @@ func Session(validator SessionValidator) func(http.Handler) http.Handler {
 				return
 			}
 
-			userID, err := validator.ValidateSession(r.Context(), cookie.Value)
+			info, err := validator.ValidateSession(r.Context(), cookie.Value)
 			if err != nil {
 				ClearSessionCookie(w)
 				http.Redirect(w, r, "/signin", http.StatusSeeOther)
@@ -70,7 +83,9 @@ func Session(validator SessionValidator) func(http.Handler) http.Handler {
 			}
 
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, UserIDKey, userID)
+			ctx = context.WithValue(ctx, UserIDKey, info.UserID)
+			ctx = context.WithValue(ctx, UserNameKey, info.UserName)
+			ctx = context.WithValue(ctx, UserRolesKey, info.UserRoles)
 			ctx = context.WithValue(ctx, SessionIDKey, cookie.Value)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -123,6 +138,30 @@ func GetSessionID(ctx context.Context) string {
 	}
 	if id, ok := ctx.Value(SessionIDKey).(string); ok {
 		return id
+	}
+	return ""
+}
+
+// GetUserName extracts the user name from the context.
+// Returns an empty string if no user name is found.
+func GetUserName(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if name, ok := ctx.Value(UserNameKey).(string); ok {
+		return name
+	}
+	return ""
+}
+
+// GetUserRoles extracts the user roles from the context.
+// Returns an empty string if no user roles are found.
+func GetUserRoles(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if roles, ok := ctx.Value(UserRolesKey).(string); ok {
+		return roles
 	}
 	return ""
 }

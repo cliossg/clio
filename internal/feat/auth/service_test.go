@@ -665,7 +665,7 @@ func TestServiceValidateSession(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID, err := svc.ValidateSession(ctx, tt.sessionID)
+			info, err := svc.ValidateSession(ctx, tt.sessionID)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("ValidateSession() error = %v, wantErr %v", err, tt.wantErr)
@@ -676,8 +676,14 @@ func TestServiceValidateSession(t *testing.T) {
 				t.Errorf("ValidateSession() unexpected error = %v", err)
 				return
 			}
-			if userID != user.ID.String() {
-				t.Errorf("ValidateSession() userID = %v, want %v", userID, user.ID.String())
+			if info.UserID != user.ID.String() {
+				t.Errorf("ValidateSession() userID = %v, want %v", info.UserID, user.ID.String())
+			}
+			if info.UserName != user.Name {
+				t.Errorf("ValidateSession() userName = %v, want %v", info.UserName, user.Name)
+			}
+			if info.UserRoles != user.Roles {
+				t.Errorf("ValidateSession() userRoles = %v, want %v", info.UserRoles, user.Roles)
 			}
 		})
 	}

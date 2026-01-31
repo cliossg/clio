@@ -55,8 +55,8 @@ func main() {
 	siteCtxMw := ssg.SiteContextMiddleware(ssgService, log)
 
 	authHandler := auth.NewHandler(authService, profileService, optionalSessionMw, templatesFS, cfg, log)
-	profileHandler := profile.NewHandler(profileService, authHandler, requiredSessionMw, templatesFS, cfg, log)
-	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, authHandler.GetUserName, authHandler.GetUserRoles, templatesFS, ssgAssetsFS, cfg, log)
+	profileHandler := profile.NewHandler(profileService, authService, requiredSessionMw, templatesFS, cfg, log)
+	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, templatesFS, ssgAssetsFS, cfg, log)
 	previewServer := ssg.NewPreviewServer(ssgService, cfg, log)
 
 	authSeeder := auth.NewSeeder(authService, profileService, templatesFS, log)

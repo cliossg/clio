@@ -13,6 +13,7 @@ import (
 
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/logger"
+	"github.com/cliossg/clio/pkg/cl/middleware"
 	"github.com/cliossg/clio/pkg/cl/render"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -20,37 +21,50 @@ import (
 
 const profilesBasePath = "_workspace/profiles"
 
-type UserProvider interface {
-	GetCurrentUserID(ctx context.Context) (uuid.UUID, error)
-	GetCurrentUserProfileID(ctx context.Context) (*uuid.UUID, error)
-	GetCurrentUserRoles(ctx context.Context) string
-	GetUserName(ctx context.Context) string
+type AuthService interface {
+	GetUserProfileID(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
 	SetUserProfile(ctx context.Context, userID, profileID uuid.UUID) error
 }
 
 type Handler struct {
-	service      Service
-	userProvider UserProvider
-	sessionMw    func(http.Handler) http.Handler
-	assetsFS     embed.FS
-	cfg          *config.Config
-	log          logger.Logger
+	service     Service
+	authService AuthService
+	sessionMw   func(http.Handler) http.Handler
+	assetsFS    embed.FS
+	cfg         *config.Config
+	log         logger.Logger
 }
 
-func NewHandler(service Service, userProvider UserProvider, sessionMw func(http.Handler) http.Handler, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
+func NewHandler(service Service, authService AuthService, sessionMw func(http.Handler) http.Handler, assetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	return &Handler{
-		service:      service,
-		userProvider: userProvider,
-		sessionMw:    sessionMw,
-		assetsFS:     assetsFS,
-		cfg:          cfg,
-		log:          log,
+		service:     service,
+		authService: authService,
+		sessionMw:   sessionMw,
+		assetsFS:    assetsFS,
+		cfg:         cfg,
+		log:         log,
 	}
 }
 
 func (h *Handler) Start(ctx context.Context) error {
 	h.log.Info("Profile handler started")
 	return nil
+}
+
+func (h *Handler) getCurrentUserID(ctx context.Context) (uuid.UUID, error) {
+	userIDStr := middleware.GetUserID(ctx)
+	if userIDStr == "" {
+		return uuid.Nil, nil
+	}
+	return uuid.Parse(userIDStr)
+}
+
+func (h *Handler) getCurrentUserProfileID(ctx context.Context) (*uuid.UUID, error) {
+	userID, err := h.getCurrentUserID(ctx)
+	if err != nil || userID == uuid.Nil {
+		return nil, err
+	}
+	return h.authService.GetUserProfileID(ctx, userID)
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
@@ -86,15 +100,15 @@ type PageData struct {
 func (h *Handler) HandleShowProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	profileID, err := h.getCurrentUserProfileID(ctx)
 	if err != nil {
 		h.log.Errorf("Cannot get user profile ID: %v", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	roles := h.userProvider.GetCurrentUserRoles(ctx)
-	userName := h.userProvider.GetUserName(ctx)
+	roles := middleware.GetUserRoles(ctx)
+	userName := middleware.GetUserName(ctx)
 
 	if profileID == nil {
 		h.renderTemplate(w, "profile/new.html", PageData{
@@ -126,7 +140,7 @@ func (h *Handler) HandleShowProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleEditProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	profileID, err := h.getCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
 		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
@@ -139,8 +153,8 @@ func (h *Handler) HandleEditProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roles := h.userProvider.GetCurrentUserRoles(ctx)
-	userName := h.userProvider.GetUserName(ctx)
+	roles := middleware.GetUserRoles(ctx)
+	userName := middleware.GetUserName(ctx)
 
 	h.renderTemplate(w, "profile/edit.html", PageData{
 		Title:            "Edit Profile",
@@ -155,7 +169,7 @@ func (h *Handler) HandleEditProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	userID, err := h.userProvider.GetCurrentUserID(ctx)
+	userID, err := h.getCurrentUserID(ctx)
 	if err != nil {
 		h.log.Errorf("Cannot get user ID: %v", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -171,8 +185,8 @@ func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 	profile, err := h.service.CreateProfile(ctx, slug, name, surname, bio, socialLinks, "", userID.String())
 	if err != nil {
 		h.log.Errorf("Cannot create profile: %v", err)
-		roles := h.userProvider.GetCurrentUserRoles(ctx)
-		userName := h.userProvider.GetUserName(ctx)
+		roles := middleware.GetUserRoles(ctx)
+		userName := middleware.GetUserName(ctx)
 		h.renderTemplate(w, "profile/new.html", PageData{
 			Title:            "Create Profile",
 			Template:         "profile/new.html",
@@ -183,7 +197,7 @@ func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.userProvider.SetUserProfile(ctx, userID, profile.ID)
+	err = h.authService.SetUserProfile(ctx, userID, profile.ID)
 	if err != nil {
 		h.log.Errorf("Cannot link profile to user: %v", err)
 	}
@@ -194,7 +208,7 @@ func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	profileID, err := h.getCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
 		http.Redirect(w, r, "/get-profile", http.StatusSeeOther)
 		return
@@ -206,7 +220,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := h.userProvider.GetCurrentUserID(ctx)
+	userID, _ := h.getCurrentUserID(ctx)
 
 	profile.Slug = normalizeSlug(r.FormValue("slug"))
 	profile.Name = strings.TrimSpace(r.FormValue("name"))
@@ -218,8 +232,8 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	err = h.service.UpdateProfile(ctx, profile)
 	if err != nil {
 		h.log.Errorf("Cannot update profile: %v", err)
-		roles := h.userProvider.GetCurrentUserRoles(ctx)
-		userName := h.userProvider.GetUserName(ctx)
+		roles := middleware.GetUserRoles(ctx)
+		userName := middleware.GetUserName(ctx)
 		h.renderTemplate(w, "profile/edit.html", PageData{
 			Title:            "Edit Profile",
 			Template:         "profile/edit.html",
@@ -238,7 +252,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	profileID, err := h.getCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
 		http.Error(w, "No profile found", http.StatusBadRequest)
 		return
@@ -294,7 +308,7 @@ func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := h.userProvider.GetCurrentUserID(ctx)
+	userID, _ := h.getCurrentUserID(ctx)
 	profile.PhotoPath = fileName
 	profile.UpdatedBy = userID.String()
 
@@ -311,7 +325,7 @@ func (h *Handler) HandleUploadPhoto(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	profileID, err := h.userProvider.GetCurrentUserProfileID(ctx)
+	profileID, err := h.getCurrentUserProfileID(ctx)
 	if err != nil || profileID == nil {
 		http.Error(w, "No profile found", http.StatusBadRequest)
 		return
@@ -328,7 +342,7 @@ func (h *Handler) HandleRemovePhoto(w http.ResponseWriter, r *http.Request) {
 		os.Remove(filePath)
 	}
 
-	userID, _ := h.userProvider.GetCurrentUserID(ctx)
+	userID, _ := h.getCurrentUserID(ctx)
 	profile.PhotoPath = ""
 	profile.UpdatedBy = userID.String()
 
