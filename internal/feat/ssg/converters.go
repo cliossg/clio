@@ -74,6 +74,9 @@ func contentFromSQLC(c sqlc.Content) *Content {
 		id := parseUUID(c.ContributorID.String)
 		content.ContributorID = &id
 	}
+	if c.ImagesMeta.Valid {
+		content.ImagesMeta = c.ImagesMeta.String
+	}
 
 	return content
 }
@@ -137,6 +140,9 @@ func contentWithMetaFromSQLC(row sqlc.GetContentWithMetaRow) *Content {
 	if row.ContributorID.Valid {
 		id := parseUUID(row.ContributorID.String)
 		content.ContributorID = &id
+	}
+	if row.ImagesMeta.Valid {
+		content.ImagesMeta = row.ImagesMeta.String
 	}
 	content.ContributorHandle = row.ContributorHandle
 	content.AuthorUsername = row.AuthorUsername
@@ -212,6 +218,18 @@ func contentWithMetaFromSQLCAll(row sqlc.GetAllContentWithMetaRow) *Content {
 	}
 	if row.HeaderImageAlt.Valid {
 		content.HeaderImageAlt = row.HeaderImageAlt.String
+	}
+	if row.HeaderImageCaption.Valid {
+		content.HeaderImageCaption = row.HeaderImageCaption.String
+	}
+	if row.HeaderImageAttribution.Valid {
+		content.HeaderImageAttribution = row.HeaderImageAttribution.String
+	}
+	if row.HeaderImageAttributionUrl.Valid {
+		content.HeaderImageAttributionURL = row.HeaderImageAttributionUrl.String
+	}
+	if row.ImagesMeta.Valid {
+		content.ImagesMeta = row.ImagesMeta.String
 	}
 
 	return content
@@ -387,6 +405,12 @@ func imageFromSQLC(i sqlc.Image) *Image {
 	}
 	if i.Title.Valid {
 		image.Title = i.Title.String
+	}
+	if i.Attribution.Valid {
+		image.Attribution = i.Attribution.String
+	}
+	if i.AttributionUrl.Valid {
+		image.AttributionURL = i.AttributionUrl.String
 	}
 	if i.Width.Valid {
 		image.Width = int(i.Width.Int64)

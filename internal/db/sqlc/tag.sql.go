@@ -87,7 +87,7 @@ func (q *Queries) DeleteTag(ctx context.Context, id string) error {
 }
 
 const getContentForTag = `-- name: GetContentForTag :many
-SELECT c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username, c.hero_title_dark FROM content c
+SELECT c.id, c.site_id, c.user_id, c.short_id, c.section_id, c.kind, c.heading, c.summary, c.body, c.draft, c.featured, c.series, c.series_order, c.published_at, c.created_by, c.updated_by, c.created_at, c.updated_at, c.contributor_id, c.contributor_handle, c.author_username, c.hero_title_dark, c.images_meta FROM content c
 JOIN content_tag ct ON c.id = ct.content_id
 WHERE ct.tag_id = ?
 ORDER BY c.created_at DESC
@@ -125,6 +125,7 @@ func (q *Queries) GetContentForTag(ctx context.Context, tagID string) ([]Content
 			&i.ContributorHandle,
 			&i.AuthorUsername,
 			&i.HeroTitleDark,
+			&i.ImagesMeta,
 		); err != nil {
 			return nil, err
 		}

@@ -2010,6 +2010,8 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	// Get form values
 	title := r.FormValue("title")
 	altText := r.FormValue("alt_text")
+	attribution := r.FormValue("attribution")
+	attributionURL := r.FormValue("attribution_url")
 
 	// Determine target path
 	imagesPath := h.workspace.GetImagesPath(site.Slug)
@@ -2045,6 +2047,8 @@ func (h *Handler) HandleCreateImage(w http.ResponseWriter, r *http.Request) {
 	image := NewImage(site.ID, header.Filename, fileName)
 	image.Title = title
 	image.AltText = altText
+	image.Attribution = attribution
+	image.AttributionURL = attributionURL
 
 	// Get user ID from context
 	userIDStr := middleware.GetUserID(r.Context())
@@ -2152,6 +2156,8 @@ func (h *Handler) HandleUpdateImage(w http.ResponseWriter, r *http.Request) {
 
 	image.AltText = r.FormValue("alt_text")
 	image.Title = r.FormValue("title")
+	image.Attribution = r.FormValue("attribution")
+	image.AttributionURL = r.FormValue("attribution_url")
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -2192,10 +2198,22 @@ func (h *Handler) HandleDeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	image, err := h.service.GetImage(r.Context(), imageID)
+	if err != nil {
+		h.log.Errorf("Cannot get image: %v", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Cannot get image")
+		return
+	}
+
 	if err := h.service.DeleteImage(r.Context(), imageID); err != nil {
 		h.log.Errorf("Cannot delete image: %v", err)
 		h.renderError(w, r, http.StatusInternalServerError, "Cannot delete image")
 		return
+	}
+
+	filePath := h.workspace.GetImagesPath(site.Slug) + "/" + image.FilePath
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		h.log.Errorf("Cannot delete image file %s: %v", filePath, err)
 	}
 
 	h.siteRedirect(w, r, "/ssg/list-images")
@@ -2266,6 +2284,8 @@ func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Reques
 	// Get form values
 	altText := r.FormValue("alt_text")
 	title := r.FormValue("title")
+	attribution := r.FormValue("attribution")
+	attributionURL := r.FormValue("attribution_url")
 	purpose := r.FormValue("purpose") // "header" or "content"
 	isHeader := purpose == "header"
 
@@ -2303,6 +2323,8 @@ func (h *Handler) HandleUploadContentImage(w http.ResponseWriter, r *http.Reques
 	image := NewImage(site.ID, header.Filename, fileName)
 	image.AltText = altText
 	image.Title = title
+	image.Attribution = attribution
+	image.AttributionURL = attributionURL
 
 	// Get user ID from context
 	userIDStr := middleware.GetUserID(r.Context())
@@ -2429,6 +2451,8 @@ func (h *Handler) HandleUploadSectionImage(w http.ResponseWriter, r *http.Reques
 
 	altText := r.FormValue("alt_text")
 	title := r.FormValue("title")
+	attribution := r.FormValue("attribution")
+	attributionURL := r.FormValue("attribution_url")
 	purpose := r.FormValue("purpose")
 	isHeader := purpose == "header"
 
@@ -2461,6 +2485,8 @@ func (h *Handler) HandleUploadSectionImage(w http.ResponseWriter, r *http.Reques
 	image := NewImage(site.ID, header.Filename, fileName)
 	image.AltText = altText
 	image.Title = title
+	image.Attribution = attribution
+	image.AttributionURL = attributionURL
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {

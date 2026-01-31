@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS image (
     file_path TEXT NOT NULL,
     alt_text TEXT,
     title TEXT,
+    attribution TEXT,
+    attribution_url TEXT,
     width INTEGER,
     height INTEGER,
     created_by TEXT,

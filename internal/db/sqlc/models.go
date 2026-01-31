@@ -32,6 +32,7 @@ type Content struct {
 	ContributorHandle string         `json:"contributor_handle"`
 	AuthorUsername    string         `json:"author_username"`
 	HeroTitleDark     sql.NullInt64  `json:"hero_title_dark"`
+	ImagesMeta        sql.NullString `json:"images_meta"`
 }
 
 type ContentImage struct {
@@ -61,27 +62,29 @@ type Contributor struct {
 	Surname     string         `json:"surname"`
 	Bio         string         `json:"bio"`
 	SocialLinks string         `json:"social_links"`
+	Role        string         `json:"role"`
 	CreatedBy   string         `json:"created_by"`
 	UpdatedBy   string         `json:"updated_by"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
-	Role        string         `json:"role"`
 }
 
 type Image struct {
-	ID        string         `json:"id"`
-	SiteID    string         `json:"site_id"`
-	ShortID   sql.NullString `json:"short_id"`
-	FileName  string         `json:"file_name"`
-	FilePath  string         `json:"file_path"`
-	AltText   sql.NullString `json:"alt_text"`
-	Title     sql.NullString `json:"title"`
-	Width     sql.NullInt64  `json:"width"`
-	Height    sql.NullInt64  `json:"height"`
-	CreatedBy sql.NullString `json:"created_by"`
-	UpdatedBy sql.NullString `json:"updated_by"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
+	ID             string         `json:"id"`
+	SiteID         string         `json:"site_id"`
+	ShortID        sql.NullString `json:"short_id"`
+	FileName       string         `json:"file_name"`
+	FilePath       string         `json:"file_path"`
+	AltText        sql.NullString `json:"alt_text"`
+	Title          sql.NullString `json:"title"`
+	Attribution    sql.NullString `json:"attribution"`
+	AttributionUrl sql.NullString `json:"attribution_url"`
+	Width          sql.NullInt64  `json:"width"`
+	Height         sql.NullInt64  `json:"height"`
+	CreatedBy      sql.NullString `json:"created_by"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
 }
 
 type ImageVariant struct {
@@ -159,11 +162,11 @@ type Section struct {
 	Path          sql.NullString `json:"path"`
 	LayoutID      sql.NullString `json:"layout_id"`
 	LayoutName    sql.NullString `json:"layout_name"`
+	HeroTitleDark sql.NullInt64  `json:"hero_title_dark"`
 	CreatedBy     sql.NullString `json:"created_by"`
 	UpdatedBy     sql.NullString `json:"updated_by"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	HeroTitleDark sql.NullInt64  `json:"hero_title_dark"`
 }
 
 type SectionImage struct {
@@ -192,12 +195,12 @@ type Setting struct {
 	Value       sql.NullString `json:"value"`
 	RefKey      sql.NullString `json:"ref_key"`
 	System      sql.NullInt64  `json:"system"`
+	Category    sql.NullString `json:"category"`
+	Position    sql.NullInt64  `json:"position"`
 	CreatedBy   sql.NullString `json:"created_by"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	Category    sql.NullString `json:"category"`
-	Position    sql.NullInt64  `json:"position"`
 }
 
 type Site struct {

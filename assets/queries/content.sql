@@ -1,6 +1,6 @@
 -- name: CreateContent :one
-INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, contributor_handle, author_username, kind, heading, summary, body, draft, featured, series, series_order, published_at, hero_title_dark, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO content (id, site_id, user_id, short_id, section_id, contributor_id, contributor_handle, author_username, kind, heading, summary, body, draft, featured, series, series_order, published_at, hero_title_dark, images_meta, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetContent :one
@@ -37,7 +37,10 @@ SELECT
     m.description as meta_description,
     m.keywords as meta_keywords,
     hi.file_path as header_image_path,
-    hi.alt_text as header_image_alt
+    hi.alt_text as header_image_alt,
+    hi.title as header_image_caption,
+    hi.attribution as header_image_attribution,
+    hi.attribution_url as header_image_attribution_url
 FROM content c
 LEFT JOIN section s ON c.section_id = s.id
 LEFT JOIN meta m ON c.id = m.content_id
@@ -80,6 +83,7 @@ UPDATE content SET
     series_order = ?,
     published_at = ?,
     hero_title_dark = ?,
+    images_meta = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?

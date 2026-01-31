@@ -39,25 +39,27 @@ func (q *Queries) CreateContentImage(ctx context.Context, arg CreateContentImage
 }
 
 const createImage = `-- name: CreateImage :one
-INSERT INTO image (id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at
+INSERT INTO image (id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at
 `
 
 type CreateImageParams struct {
-	ID        string         `json:"id"`
-	SiteID    string         `json:"site_id"`
-	ShortID   sql.NullString `json:"short_id"`
-	FileName  string         `json:"file_name"`
-	FilePath  string         `json:"file_path"`
-	AltText   sql.NullString `json:"alt_text"`
-	Title     sql.NullString `json:"title"`
-	Width     sql.NullInt64  `json:"width"`
-	Height    sql.NullInt64  `json:"height"`
-	CreatedBy sql.NullString `json:"created_by"`
-	UpdatedBy sql.NullString `json:"updated_by"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
+	ID             string         `json:"id"`
+	SiteID         string         `json:"site_id"`
+	ShortID        sql.NullString `json:"short_id"`
+	FileName       string         `json:"file_name"`
+	FilePath       string         `json:"file_path"`
+	AltText        sql.NullString `json:"alt_text"`
+	Title          sql.NullString `json:"title"`
+	Attribution    sql.NullString `json:"attribution"`
+	AttributionUrl sql.NullString `json:"attribution_url"`
+	Width          sql.NullInt64  `json:"width"`
+	Height         sql.NullInt64  `json:"height"`
+	CreatedBy      sql.NullString `json:"created_by"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
 }
 
 func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (Image, error) {
@@ -69,6 +71,8 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (Image
 		arg.FilePath,
 		arg.AltText,
 		arg.Title,
+		arg.Attribution,
+		arg.AttributionUrl,
 		arg.Width,
 		arg.Height,
 		arg.CreatedBy,
@@ -85,6 +89,8 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (Image
 		&i.FilePath,
 		&i.AltText,
 		&i.Title,
+		&i.Attribution,
+		&i.AttributionUrl,
 		&i.Width,
 		&i.Height,
 		&i.CreatedBy,
@@ -318,6 +324,8 @@ SELECT
     i.file_path,
     i.alt_text,
     i.title,
+    i.attribution,
+    i.attribution_url,
     i.width,
     i.height,
     i.created_at,
@@ -341,6 +349,8 @@ type GetContentImagesWithDetailsRow struct {
 	FilePath       string         `json:"file_path"`
 	AltText        sql.NullString `json:"alt_text"`
 	Title          sql.NullString `json:"title"`
+	Attribution    sql.NullString `json:"attribution"`
+	AttributionUrl sql.NullString `json:"attribution_url"`
 	Width          sql.NullInt64  `json:"width"`
 	Height         sql.NullInt64  `json:"height"`
 	CreatedAt      sql.NullTime   `json:"created_at"`
@@ -369,6 +379,8 @@ func (q *Queries) GetContentImagesWithDetails(ctx context.Context, contentID str
 			&i.FilePath,
 			&i.AltText,
 			&i.Title,
+			&i.Attribution,
+			&i.AttributionUrl,
 			&i.Width,
 			&i.Height,
 			&i.CreatedAt,
@@ -388,7 +400,7 @@ func (q *Queries) GetContentImagesWithDetails(ctx context.Context, contentID str
 }
 
 const getImage = `-- name: GetImage :one
-SELECT id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE id = ?
+SELECT id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE id = ?
 `
 
 func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
@@ -402,6 +414,8 @@ func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
 		&i.FilePath,
 		&i.AltText,
 		&i.Title,
+		&i.Attribution,
+		&i.AttributionUrl,
 		&i.Width,
 		&i.Height,
 		&i.CreatedBy,
@@ -413,7 +427,7 @@ func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
 }
 
 const getImageByPath = `-- name: GetImageByPath :one
-SELECT id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE site_id = ? AND file_path = ?
+SELECT id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE site_id = ? AND file_path = ?
 `
 
 type GetImageByPathParams struct {
@@ -432,6 +446,8 @@ func (q *Queries) GetImageByPath(ctx context.Context, arg GetImageByPathParams) 
 		&i.FilePath,
 		&i.AltText,
 		&i.Title,
+		&i.Attribution,
+		&i.AttributionUrl,
 		&i.Width,
 		&i.Height,
 		&i.CreatedBy,
@@ -443,7 +459,7 @@ func (q *Queries) GetImageByPath(ctx context.Context, arg GetImageByPathParams) 
 }
 
 const getImageByShortID = `-- name: GetImageByShortID :one
-SELECT id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE short_id = ?
+SELECT id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE short_id = ?
 `
 
 func (q *Queries) GetImageByShortID(ctx context.Context, shortID sql.NullString) (Image, error) {
@@ -457,6 +473,8 @@ func (q *Queries) GetImageByShortID(ctx context.Context, shortID sql.NullString)
 		&i.FilePath,
 		&i.AltText,
 		&i.Title,
+		&i.Attribution,
+		&i.AttributionUrl,
 		&i.Width,
 		&i.Height,
 		&i.CreatedBy,
@@ -534,7 +552,7 @@ func (q *Queries) GetImageVariantsByImageID(ctx context.Context, imageID string)
 }
 
 const getImagesBySiteID = `-- name: GetImagesBySiteID :many
-SELECT id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE site_id = ? ORDER BY created_at DESC
+SELECT id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at FROM image WHERE site_id = ? ORDER BY created_at DESC
 `
 
 func (q *Queries) GetImagesBySiteID(ctx context.Context, siteID string) ([]Image, error) {
@@ -554,6 +572,8 @@ func (q *Queries) GetImagesBySiteID(ctx context.Context, siteID string) ([]Image
 			&i.FilePath,
 			&i.AltText,
 			&i.Title,
+			&i.Attribution,
+			&i.AttributionUrl,
 			&i.Width,
 			&i.Height,
 			&i.CreatedBy,
@@ -662,6 +682,8 @@ SELECT
     i.file_path,
     i.alt_text,
     i.title,
+    i.attribution,
+    i.attribution_url,
     i.width,
     i.height,
     i.created_at,
@@ -685,6 +707,8 @@ type GetSectionImagesWithDetailsRow struct {
 	FilePath       string         `json:"file_path"`
 	AltText        sql.NullString `json:"alt_text"`
 	Title          sql.NullString `json:"title"`
+	Attribution    sql.NullString `json:"attribution"`
+	AttributionUrl sql.NullString `json:"attribution_url"`
 	Width          sql.NullInt64  `json:"width"`
 	Height         sql.NullInt64  `json:"height"`
 	CreatedAt      sql.NullTime   `json:"created_at"`
@@ -713,6 +737,8 @@ func (q *Queries) GetSectionImagesWithDetails(ctx context.Context, sectionID str
 			&i.FilePath,
 			&i.AltText,
 			&i.Title,
+			&i.Attribution,
+			&i.AttributionUrl,
 			&i.Width,
 			&i.Height,
 			&i.CreatedAt,
@@ -737,24 +763,28 @@ UPDATE image SET
     file_path = ?,
     alt_text = ?,
     title = ?,
+    attribution = ?,
+    attribution_url = ?,
     width = ?,
     height = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at
 `
 
 type UpdateImageParams struct {
-	FileName  string         `json:"file_name"`
-	FilePath  string         `json:"file_path"`
-	AltText   sql.NullString `json:"alt_text"`
-	Title     sql.NullString `json:"title"`
-	Width     sql.NullInt64  `json:"width"`
-	Height    sql.NullInt64  `json:"height"`
-	UpdatedBy sql.NullString `json:"updated_by"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
-	ID        string         `json:"id"`
+	FileName       string         `json:"file_name"`
+	FilePath       string         `json:"file_path"`
+	AltText        sql.NullString `json:"alt_text"`
+	Title          sql.NullString `json:"title"`
+	Attribution    sql.NullString `json:"attribution"`
+	AttributionUrl sql.NullString `json:"attribution_url"`
+	Width          sql.NullInt64  `json:"width"`
+	Height         sql.NullInt64  `json:"height"`
+	UpdatedBy      sql.NullString `json:"updated_by"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	ID             string         `json:"id"`
 }
 
 func (q *Queries) UpdateImage(ctx context.Context, arg UpdateImageParams) (Image, error) {
@@ -763,6 +793,8 @@ func (q *Queries) UpdateImage(ctx context.Context, arg UpdateImageParams) (Image
 		arg.FilePath,
 		arg.AltText,
 		arg.Title,
+		arg.Attribution,
+		arg.AttributionUrl,
 		arg.Width,
 		arg.Height,
 		arg.UpdatedBy,
@@ -778,6 +810,8 @@ func (q *Queries) UpdateImage(ctx context.Context, arg UpdateImageParams) (Image
 		&i.FilePath,
 		&i.AltText,
 		&i.Title,
+		&i.Attribution,
+		&i.AttributionUrl,
 		&i.Width,
 		&i.Height,
 		&i.CreatedBy,

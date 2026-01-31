@@ -197,6 +197,59 @@ nav a.active {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* Hero Figure and Attribution */
+.hero-figure {
+    position: relative;
+    margin: 0;
+    width: 100%;
+}
+
+.hero-credit {
+    position: absolute;
+    top: 0.5rem;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: max-width 0.3s ease, background-color 0.2s ease;
+    border-radius: 0.25rem 0 0 0.25rem;
+    z-index: 3;
+}
+
+.hero-credit:hover {
+    max-width: 60%;
+    background-color: rgba(0, 0, 0, 0.85);
+}
+
+.hero-credit-title {
+    display: none;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.hero-credit:hover .hero-credit-title {
+    display: inline;
+}
+
+.hero-credit-title::after {
+    content: " · ";
+}
+
+.hero-credit a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.hero-credit a:hover {
+    text-decoration: underline;
+    color: #93c5fd;
+}
+
 /* ============================================
    PROSE/CONTENT STYLES
    ============================================ */
@@ -587,15 +640,62 @@ nav a.active {
 }
 
 .content-figure {
+    position: relative;
     margin: 1.5rem 0;
     text-align: center;
 }
 
-.content-figure figcaption {
+.content-caption {
     font-size: 0.875rem;
     color: #6b7280;
     text-align: center;
     margin-top: 0.5rem;
+}
+
+.content-credit {
+    position: absolute;
+    top: 0.5rem;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: max-width 0.3s ease, background-color 0.2s ease;
+    border-radius: 0.25rem 0 0 0.25rem;
+    z-index: 3;
+}
+
+.content-credit:hover {
+    max-width: 80%;
+    background-color: rgba(0, 0, 0, 0.85);
+}
+
+.content-credit-title {
+    display: none;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.content-credit:hover .content-credit-title {
+    display: inline;
+}
+
+.content-credit-title::after {
+    content: " · ";
+}
+
+.content-credit a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.content-credit a:hover {
+    text-decoration: underline;
+    color: #93c5fd;
 }
 
 /* ============================================

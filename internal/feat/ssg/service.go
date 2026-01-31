@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/cliossg/clio/internal/db/sqlc"
@@ -268,6 +269,8 @@ func (s *service) CreateContent(ctx context.Context, content *Content) error {
 		contributorID = nullString(content.ContributorID.String())
 	}
 
+	imagesMeta := s.buildImagesMeta(ctx, content.SiteID, content.Body)
+
 	params := sqlc.CreateContentParams{
 		ID:                content.ID.String(),
 		SiteID:            content.SiteID.String(),
@@ -287,6 +290,7 @@ func (s *service) CreateContent(ctx context.Context, content *Content) error {
 		SeriesOrder:       nullInt(int64(content.SeriesOrder)),
 		PublishedAt:       nullTime(content.PublishedAt),
 		HeroTitleDark:     nullInt(boolToInt(content.HeroTitleDark)),
+		ImagesMeta:        nullString(imagesMeta),
 		CreatedBy:         nullString(content.CreatedBy.String()),
 		UpdatedBy:         nullString(content.UpdatedBy.String()),
 		CreatedAt:         nullTime(&content.CreatedAt),
@@ -414,6 +418,8 @@ func (s *service) UpdateContent(ctx context.Context, content *Content) error {
 		contributorID = nullString(content.ContributorID.String())
 	}
 
+	imagesMeta := s.buildImagesMeta(ctx, content.SiteID, content.Body)
+
 	params := sqlc.UpdateContentParams{
 		SectionID:         nullString(content.SectionID.String()),
 		ContributorID:     contributorID,
@@ -429,6 +435,7 @@ func (s *service) UpdateContent(ctx context.Context, content *Content) error {
 		SeriesOrder:       nullInt(int64(content.SeriesOrder)),
 		PublishedAt:       nullTime(content.PublishedAt),
 		HeroTitleDark:     nullInt(boolToInt(content.HeroTitleDark)),
+		ImagesMeta:        nullString(imagesMeta),
 		UpdatedBy:         nullString(content.UpdatedBy.String()),
 		UpdatedAt:         nullTime(&content.UpdatedAt),
 		ID:                content.ID.String(),
@@ -991,19 +998,21 @@ func (s *service) CreateImage(ctx context.Context, image *Image) error {
 	s.ensureQueries()
 
 	params := sqlc.CreateImageParams{
-		ID:        image.ID.String(),
-		SiteID:    image.SiteID.String(),
-		ShortID:   nullString(image.ShortID),
-		FileName:  image.FileName,
-		FilePath:  image.FilePath,
-		AltText:   nullString(image.AltText),
-		Title:     nullString(image.Title),
-		Width:     nullInt(int64(image.Width)),
-		Height:    nullInt(int64(image.Height)),
-		CreatedBy: nullString(image.CreatedBy.String()),
-		UpdatedBy: nullString(image.UpdatedBy.String()),
-		CreatedAt: nullTime(&image.CreatedAt),
-		UpdatedAt: nullTime(&image.UpdatedAt),
+		ID:             image.ID.String(),
+		SiteID:         image.SiteID.String(),
+		ShortID:        nullString(image.ShortID),
+		FileName:       image.FileName,
+		FilePath:       image.FilePath,
+		AltText:        nullString(image.AltText),
+		Title:          nullString(image.Title),
+		Attribution:    nullString(image.Attribution),
+		AttributionUrl: nullString(image.AttributionURL),
+		Width:          nullInt(int64(image.Width)),
+		Height:         nullInt(int64(image.Height)),
+		CreatedBy:      nullString(image.CreatedBy.String()),
+		UpdatedBy:      nullString(image.UpdatedBy.String()),
+		CreatedAt:      nullTime(&image.CreatedAt),
+		UpdatedAt:      nullTime(&image.UpdatedAt),
 	}
 
 	_, err := s.queries.CreateImage(ctx, params)
@@ -1677,4 +1686,60 @@ func (s *service) BuildUserAuthorsMap(ctx context.Context, contents []*Content, 
 	}
 
 	return result
+}
+
+func (s *service) buildImagesMeta(ctx context.Context, siteID uuid.UUID, body string) string {
+	if body == "" {
+		return ""
+	}
+
+	imgPathRegex := regexp.MustCompile(`/images/([^)"'\s]+\.(png|jpg|jpeg|gif|webp))`)
+	matches := imgPathRegex.FindAllStringSubmatch(body, -1)
+	if len(matches) == 0 {
+		return ""
+	}
+
+	meta := make(map[string]ImageMeta)
+	seen := make(map[string]bool)
+
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		filePath := match[1]
+		fullPath := "/images/" + filePath
+
+		if seen[filePath] {
+			continue
+		}
+		seen[filePath] = true
+
+		img, err := s.queries.GetImageByPath(ctx, sqlc.GetImageByPathParams{
+			SiteID:   siteID.String(),
+			FilePath: filePath,
+		})
+		if err != nil {
+			continue
+		}
+
+		if img.Attribution.Valid && img.Attribution.String != "" {
+			meta[fullPath] = ImageMeta{
+				Title:          img.Title.String,
+				Alt:            img.AltText.String,
+				Attribution:    img.Attribution.String,
+				AttributionURL: img.AttributionUrl.String,
+			}
+		}
+	}
+
+	if len(meta) == 0 {
+		return ""
+	}
+
+	jsonBytes, err := json.Marshal(meta)
+	if err != nil {
+		return ""
+	}
+
+	return string(jsonBytes)
 }

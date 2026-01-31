@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS content (
     contributor_handle TEXT NOT NULL DEFAULT '',
     author_username TEXT NOT NULL DEFAULT '',
     hero_title_dark INTEGER DEFAULT 0,
+    images_meta TEXT,
     FOREIGN KEY (site_id) REFERENCES site(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id),
     FOREIGN KEY (section_id) REFERENCES section(id),

@@ -13,7 +13,7 @@ import (
 const createSetting = `-- name: CreateSetting :one
 INSERT INTO setting (id, site_id, short_id, name, description, value, ref_key, category, position, system, created_by, updated_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at
 `
 
 type CreateSettingParams struct {
@@ -60,12 +60,12 @@ func (q *Queries) CreateSetting(ctx context.Context, arg CreateSettingParams) (S
 		&i.Value,
 		&i.RefKey,
 		&i.System,
+		&i.Category,
+		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Category,
-		&i.Position,
 	)
 	return i, err
 }
@@ -80,7 +80,7 @@ func (q *Queries) DeleteSetting(ctx context.Context, id string) error {
 }
 
 const getSetting = `-- name: GetSetting :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM setting WHERE id = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE id = ?
 `
 
 func (q *Queries) GetSetting(ctx context.Context, id string) (Setting, error) {
@@ -95,18 +95,18 @@ func (q *Queries) GetSetting(ctx context.Context, id string) (Setting, error) {
 		&i.Value,
 		&i.RefKey,
 		&i.System,
+		&i.Category,
+		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Category,
-		&i.Position,
 	)
 	return i, err
 }
 
 const getSettingByName = `-- name: GetSettingByName :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM setting WHERE site_id = ? AND name = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? AND name = ?
 `
 
 type GetSettingByNameParams struct {
@@ -126,18 +126,18 @@ func (q *Queries) GetSettingByName(ctx context.Context, arg GetSettingByNamePara
 		&i.Value,
 		&i.RefKey,
 		&i.System,
+		&i.Category,
+		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Category,
-		&i.Position,
 	)
 	return i, err
 }
 
 const getSettingByRefKey = `-- name: GetSettingByRefKey :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM setting WHERE site_id = ? AND ref_key = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? AND ref_key = ?
 `
 
 type GetSettingByRefKeyParams struct {
@@ -157,18 +157,18 @@ func (q *Queries) GetSettingByRefKey(ctx context.Context, arg GetSettingByRefKey
 		&i.Value,
 		&i.RefKey,
 		&i.System,
+		&i.Category,
+		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Category,
-		&i.Position,
 	)
 	return i, err
 }
 
 const getSettingsBySiteID = `-- name: GetSettingsBySiteID :many
-SELECT id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position FROM setting WHERE site_id = ? ORDER BY category, position, name
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? ORDER BY category, position, name
 `
 
 func (q *Queries) GetSettingsBySiteID(ctx context.Context, siteID string) ([]Setting, error) {
@@ -189,12 +189,12 @@ func (q *Queries) GetSettingsBySiteID(ctx context.Context, siteID string) ([]Set
 			&i.Value,
 			&i.RefKey,
 			&i.System,
+			&i.Category,
+			&i.Position,
 			&i.CreatedBy,
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Category,
-			&i.Position,
 		); err != nil {
 			return nil, err
 		}
@@ -221,7 +221,7 @@ UPDATE setting SET
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, created_by, updated_by, created_at, updated_at, category, position
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at
 `
 
 type UpdateSettingParams struct {
@@ -260,12 +260,12 @@ func (q *Queries) UpdateSetting(ctx context.Context, arg UpdateSettingParams) (S
 		&i.Value,
 		&i.RefKey,
 		&i.System,
+		&i.Category,
+		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Category,
-		&i.Position,
 	)
 	return i, err
 }

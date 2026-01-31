@@ -14,7 +14,7 @@ import (
 const createContributor = `-- name: CreateContributor :one
 INSERT INTO contributor (id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
+RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at
 `
 
 type CreateContributorParams struct {
@@ -62,11 +62,11 @@ func (q *Queries) CreateContributor(ctx context.Context, arg CreateContributorPa
 		&i.Surname,
 		&i.Bio,
 		&i.SocialLinks,
+		&i.Role,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Role,
 	)
 	return i, err
 }
@@ -81,7 +81,7 @@ func (q *Queries) DeleteContributor(ctx context.Context, id string) error {
 }
 
 const getContributor = `-- name: GetContributor :one
-SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE id = ?
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at FROM contributor WHERE id = ?
 `
 
 func (q *Queries) GetContributor(ctx context.Context, id string) (Contributor, error) {
@@ -97,17 +97,17 @@ func (q *Queries) GetContributor(ctx context.Context, id string) (Contributor, e
 		&i.Surname,
 		&i.Bio,
 		&i.SocialLinks,
+		&i.Role,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Role,
 	)
 	return i, err
 }
 
 const getContributorByHandle = `-- name: GetContributorByHandle :one
-SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? AND handle = ?
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at FROM contributor WHERE site_id = ? AND handle = ?
 `
 
 type GetContributorByHandleParams struct {
@@ -128,17 +128,17 @@ func (q *Queries) GetContributorByHandle(ctx context.Context, arg GetContributor
 		&i.Surname,
 		&i.Bio,
 		&i.SocialLinks,
+		&i.Role,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Role,
 	)
 	return i, err
 }
 
 const listContributorsBySiteID = `-- name: ListContributorsBySiteID :many
-SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role FROM contributor WHERE site_id = ? ORDER BY name, surname
+SELECT id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at FROM contributor WHERE site_id = ? ORDER BY name, surname
 `
 
 func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error) {
@@ -160,11 +160,11 @@ func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) (
 			&i.Surname,
 			&i.Bio,
 			&i.SocialLinks,
+			&i.Role,
 			&i.CreatedBy,
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (q *Queries) ListContributorsBySiteID(ctx context.Context, siteID string) (
 }
 
 const listContributorsWithProfile = `-- name: ListContributorsWithProfile :many
-SELECT c.id, c.short_id, c.site_id, c.profile_id, c.handle, c.name, c.surname, c.bio, c.social_links, c.created_by, c.updated_by, c.created_at, c.updated_at, c.role, p.photo_path as profile_photo_path
+SELECT c.id, c.short_id, c.site_id, c.profile_id, c.handle, c.name, c.surname, c.bio, c.social_links, c.role, c.created_by, c.updated_by, c.created_at, c.updated_at, p.photo_path as profile_photo_path
 FROM contributor c
 LEFT JOIN profile p ON c.profile_id = p.id
 WHERE c.site_id = ?
@@ -197,11 +197,11 @@ type ListContributorsWithProfileRow struct {
 	Surname          string         `json:"surname"`
 	Bio              string         `json:"bio"`
 	SocialLinks      string         `json:"social_links"`
+	Role             string         `json:"role"`
 	CreatedBy        string         `json:"created_by"`
 	UpdatedBy        string         `json:"updated_by"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
-	Role             string         `json:"role"`
 	ProfilePhotoPath sql.NullString `json:"profile_photo_path"`
 }
 
@@ -224,11 +224,11 @@ func (q *Queries) ListContributorsWithProfile(ctx context.Context, siteID string
 			&i.Surname,
 			&i.Bio,
 			&i.SocialLinks,
+			&i.Role,
 			&i.CreatedBy,
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Role,
 			&i.ProfilePhotoPath,
 		); err != nil {
 			return nil, err
@@ -276,7 +276,7 @@ UPDATE contributor SET
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, created_by, updated_by, created_at, updated_at, role
+RETURNING id, short_id, site_id, profile_id, handle, name, surname, bio, social_links, role, created_by, updated_by, created_at, updated_at
 `
 
 type UpdateContributorParams struct {
@@ -314,11 +314,11 @@ func (q *Queries) UpdateContributor(ctx context.Context, arg UpdateContributorPa
 		&i.Surname,
 		&i.Bio,
 		&i.SocialLinks,
+		&i.Role,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Role,
 	)
 	return i, err
 }

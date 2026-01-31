@@ -845,6 +845,7 @@ button.nav-card {
     line-height: 1;
     opacity: 0;
     transition: opacity 0.2s;
+    z-index: 10;
 }
 
 .gallery-image:hover .delete-btn {
@@ -941,6 +942,7 @@ button.nav-card {
     border: none;
     border-radius: 50%;
     cursor: pointer;
+    z-index: 10;
     font-size: 1.25rem;
     line-height: 1;
     opacity: 0;

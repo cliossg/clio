@@ -2,7 +2,17 @@
 <article class="article">
     <div class="hero-wrapper">
         {{ if .Content.HeaderImageURL }}
-        <img class="hero-image" src="{{ .Content.HeaderImageURL }}" alt="{{ .Content.Heading }}">
+        <figure class="hero-figure">
+            <img class="hero-image" src="{{ .Content.HeaderImageURL }}" alt="{{ if .Content.HeaderImageAlt }}{{ .Content.HeaderImageAlt }}{{ else }}{{ .Content.Heading }}{{ end }}">
+            {{ if or .Content.HeaderImageCaption .Content.HeaderImageAttribution }}
+            <figcaption class="hero-credit">
+                {{ if .Content.HeaderImageCaption }}<span class="hero-credit-title">{{ .Content.HeaderImageCaption }}</span>{{ end }}
+                {{ if .Content.HeaderImageAttribution }}
+                <span class="hero-credit-attr">{{ if .Content.HeaderImageAttributionURL }}<a href="{{ .Content.HeaderImageAttributionURL }}" target="_blank" rel="noopener">{{ .Content.HeaderImageAttribution }}</a>{{ else }}{{ .Content.HeaderImageAttribution }}{{ end }}</span>
+                {{ end }}
+            </figcaption>
+            {{ end }}
+        </figure>
         {{ else }}
         <div class="hero-image-gradient"></div>
         {{ end }}

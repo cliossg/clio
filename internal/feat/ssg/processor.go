@@ -2,6 +2,7 @@ package ssg
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,6 +12,13 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 )
+
+type ImageMeta struct {
+	Title          string `json:"title"`
+	Alt            string `json:"alt"`
+	Attribution    string `json:"attribution"`
+	AttributionURL string `json:"attribution_url"`
+}
 
 // Processor handles markdown to HTML conversion.
 type Processor struct {
@@ -62,11 +70,17 @@ func (p *Processor) ProcessContent(content *Content) (string, error) {
 		return "", err
 	}
 
-	// Post-process images with captions (using |||long description syntax)
-	html = p.enhanceImages(html)
-
-	// Transform workspace image paths to static site paths
+	// Transform workspace image paths to static site paths FIRST
 	html = p.transformImagePaths(html)
+
+	// Parse images metadata if available
+	var imagesMeta map[string]ImageMeta
+	if content.ImagesMeta != "" {
+		json.Unmarshal([]byte(content.ImagesMeta), &imagesMeta)
+	}
+
+	// Post-process images with captions (using |||long description syntax)
+	html = p.enhanceImages(html, imagesMeta)
 
 	return html, nil
 }
@@ -78,10 +92,10 @@ func (p *Processor) transformImagePaths(html string) string {
 	return re.ReplaceAllString(html, "/images/")
 }
 
-// enhanceImages post-processes HTML to enhance images with captions.
+// enhanceImages post-processes HTML to enhance images with captions and credits.
 // Supports syntax: ![alt text|||caption](image.jpg)
-func (p *Processor) enhanceImages(html string) string {
-	// Regex to match img tags
+// Also adds attribution credits from imagesMeta if available.
+func (p *Processor) enhanceImages(html string, imagesMeta map[string]ImageMeta) string {
 	imgRegex := regexp.MustCompile(`<img([^>]*?)alt="([^"]*?)"([^>]*?)>`)
 
 	result := imgRegex.ReplaceAllStringFunc(html, func(match string) string {
@@ -109,8 +123,26 @@ func (p *Processor) enhanceImages(html string) string {
 
 		enhancedImg := fmt.Sprintf(`<img src="%s" alt="%s" class="content-img" loading="lazy">`, srcValue, altText)
 
-		if caption != "" {
-			return fmt.Sprintf(`<figure class="content-figure">%s<figcaption>%s</figcaption></figure>`, enhancedImg, caption)
+		// Check for image metadata (attribution)
+		var credit string
+		if imagesMeta != nil {
+			if meta, ok := imagesMeta[srcValue]; ok && meta.Attribution != "" {
+				if meta.AttributionURL != "" {
+					credit = fmt.Sprintf(`<figcaption class="content-credit"><span class="content-credit-title">%s</span><span class="content-credit-attr"><a href="%s" target="_blank" rel="noopener">%s</a></span></figcaption>`,
+						meta.Title, meta.AttributionURL, meta.Attribution)
+				} else {
+					credit = fmt.Sprintf(`<figcaption class="content-credit"><span class="content-credit-title">%s</span><span class="content-credit-attr">%s</span></figcaption>`,
+						meta.Title, meta.Attribution)
+				}
+			}
+		}
+
+		if caption != "" || credit != "" {
+			var figContent string
+			if caption != "" {
+				figContent = fmt.Sprintf(`<figcaption class="content-caption">%s</figcaption>`, caption)
+			}
+			return fmt.Sprintf(`<figure class="content-figure">%s%s%s</figure>`, enhancedImg, credit, figContent)
 		}
 
 		return enhancedImg

@@ -103,9 +103,14 @@ type Content struct {
 	Contributor *Contributor `json:"contributor,omitempty"`
 
 	// Image fields (from relationships)
-	HeaderImageURL     string `json:"header_image_url,omitempty"`
-	HeaderImageAlt     string `json:"header_image_alt,omitempty"`
-	HeaderImageCaption string `json:"header_image_caption,omitempty"`
+	HeaderImageURL            string `json:"header_image_url,omitempty"`
+	HeaderImageAlt            string `json:"header_image_alt,omitempty"`
+	HeaderImageCaption        string `json:"header_image_caption,omitempty"`
+	HeaderImageAttribution    string `json:"header_image_attribution,omitempty"`
+	HeaderImageAttributionURL string `json:"header_image_attribution_url,omitempty"`
+
+	// Embedded images metadata (JSON map: path -> {title, alt, attribution, attribution_url})
+	ImagesMeta string `json:"images_meta,omitempty"`
 
 	// Hero styling
 	HeroTitleDark bool `json:"hero_title_dark"` // true = dark text, false = light text
@@ -296,19 +301,21 @@ func (p *Setting) MaskedValue() string {
 
 // Image represents an image asset.
 type Image struct {
-	ID        uuid.UUID `json:"id"`
-	SiteID    uuid.UUID `json:"site_id"`
-	ShortID   string    `json:"short_id"`
-	FileName  string    `json:"file_name"`
-	FilePath  string    `json:"file_path"`
-	AltText   string    `json:"alt_text"`
-	Title     string    `json:"title"`
-	Width     int       `json:"width"`
-	Height    int       `json:"height"`
-	CreatedBy uuid.UUID `json:"-"`
-	UpdatedBy uuid.UUID `json:"-"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	SiteID         uuid.UUID `json:"site_id"`
+	ShortID        string    `json:"short_id"`
+	FileName       string    `json:"file_name"`
+	FilePath       string    `json:"file_path"`
+	AltText        string    `json:"alt_text"`
+	Title          string    `json:"title"`
+	Attribution    string    `json:"attribution"`
+	AttributionURL string    `json:"attribution_url"`
+	Width          int       `json:"width"`
+	Height         int       `json:"height"`
+	CreatedBy      uuid.UUID `json:"-"`
+	UpdatedBy      uuid.UUID `json:"-"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // NewImage creates a new Image instance.

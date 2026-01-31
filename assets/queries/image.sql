@@ -1,6 +1,6 @@
 -- name: CreateImage :one
-INSERT INTO image (id, site_id, short_id, file_name, file_path, alt_text, title, width, height, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO image (id, site_id, short_id, file_name, file_path, alt_text, title, attribution, attribution_url, width, height, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetImage :one
@@ -21,6 +21,8 @@ UPDATE image SET
     file_path = ?,
     alt_text = ?,
     title = ?,
+    attribution = ?,
+    attribution_url = ?,
     width = ?,
     height = ?,
     updated_by = ?,
@@ -79,6 +81,8 @@ SELECT
     i.file_path,
     i.alt_text,
     i.title,
+    i.attribution,
+    i.attribution_url,
     i.width,
     i.height,
     i.created_at,
@@ -131,6 +135,8 @@ SELECT
     i.file_path,
     i.alt_text,
     i.title,
+    i.attribution,
+    i.attribution_url,
     i.width,
     i.height,
     i.created_at,
