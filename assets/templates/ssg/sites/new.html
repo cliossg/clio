@@ -10,6 +10,12 @@
             <label for="slug">Slug</label>
             <input type="text" id="slug" name="slug" required>
         </div>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="create_import_dir" value="true" checked>
+                Create import directory <code>~/Documents/Clio/{slug}/</code>
+            </label>
+        </div>
         <div class="actions">
             <button type="submit" class="btn">Create</button>
             <a href="/ssg/list-sites" class="btn btn-secondary">Cancel</a>

@@ -289,6 +289,13 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Post("/ssg/update-contributor-profile", h.HandleUpdateContributorProfile)
 				r.Post("/ssg/upload-contributor-photo", h.HandleUploadContributorPhoto)
 				r.Post("/ssg/remove-contributor-photo", h.HandleRemoveContributorPhoto)
+
+				// Import (file import from external directories)
+				r.Get("/ssg/import/list", h.HandleListImport)
+				r.Post("/ssg/import/scan", h.HandleScanImport)
+				r.Get("/ssg/import/preview", h.HandlePreviewImport)
+				r.Post("/ssg/import/do", h.HandleDoImport)
+				r.Post("/ssg/import/reimport", h.HandleReimport)
 			})
 		})
 	})
@@ -333,6 +340,21 @@ type PageData struct {
 	HasPrev         bool
 	HasNext         bool
 	Search          string
+
+	// Import fields
+	Import      *Import
+	Imports     []*Import
+	ImportFile  *ImportFile
+	ImportFiles []ImportFile
+	ImportRows  []ImportRow
+	ImportPath  string
+}
+
+// ImportRow represents a unified row in the import table
+type ImportRow struct {
+	File   ImportFile // File info from scan
+	Import *Import    // Import record (nil if not imported)
+	Status string     // "new", "synced", "updated", "conflict"
 }
 
 func (h *Handler) render(w http.ResponseWriter, r *http.Request, templateName string, data PageData) {
@@ -474,6 +496,17 @@ func (h *Handler) HandleCreateSite(w http.ResponseWriter, r *http.Request) {
 	rootSection := NewSection(site.ID, "main", "Main section for top-level content", "")
 	if err := h.service.CreateSection(r.Context(), rootSection); err != nil {
 		h.log.Errorf("Cannot create main section: %v", err)
+	}
+
+	// Create import directory if requested
+	if r.FormValue("create_import_dir") == "true" {
+		importPath := GetImportPath(DefaultImportBasePath, slug)
+		if err := createImportDirectory(importPath); err != nil {
+			h.log.Errorf("Cannot create import directory: %v", err)
+			// Non-fatal, continue
+		} else {
+			h.log.Infof("Created import directory: %s", importPath)
+		}
 	}
 
 	h.log.Infof("Created site %s with directories", site.Slug)
@@ -3455,4 +3488,329 @@ func normalizeSlug(s string) string {
 		}
 	}
 	return result.String()
+}
+
+// --- Import Handlers ---
+
+func (h *Handler) HandleListImport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	// Scan site-specific import directory
+	importPath := h.getImportPath(ctx, site)
+	files, err := h.service.ScanImportDirectory(ctx, importPath)
+	if err != nil {
+		h.log.Errorf("Failed to scan import directory: %v", err)
+		files = []ImportFile{}
+	}
+
+	// Get existing imports
+	imports, err := h.service.ListImports(ctx, site.ID)
+	if err != nil {
+		h.log.Errorf("Failed to list imports: %v", err)
+		imports = []*Import{}
+	}
+
+	// Create a map of imported file paths
+	importedPaths := make(map[string]*Import)
+	for _, imp := range imports {
+		importedPaths[imp.FilePath] = imp
+	}
+
+	// Build unified import rows
+	var rows []ImportRow
+	seenPaths := make(map[string]bool)
+
+	// First, add all scanned files
+	for _, f := range files {
+		row := ImportRow{File: f}
+		if imp, exists := importedPaths[f.Path]; exists {
+			row.Import = imp
+			row.Status = ComputeImportStatus(imp, f.Mtime)
+			imp.FileName = f.Name
+		} else {
+			row.Status = "new"
+		}
+		rows = append(rows, row)
+		seenPaths[f.Path] = true
+	}
+
+	// Add imports for files that no longer exist (orphaned)
+	for _, imp := range imports {
+		if !seenPaths[imp.FilePath] {
+			rows = append(rows, ImportRow{
+				File:   ImportFile{Path: imp.FilePath, Name: imp.FileName},
+				Import: imp,
+				Status: "missing",
+			})
+		}
+	}
+
+	// Get sections for dropdown
+	sections, err := h.service.GetSections(ctx, site.ID)
+	if err != nil {
+		h.log.Errorf("Failed to get sections: %v", err)
+		sections = []*Section{}
+	}
+
+	data := PageData{
+		Title:      "Import",
+		Site:       site,
+		Sections:   sections,
+		ImportRows: rows,
+		ImportPath: importPath,
+	}
+
+	h.render(w, r, "ssg/import/list", data)
+}
+
+func (h *Handler) HandleScanImport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		http.Error(w, "Site context required", http.StatusBadRequest)
+		return
+	}
+
+	importPath := h.getImportPath(ctx, site)
+	files, err := h.service.ScanImportDirectory(ctx, importPath)
+	if err != nil {
+		h.log.Errorf("Failed to scan import directory: %v", err)
+		http.Error(w, "Failed to scan directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Return JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"files": files,
+		"count": len(files),
+	})
+}
+
+func (h *Handler) HandlePreviewImport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	filePath := r.URL.Query().Get("path")
+	if filePath == "" {
+		h.renderError(w, r, http.StatusBadRequest, "Missing file path")
+		return
+	}
+
+	// Scan to find the file
+	importPath := h.getImportPath(ctx, site)
+	files, err := h.service.ScanImportDirectory(ctx, importPath)
+	if err != nil {
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to scan directory")
+		return
+	}
+
+	var targetFile *ImportFile
+	for _, f := range files {
+		if f.Path == filePath {
+			targetFile = &f
+			break
+		}
+	}
+
+	if targetFile == nil {
+		h.renderError(w, r, http.StatusNotFound, "File not found")
+		return
+	}
+
+	// Get sections for dropdown
+	sections, err := h.service.GetSections(ctx, site.ID)
+	if err != nil {
+		sections = []*Section{}
+	}
+
+	data := PageData{
+		Title:      "Preview: " + targetFile.Name,
+		Site:       site,
+		Sections:   sections,
+		ImportFile: targetFile,
+	}
+
+	h.render(w, r, "ssg/import/preview", data)
+}
+
+func (h *Handler) HandleDoImport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	userIDStr := middleware.GetUserID(ctx)
+	if userIDStr == "" {
+		h.renderError(w, r, http.StatusUnauthorized, "User not found")
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusUnauthorized, "Invalid user ID")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	// Get section ID
+	sectionIDStr := r.FormValue("section_id")
+	sectionID, err := uuid.Parse(sectionIDStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid section ID")
+		return
+	}
+
+	// Get file paths for new imports
+	filePaths := r.Form["file_paths[]"]
+	if len(filePaths) == 0 {
+		// Try single file_path
+		singlePath := r.FormValue("file_path")
+		if singlePath != "" {
+			filePaths = []string{singlePath}
+		}
+	}
+
+	// Get reimport IDs (for updated/conflict files)
+	reimportIDs := r.Form["reimport_ids[]"]
+
+	if len(filePaths) == 0 && len(reimportIDs) == 0 {
+		h.renderError(w, r, http.StatusBadRequest, "No files selected")
+		return
+	}
+
+	var importedCount int
+	var reimportedCount int
+	var importErrors []string
+
+	// Handle new imports
+	if len(filePaths) > 0 {
+		importPath := h.getImportPath(ctx, site)
+		files, err := h.service.ScanImportDirectory(ctx, importPath)
+		if err != nil {
+			h.renderError(w, r, http.StatusInternalServerError, "Failed to scan directory")
+			return
+		}
+
+		fileMap := make(map[string]ImportFile)
+		for _, f := range files {
+			fileMap[f.Path] = f
+		}
+
+		for _, path := range filePaths {
+			file, exists := fileMap[path]
+			if !exists {
+				importErrors = append(importErrors, fmt.Sprintf("File not found: %s", path))
+				continue
+			}
+
+			_, _, err := h.service.ImportFile(ctx, site.ID, userID, file, sectionID)
+			if err != nil {
+				importErrors = append(importErrors, fmt.Sprintf("%s: %v", filepath.Base(path), err))
+				continue
+			}
+
+			importedCount++
+		}
+	}
+
+	// Handle reimports (for updated/conflict files)
+	for _, idStr := range reimportIDs {
+		importID, err := uuid.Parse(idStr)
+		if err != nil {
+			importErrors = append(importErrors, fmt.Sprintf("Invalid import ID: %s", idStr))
+			continue
+		}
+
+		_, err = h.service.ReimportFile(ctx, importID, true)
+		if err != nil {
+			importErrors = append(importErrors, fmt.Sprintf("Reimport failed: %v", err))
+			continue
+		}
+
+		reimportedCount++
+	}
+
+	// Build success message
+	var msgs []string
+	if importedCount > 0 {
+		msgs = append(msgs, fmt.Sprintf("Imported %d", importedCount))
+	}
+	if reimportedCount > 0 {
+		msgs = append(msgs, fmt.Sprintf("Reimported %d", reimportedCount))
+	}
+	successMsg := strings.Join(msgs, ", ")
+
+	h.siteRedirect(w, r, fmt.Sprintf("/ssg/import/list?success=%s", successMsg))
+}
+
+func (h *Handler) HandleReimport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	importIDStr := r.FormValue("import_id")
+	importID, err := uuid.Parse(importIDStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid import ID")
+		return
+	}
+
+	force := r.FormValue("force") == "true"
+
+	_, err = h.service.ReimportFile(ctx, importID, force)
+	if err != nil {
+		h.siteRedirect(w, r, "/ssg/import/list?error="+err.Error())
+		return
+	}
+
+	h.siteRedirect(w, r, "/ssg/import/list?success=File reimported successfully")
+}
+
+// getImportPath returns the import path for a site, using settings if configured.
+func (h *Handler) getImportPath(ctx context.Context, site *Site) string {
+	basePath := DefaultImportBasePath
+
+	// Check for custom base path in settings
+	setting, err := h.service.GetSettingByRefKey(ctx, site.ID, "import.base-path")
+	if err == nil && setting.Value != "" {
+		basePath = setting.Value
+	}
+
+	return GetImportPath(basePath, site.Slug)
+}
+
+// createImportDirectory creates the import directory for a site.
+func createImportDirectory(importPath string) error {
+	// Expand home directory
+	if strings.HasPrefix(importPath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		importPath = filepath.Join(home, importPath[2:])
+	}
+	return os.MkdirAll(importPath, 0755)
 }

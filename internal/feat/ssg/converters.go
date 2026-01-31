@@ -499,3 +499,71 @@ func timeFromNull(t interface{ Time() (time.Time, bool) }) time.Time {
 	}
 	return time.Time{}
 }
+
+// Import converters
+
+func importFromSQLC(i sqlc.Import) *Import {
+	imp := &Import{
+		ID:        parseUUID(i.ID),
+		ShortID:   i.ShortID,
+		FilePath:  i.FilePath,
+		SiteID:    parseUUID(i.SiteID),
+		UserID:    parseUUID(i.UserID),
+		Status:    i.Status,
+		CreatedAt: i.CreatedAt,
+		UpdatedAt: i.UpdatedAt,
+	}
+
+	if i.FileHash.Valid {
+		imp.FileHash = i.FileHash.String
+	}
+	if i.FileMtime.Valid {
+		imp.FileMtime = &i.FileMtime.Time
+	}
+	if i.ContentID.Valid {
+		contentID := parseUUID(i.ContentID.String)
+		imp.ContentID = &contentID
+	}
+	if i.ImportedAt.Valid {
+		imp.ImportedAt = &i.ImportedAt.Time
+	}
+
+	return imp
+}
+
+func importWithContentFromSQLC(row sqlc.ListImportsBySiteIDRow) *Import {
+	imp := &Import{
+		ID:        parseUUID(row.ID),
+		ShortID:   row.ShortID,
+		FilePath:  row.FilePath,
+		SiteID:    parseUUID(row.SiteID),
+		UserID:    parseUUID(row.UserID),
+		Status:    row.Status,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+
+	if row.FileHash.Valid {
+		imp.FileHash = row.FileHash.String
+	}
+	if row.FileMtime.Valid {
+		imp.FileMtime = &row.FileMtime.Time
+	}
+	if row.ContentID.Valid {
+		contentID := parseUUID(row.ContentID.String)
+		imp.ContentID = &contentID
+	}
+	if row.ImportedAt.Valid {
+		imp.ImportedAt = &row.ImportedAt.Time
+	}
+
+	// Joined fields from content
+	if row.ContentHeading.Valid {
+		imp.ContentHeading = row.ContentHeading.String
+	}
+	if row.ContentUpdatedAt.Valid {
+		imp.ContentUpdatedAt = &row.ContentUpdatedAt.Time
+	}
+
+	return imp
+}

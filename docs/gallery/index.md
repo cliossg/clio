@@ -15,6 +15,8 @@
 | Content List | Edit Content |
 | ![View Content](view-content.png) | ![Zen Mode](zen-plus-dark-mode.png) |
 | View Content | Zen Mode (Dark) |
+| ![Import Content](import.png) | |
+| Import Content | |
 
 ## Sections & Layouts
 

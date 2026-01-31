@@ -477,6 +477,65 @@ func (c *Contributor) FullName() string {
 	return c.Name + " " + c.Surname
 }
 
+// --- Import ---
+
+// Import status constants.
+const (
+	ImportStatusPending  = "pending"
+	ImportStatusImported = "imported"
+	ImportStatusSynced   = "synced"
+	ImportStatusUpdated  = "updated"
+	ImportStatusConflict = "conflict"
+)
+
+// Import represents a tracked file import from an external directory.
+type Import struct {
+	ID         uuid.UUID  `json:"id"`
+	ShortID    string     `json:"short_id"`
+	FilePath   string     `json:"file_path"`
+	FileHash   string     `json:"file_hash"`
+	FileMtime  *time.Time `json:"file_mtime"`
+	ContentID  *uuid.UUID `json:"content_id,omitempty"`
+	SiteID     uuid.UUID  `json:"site_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Status     string     `json:"status"`
+	ImportedAt *time.Time `json:"imported_at,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+
+	// Computed/joined fields
+	FileName         string     `json:"file_name,omitempty"`
+	ContentHeading   string     `json:"content_heading,omitempty"`
+	ContentUpdatedAt *time.Time `json:"content_updated_at,omitempty"`
+	ComputedStatus   string     `json:"computed_status,omitempty"`
+}
+
+// NewImport creates a new Import instance.
+func NewImport(siteID, userID uuid.UUID, filePath string) *Import {
+	now := time.Now()
+	return &Import{
+		ID:        uuid.New(),
+		ShortID:   uuid.New().String()[:8],
+		FilePath:  filePath,
+		SiteID:    siteID,
+		UserID:    userID,
+		Status:    ImportStatusPending,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+// ImportFile represents a scanned file from the import directory.
+type ImportFile struct {
+	Path        string            `json:"path"`
+	Name        string            `json:"name"`
+	Mtime       time.Time         `json:"mtime"`
+	Hash        string            `json:"hash"`
+	Title       string            `json:"title"`
+	Body        string            `json:"body"`
+	Frontmatter map[string]string `json:"frontmatter,omitempty"`
+}
+
 // --- Utility Functions ---
 
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-z0-9]+`)

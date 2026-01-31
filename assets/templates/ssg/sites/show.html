@@ -51,6 +51,12 @@
                 <strong>Images</strong>
                 <span>Manage media assets</span>
             </a>
+            {{ if $canEdit }}
+            <a href="/ssg/import/list?site_id={{ .Site.ID }}" class="nav-card">
+                <strong>Import</strong>
+                <span>Import Markdown from ~/Documents/Clio</span>
+            </a>
+            {{ end }}
         </div>
 
         {{ if $isAdmin }}

@@ -103,6 +103,21 @@ type ImageVariant struct {
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 }
 
+type Import struct {
+	ID         string         `json:"id"`
+	ShortID    string         `json:"short_id"`
+	FilePath   string         `json:"file_path"`
+	FileHash   sql.NullString `json:"file_hash"`
+	FileMtime  sql.NullTime   `json:"file_mtime"`
+	ContentID  sql.NullString `json:"content_id"`
+	SiteID     string         `json:"site_id"`
+	UserID     string         `json:"user_id"`
+	Status     string         `json:"status"`
+	ImportedAt sql.NullTime   `json:"imported_at"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
 type Layout struct {
 	ID            string         `json:"id"`
 	SiteID        string         `json:"site_id"`

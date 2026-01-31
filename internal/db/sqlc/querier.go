@@ -18,6 +18,7 @@ type Querier interface {
 	CreateContributor(ctx context.Context, arg CreateContributorParams) (Contributor, error)
 	CreateImage(ctx context.Context, arg CreateImageParams) (Image, error)
 	CreateImageVariant(ctx context.Context, arg CreateImageVariantParams) (ImageVariant, error)
+	CreateImport(ctx context.Context, arg CreateImportParams) (Import, error)
 	CreateLayout(ctx context.Context, arg CreateLayoutParams) (Layout, error)
 	CreateMeta(ctx context.Context, arg CreateMetaParams) (Meta, error)
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error)
@@ -35,6 +36,8 @@ type Querier interface {
 	DeleteExpiredSessions(ctx context.Context) error
 	DeleteImage(ctx context.Context, id string) error
 	DeleteImageVariant(ctx context.Context, id string) error
+	DeleteImport(ctx context.Context, id string) error
+	DeleteImportByContentID(ctx context.Context, contentID sql.NullString) error
 	DeleteLayout(ctx context.Context, id string) error
 	DeleteMeta(ctx context.Context, id string) error
 	DeleteMetaByContentID(ctx context.Context, contentID string) error
@@ -65,6 +68,9 @@ type Querier interface {
 	GetImageVariant(ctx context.Context, id string) (ImageVariant, error)
 	GetImageVariantsByImageID(ctx context.Context, imageID string) ([]ImageVariant, error)
 	GetImagesBySiteID(ctx context.Context, siteID string) ([]Image, error)
+	GetImport(ctx context.Context, id string) (Import, error)
+	GetImportByContentID(ctx context.Context, contentID sql.NullString) (Import, error)
+	GetImportByFilePath(ctx context.Context, filePath string) (Import, error)
 	GetLayout(ctx context.Context, id string) (Layout, error)
 	GetLayoutByName(ctx context.Context, arg GetLayoutByNameParams) (Layout, error)
 	GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layout, error)
@@ -100,6 +106,7 @@ type Querier interface {
 	ListAllSites(ctx context.Context) ([]Site, error)
 	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
 	ListContributorsWithProfile(ctx context.Context, siteID string) ([]ListContributorsWithProfileRow, error)
+	ListImportsBySiteID(ctx context.Context, siteID string) ([]ListImportsBySiteIDRow, error)
 	ListProfiles(ctx context.Context) ([]Profile, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	ListUsers(ctx context.Context) ([]User, error)
@@ -112,6 +119,8 @@ type Querier interface {
 	UpdateContributor(ctx context.Context, arg UpdateContributorParams) (Contributor, error)
 	UpdateImage(ctx context.Context, arg UpdateImageParams) (Image, error)
 	UpdateImageVariant(ctx context.Context, arg UpdateImageVariantParams) (ImageVariant, error)
+	UpdateImport(ctx context.Context, arg UpdateImportParams) (Import, error)
+	UpdateImportStatus(ctx context.Context, arg UpdateImportStatusParams) (Import, error)
 	UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Layout, error)
 	UpdateMeta(ctx context.Context, arg UpdateMetaParams) (Meta, error)
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) (Profile, error)

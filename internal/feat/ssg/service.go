@@ -109,6 +109,19 @@ type Service interface {
 	// HTML generation
 	GenerateHTMLForSite(ctx context.Context, siteSlug string) error
 	BuildUserAuthorsMap(ctx context.Context, contents []*Content, contributors []*Contributor) map[string]*Contributor
+
+	// Import operations
+	CreateImport(ctx context.Context, imp *Import) error
+	GetImport(ctx context.Context, id uuid.UUID) (*Import, error)
+	GetImportByFilePath(ctx context.Context, filePath string) (*Import, error)
+	GetImportByContentID(ctx context.Context, contentID uuid.UUID) (*Import, error)
+	ListImports(ctx context.Context, siteID uuid.UUID) ([]*Import, error)
+	UpdateImport(ctx context.Context, imp *Import) error
+	UpdateImportStatus(ctx context.Context, id uuid.UUID, status string) error
+	DeleteImport(ctx context.Context, id uuid.UUID) error
+	ScanImportDirectory(ctx context.Context, importPath string) ([]ImportFile, error)
+	ImportFile(ctx context.Context, siteID, userID uuid.UUID, file ImportFile, sectionID uuid.UUID) (*Content, *Import, error)
+	ReimportFile(ctx context.Context, importID uuid.UUID, force bool) (*Content, error)
 }
 
 // DBProvider provides access to the database.
@@ -412,6 +425,8 @@ func (s *service) GetContentWithPagination(ctx context.Context, siteID uuid.UUID
 
 func (s *service) UpdateContent(ctx context.Context, content *Content) error {
 	s.ensureQueries()
+
+	content.UpdatedAt = time.Now()
 
 	var contributorID sql.NullString
 	if content.ContributorID != nil {
@@ -1742,4 +1757,297 @@ func (s *service) buildImagesMeta(ctx context.Context, siteID uuid.UUID, body st
 	}
 
 	return string(jsonBytes)
+}
+
+// --- Import Operations ---
+
+func (s *service) CreateImport(ctx context.Context, imp *Import) error {
+	s.ensureQueries()
+
+	params := sqlc.CreateImportParams{
+		ID:        imp.ID.String(),
+		ShortID:   imp.ShortID,
+		FilePath:  imp.FilePath,
+		FileHash:  nullString(imp.FileHash),
+		FileMtime: nullTime(imp.FileMtime),
+		SiteID:    imp.SiteID.String(),
+		UserID:    imp.UserID.String(),
+		Status:    imp.Status,
+		CreatedAt: imp.CreatedAt,
+		UpdatedAt: imp.UpdatedAt,
+	}
+
+	if imp.ContentID != nil {
+		params.ContentID = nullString(imp.ContentID.String())
+	}
+	if imp.ImportedAt != nil {
+		params.ImportedAt = nullTime(imp.ImportedAt)
+	}
+
+	_, err := s.queries.CreateImport(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot create import: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) GetImport(ctx context.Context, id uuid.UUID) (*Import, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetImport(ctx, id.String())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get import: %w", err)
+	}
+
+	return importFromSQLC(row), nil
+}
+
+func (s *service) GetImportByFilePath(ctx context.Context, filePath string) (*Import, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetImportByFilePath(ctx, filePath)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get import by file path: %w", err)
+	}
+
+	return importFromSQLC(row), nil
+}
+
+func (s *service) GetImportByContentID(ctx context.Context, contentID uuid.UUID) (*Import, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetImportByContentID(ctx, nullString(contentID.String()))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get import by content ID: %w", err)
+	}
+
+	return importFromSQLC(row), nil
+}
+
+func (s *service) ListImports(ctx context.Context, siteID uuid.UUID) ([]*Import, error) {
+	s.ensureQueries()
+
+	rows, err := s.queries.ListImportsBySiteID(ctx, siteID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot list imports: %w", err)
+	}
+
+	imports := make([]*Import, len(rows))
+	for i, row := range rows {
+		imports[i] = importWithContentFromSQLC(row)
+	}
+
+	return imports, nil
+}
+
+func (s *service) UpdateImport(ctx context.Context, imp *Import) error {
+	s.ensureQueries()
+
+	params := sqlc.UpdateImportParams{
+		ID:        imp.ID.String(),
+		FileHash:  nullString(imp.FileHash),
+		FileMtime: nullTime(imp.FileMtime),
+		Status:    imp.Status,
+		UpdatedAt: imp.UpdatedAt,
+	}
+
+	if imp.ContentID != nil {
+		params.ContentID = nullString(imp.ContentID.String())
+	}
+	if imp.ImportedAt != nil {
+		params.ImportedAt = nullTime(imp.ImportedAt)
+	}
+
+	_, err := s.queries.UpdateImport(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot update import: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) UpdateImportStatus(ctx context.Context, id uuid.UUID, status string) error {
+	s.ensureQueries()
+
+	params := sqlc.UpdateImportStatusParams{
+		ID:        id.String(),
+		Status:    status,
+		UpdatedAt: time.Now(),
+	}
+
+	_, err := s.queries.UpdateImportStatus(ctx, params)
+	if err != nil {
+		return fmt.Errorf("cannot update import status: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) DeleteImport(ctx context.Context, id uuid.UUID) error {
+	s.ensureQueries()
+
+	err := s.queries.DeleteImport(ctx, id.String())
+	if err != nil {
+		return fmt.Errorf("cannot delete import: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) ScanImportDirectory(ctx context.Context, importPath string) ([]ImportFile, error) {
+	scanner := NewImportScanner([]string{importPath})
+	files, err := scanner.ScanFiles()
+	if err != nil {
+		return nil, fmt.Errorf("cannot scan import directory: %w", err)
+	}
+
+	return files, nil
+}
+
+func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file ImportFile, sectionID uuid.UUID) (*Content, *Import, error) {
+	s.ensureQueries()
+
+	// Check if file was already imported
+	existing, err := s.GetImportByFilePath(ctx, file.Path)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return nil, nil, fmt.Errorf("cannot check existing import: %w", err)
+	}
+	if existing != nil && existing.ContentID != nil {
+		return nil, nil, fmt.Errorf("file already imported")
+	}
+
+	// Create content from file
+	content := NewContent(siteID, sectionID, file.Title, file.Body)
+	content.UserID = userID
+	content.CreatedBy = userID
+	content.UpdatedBy = userID
+
+	// Apply frontmatter if present
+	if len(file.Frontmatter) > 0 {
+		fm := ParseImportFrontmatter(file.Frontmatter)
+		if fm.Summary != "" {
+			content.Summary = fm.Summary
+		}
+		if fm.Kind != "" {
+			content.Kind = fm.Kind
+		}
+		content.Draft = fm.Draft
+		content.Featured = fm.Featured
+		if fm.Series != "" {
+			content.Series = fm.Series
+			content.SeriesOrder = fm.SeriesOrder
+		}
+		if fm.Author != "" {
+			content.AuthorUsername = fm.Author
+		}
+		if fm.Contributor != "" {
+			content.ContributorHandle = fm.Contributor
+		}
+	}
+
+	// Create the content
+	if err := s.CreateContent(ctx, content); err != nil {
+		return nil, nil, fmt.Errorf("cannot create content: %w", err)
+	}
+
+	// Create import record
+	now := time.Now()
+	imp := NewImport(siteID, userID, file.Path)
+	imp.FileHash = file.Hash
+	imp.FileMtime = &file.Mtime
+	imp.ContentID = &content.ID
+	imp.Status = ImportStatusImported
+	imp.ImportedAt = &now
+
+	if err := s.CreateImport(ctx, imp); err != nil {
+		// Rollback content creation
+		_ = s.DeleteContent(ctx, content.ID)
+		return nil, nil, fmt.Errorf("cannot create import: %w", err)
+	}
+
+	return content, imp, nil
+}
+
+func (s *service) ReimportFile(ctx context.Context, importID uuid.UUID, force bool) (*Content, error) {
+	s.ensureQueries()
+
+	// Get the import
+	imp, err := s.GetImport(ctx, importID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get import: %w", err)
+	}
+
+	if imp.ContentID == nil {
+		return nil, fmt.Errorf("import has no associated content")
+	}
+
+	// Get the content
+	content, err := s.GetContent(ctx, *imp.ContentID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get content: %w", err)
+	}
+
+	// Re-scan the file
+	scanner := NewImportScanner([]string{})
+	fileInfo, err := scanner.parseFile(imp.FilePath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot re-parse file: %w", err)
+	}
+
+	// Check for conflicts
+	if imp.ContentUpdatedAt != nil && imp.FileMtime != nil {
+		if imp.ContentUpdatedAt.After(*imp.FileMtime) && !force {
+			return nil, fmt.Errorf("conflict detected: content was modified in web UI after last import, use force=true to override")
+		}
+	}
+
+	// Update content
+	content.Heading = fileInfo.Title
+	content.Body = fileInfo.Body
+	content.UpdatedAt = time.Now()
+
+	// Apply frontmatter updates
+	if len(fileInfo.Frontmatter) > 0 {
+		fm := ParseImportFrontmatter(fileInfo.Frontmatter)
+		if fm.Summary != "" {
+			content.Summary = fm.Summary
+		}
+		if fm.Kind != "" {
+			content.Kind = fm.Kind
+		}
+		content.Draft = fm.Draft
+		content.Featured = fm.Featured
+		if fm.Series != "" {
+			content.Series = fm.Series
+			content.SeriesOrder = fm.SeriesOrder
+		}
+	}
+
+	if err := s.UpdateContent(ctx, content); err != nil {
+		return nil, fmt.Errorf("cannot update content: %w", err)
+	}
+
+	// Update import
+	now := time.Now()
+	imp.FileHash = fileInfo.Hash
+	imp.FileMtime = &fileInfo.Mtime
+	imp.Status = ImportStatusImported
+	imp.ImportedAt = &now
+	imp.UpdatedAt = now
+
+	if err := s.UpdateImport(ctx, imp); err != nil {
+		return nil, fmt.Errorf("cannot update import: %w", err)
+	}
+
+	return content, nil
 }
