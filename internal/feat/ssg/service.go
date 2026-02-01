@@ -606,17 +606,19 @@ func (s *service) CreateLayout(ctx context.Context, layout *Layout) error {
 	s.ensureQueries()
 
 	params := sqlc.CreateLayoutParams{
-		ID:            layout.ID.String(),
-		SiteID:        layout.SiteID.String(),
-		ShortID:       nullString(layout.ShortID),
-		Name:          layout.Name,
-		Description:   nullString(layout.Description),
-		Code:          nullString(layout.Code),
-		HeaderImageID: nullString(layout.HeaderImageID.String()),
-		CreatedBy:     nullString(layout.CreatedBy.String()),
-		UpdatedBy:     nullString(layout.UpdatedBy.String()),
-		CreatedAt:     nullTime(&layout.CreatedAt),
-		UpdatedAt:     nullTime(&layout.UpdatedAt),
+		ID:                layout.ID.String(),
+		SiteID:            layout.SiteID.String(),
+		ShortID:           nullString(layout.ShortID),
+		Name:              layout.Name,
+		Description:       nullString(layout.Description),
+		Code:              nullString(layout.Code),
+		Css:               nullString(layout.CSS),
+		ExcludeDefaultCss: nullInt(boolToInt(layout.ExcludeDefaultCSS)),
+		HeaderImageID:     nullString(layout.HeaderImageID.String()),
+		CreatedBy:         nullString(layout.CreatedBy.String()),
+		UpdatedBy:         nullString(layout.UpdatedBy.String()),
+		CreatedAt:         nullTime(&layout.CreatedAt),
+		UpdatedAt:         nullTime(&layout.UpdatedAt),
 	}
 
 	_, err := s.queries.CreateLayout(ctx, params)
@@ -661,13 +663,15 @@ func (s *service) UpdateLayout(ctx context.Context, layout *Layout) error {
 	s.ensureQueries()
 
 	params := sqlc.UpdateLayoutParams{
-		Name:          layout.Name,
-		Description:   nullString(layout.Description),
-		Code:          nullString(layout.Code),
-		HeaderImageID: nullString(layout.HeaderImageID.String()),
-		UpdatedBy:     nullString(layout.UpdatedBy.String()),
-		UpdatedAt:     nullTime(&layout.UpdatedAt),
-		ID:            layout.ID.String(),
+		Name:              layout.Name,
+		Description:       nullString(layout.Description),
+		Code:              nullString(layout.Code),
+		Css:               nullString(layout.CSS),
+		ExcludeDefaultCss: nullInt(boolToInt(layout.ExcludeDefaultCSS)),
+		HeaderImageID:     nullString(layout.HeaderImageID.String()),
+		UpdatedBy:         nullString(layout.UpdatedBy.String()),
+		UpdatedAt:         nullTime(&layout.UpdatedAt),
+		ID:                layout.ID.String(),
 	}
 
 	_, err := s.queries.UpdateLayout(ctx, params)

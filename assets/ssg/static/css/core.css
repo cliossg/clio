@@ -1,0 +1,84 @@
+/* Clio SSG - Core styles (always loaded) */
+
+/* ============================================
+   RESET & BOX MODEL
+   ============================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    overflow-x: hidden;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ============================================
+   CODE BLOCKS
+   ============================================ */
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9em;
+}
+
+pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+pre code {
+    display: block;
+}
+
+/* ============================================
+   IMAGES
+   ============================================ */
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* ============================================
+   RESPONSIVE CONTAINER
+   ============================================ */
+
+.site-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}

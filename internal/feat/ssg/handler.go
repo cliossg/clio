@@ -1414,6 +1414,8 @@ func (h *Handler) HandleCreateLayout(w http.ResponseWriter, r *http.Request) {
 
 	layout := NewLayout(site.ID, r.FormValue("name"), r.FormValue("description"))
 	layout.Code = r.FormValue("code")
+	layout.CSS = r.FormValue("css")
+	layout.ExcludeDefaultCSS = r.FormValue("exclude_default_css") == "on"
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -1519,6 +1521,8 @@ func (h *Handler) HandleUpdateLayout(w http.ResponseWriter, r *http.Request) {
 	layout.Name = r.FormValue("name")
 	layout.Description = r.FormValue("description")
 	layout.Code = r.FormValue("code")
+	layout.CSS = r.FormValue("css")
+	layout.ExcludeDefaultCSS = r.FormValue("exclude_default_css") == "on"
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {

@@ -119,17 +119,19 @@ type Import struct {
 }
 
 type Layout struct {
-	ID            string         `json:"id"`
-	SiteID        string         `json:"site_id"`
-	ShortID       sql.NullString `json:"short_id"`
-	Name          string         `json:"name"`
-	Description   sql.NullString `json:"description"`
-	Code          sql.NullString `json:"code"`
-	HeaderImageID sql.NullString `json:"header_image_id"`
-	CreatedBy     sql.NullString `json:"created_by"`
-	UpdatedBy     sql.NullString `json:"updated_by"`
-	CreatedAt     sql.NullTime   `json:"created_at"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	ID                string         `json:"id"`
+	SiteID            string         `json:"site_id"`
+	ShortID           sql.NullString `json:"short_id"`
+	Name              string         `json:"name"`
+	Description       sql.NullString `json:"description"`
+	Code              sql.NullString `json:"code"`
+	HeaderImageID     sql.NullString `json:"header_image_id"`
+	CreatedBy         sql.NullString `json:"created_by"`
+	UpdatedBy         sql.NullString `json:"updated_by"`
+	CreatedAt         sql.NullTime   `json:"created_at"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	Css               sql.NullString `json:"css"`
+	ExcludeDefaultCss sql.NullInt64  `json:"exclude_default_css"`
 }
 
 type Meta struct {

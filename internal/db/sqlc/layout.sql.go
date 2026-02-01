@@ -11,23 +11,25 @@ import (
 )
 
 const createLayout = `-- name: CreateLayout :one
-INSERT INTO layout (id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at
+INSERT INTO layout (id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css
 `
 
 type CreateLayoutParams struct {
-	ID            string         `json:"id"`
-	SiteID        string         `json:"site_id"`
-	ShortID       sql.NullString `json:"short_id"`
-	Name          string         `json:"name"`
-	Description   sql.NullString `json:"description"`
-	Code          sql.NullString `json:"code"`
-	HeaderImageID sql.NullString `json:"header_image_id"`
-	CreatedBy     sql.NullString `json:"created_by"`
-	UpdatedBy     sql.NullString `json:"updated_by"`
-	CreatedAt     sql.NullTime   `json:"created_at"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	ID                string         `json:"id"`
+	SiteID            string         `json:"site_id"`
+	ShortID           sql.NullString `json:"short_id"`
+	Name              string         `json:"name"`
+	Description       sql.NullString `json:"description"`
+	Code              sql.NullString `json:"code"`
+	Css               sql.NullString `json:"css"`
+	ExcludeDefaultCss sql.NullInt64  `json:"exclude_default_css"`
+	HeaderImageID     sql.NullString `json:"header_image_id"`
+	CreatedBy         sql.NullString `json:"created_by"`
+	UpdatedBy         sql.NullString `json:"updated_by"`
+	CreatedAt         sql.NullTime   `json:"created_at"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
 }
 
 func (q *Queries) CreateLayout(ctx context.Context, arg CreateLayoutParams) (Layout, error) {
@@ -38,6 +40,8 @@ func (q *Queries) CreateLayout(ctx context.Context, arg CreateLayoutParams) (Lay
 		arg.Name,
 		arg.Description,
 		arg.Code,
+		arg.Css,
+		arg.ExcludeDefaultCss,
 		arg.HeaderImageID,
 		arg.CreatedBy,
 		arg.UpdatedBy,
@@ -57,6 +61,8 @@ func (q *Queries) CreateLayout(ctx context.Context, arg CreateLayoutParams) (Lay
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
@@ -71,7 +77,7 @@ func (q *Queries) DeleteLayout(ctx context.Context, id string) error {
 }
 
 const getLayout = `-- name: GetLayout :one
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE id = ?
+SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE id = ?
 `
 
 func (q *Queries) GetLayout(ctx context.Context, id string) (Layout, error) {
@@ -89,12 +95,14 @@ func (q *Queries) GetLayout(ctx context.Context, id string) (Layout, error) {
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
 
 const getLayoutByName = `-- name: GetLayoutByName :one
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE site_id = ? AND name = ?
+SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE site_id = ? AND name = ?
 `
 
 type GetLayoutByNameParams struct {
@@ -117,12 +125,14 @@ func (q *Queries) GetLayoutByName(ctx context.Context, arg GetLayoutByNameParams
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
 
 const getLayoutsBySiteID = `-- name: GetLayoutsBySiteID :many
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE site_id = ? ORDER BY name
+SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE site_id = ? ORDER BY name
 `
 
 func (q *Queries) GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layout, error) {
@@ -146,6 +156,8 @@ func (q *Queries) GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layo
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Css,
+			&i.ExcludeDefaultCss,
 		); err != nil {
 			return nil, err
 		}
@@ -165,21 +177,25 @@ UPDATE layout SET
     name = ?,
     description = ?,
     code = ?,
+    css = ?,
+    exclude_default_css = ?,
     header_image_id = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css
 `
 
 type UpdateLayoutParams struct {
-	Name          string         `json:"name"`
-	Description   sql.NullString `json:"description"`
-	Code          sql.NullString `json:"code"`
-	HeaderImageID sql.NullString `json:"header_image_id"`
-	UpdatedBy     sql.NullString `json:"updated_by"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	ID            string         `json:"id"`
+	Name              string         `json:"name"`
+	Description       sql.NullString `json:"description"`
+	Code              sql.NullString `json:"code"`
+	Css               sql.NullString `json:"css"`
+	ExcludeDefaultCss sql.NullInt64  `json:"exclude_default_css"`
+	HeaderImageID     sql.NullString `json:"header_image_id"`
+	UpdatedBy         sql.NullString `json:"updated_by"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	ID                string         `json:"id"`
 }
 
 func (q *Queries) UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Layout, error) {
@@ -187,6 +203,8 @@ func (q *Queries) UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Lay
 		arg.Name,
 		arg.Description,
 		arg.Code,
+		arg.Css,
+		arg.ExcludeDefaultCss,
 		arg.HeaderImageID,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
@@ -205,6 +223,8 @@ func (q *Queries) UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Lay
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }

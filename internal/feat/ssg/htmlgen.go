@@ -32,25 +32,27 @@ func NewHTMLGenerator(workspace *Workspace, assetsFS embed.FS) *HTMLGenerator {
 
 // SSGPageData holds data for rendering a page.
 type SSGPageData struct {
-	Site        *Site
-	Content     *RenderedContent
-	Contents    []*RenderedContent
-	Section     *Section
-	Sections    []*Section
-	Menu        []*Section
-	Author      *Contributor
-	Blocks      *GeneratedBlocks
-	IsIndex     bool
-	IsAuthor    bool
-	IsPaginated bool
-	CurrentPage int
-	TotalPages  int
-	HasPrev     bool
-	HasNext     bool
-	PrevURL     string
-	NextURL     string
-	AssetPath   string
-	Params      map[string]string
+	Site              *Site
+	Content           *RenderedContent
+	Contents          []*RenderedContent
+	Section           *Section
+	Sections          []*Section
+	Menu              []*Section
+	Author            *Contributor
+	Blocks            *GeneratedBlocks
+	IsIndex           bool
+	IsAuthor          bool
+	IsPaginated       bool
+	CurrentPage       int
+	TotalPages        int
+	HasPrev           bool
+	HasNext           bool
+	PrevURL           string
+	NextURL           string
+	AssetPath         string
+	Params            map[string]string
+	CustomCSS         string
+	ExcludeDefaultCSS bool
 }
 
 // RenderedContent holds content with HTML body.
@@ -326,19 +328,25 @@ func (g *HTMLGenerator) buildLayoutMap(sections []*Section, layouts []*Layout) m
 // getTemplateForSection returns the appropriate template for a section.
 // Resolution order: section layout → site default layout → embedded templates.
 func (g *HTMLGenerator) getTemplateForSection(embeddedTmpl *template.Template, layoutsBySection map[uuid.UUID]*Layout, siteDefaultLayout *Layout, sectionID uuid.UUID) *template.Template {
+	tmpl, _ := g.getTemplateAndLayoutForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, sectionID)
+	return tmpl
+}
+
+// getTemplateAndLayoutForSection returns the template and the resolved layout for a section.
+func (g *HTMLGenerator) getTemplateAndLayoutForSection(embeddedTmpl *template.Template, layoutsBySection map[uuid.UUID]*Layout, siteDefaultLayout *Layout, sectionID uuid.UUID) (*template.Template, *Layout) {
 	layout, ok := layoutsBySection[sectionID]
 	if !ok || layout == nil || layout.Code == "" {
 		layout = siteDefaultLayout
 	}
 	if layout == nil || layout.Code == "" {
-		return embeddedTmpl
+		return embeddedTmpl, layout
 	}
 
 	customTmpl, err := g.parseCustomLayout(layout.Code)
 	if err != nil {
-		return embeddedTmpl
+		return embeddedTmpl, layout
 	}
-	return customTmpl
+	return customTmpl, layout
 }
 
 // parseCustomLayout parses a custom layout code string into a template.
@@ -407,6 +415,8 @@ func (g *HTMLGenerator) renderContentPage(embeddedTmpl *template.Template, layou
 
 	blocks := BuildBlocks(rendered, allRendered, blocksCfg)
 
+	tmpl, layout := g.getTemplateAndLayoutForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, content.SectionID)
+
 	data := SSGPageData{
 		Site:      site,
 		Content:   rendered,
@@ -417,6 +427,10 @@ func (g *HTMLGenerator) renderContentPage(embeddedTmpl *template.Template, layou
 		IsIndex:   false,
 		AssetPath: basePath,
 		Params:    params,
+	}
+	if layout != nil {
+		data.CustomCSS = layout.CSS
+		data.ExcludeDefaultCSS = layout.ExcludeDefaultCSS
 	}
 
 	outputPath := g.workspace.GetContentHTMLPath(site.Slug, content.SectionPath, content.Slug())
@@ -430,7 +444,6 @@ func (g *HTMLGenerator) renderContentPage(embeddedTmpl *template.Template, layou
 	}
 	defer f.Close()
 
-	tmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, content.SectionID)
 	return tmpl.ExecuteTemplate(f, "layout.html", data)
 }
 
@@ -466,8 +479,8 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 	if mainSection != nil {
 		mainSectionID = mainSection.ID
 	}
-	mainTmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, mainSectionID)
-	if err := g.renderIndex(mainTmpl, htmlPath, site, "", mainSection, publishedContents, sections, menu, params, pageSize); err != nil {
+	mainTmpl, mainLayout := g.getTemplateAndLayoutForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, mainSectionID)
+	if err := g.renderIndex(mainTmpl, mainLayout, htmlPath, site, "", mainSection, publishedContents, sections, menu, params, pageSize); err != nil {
 		return count, err
 	}
 	count++
@@ -486,8 +499,8 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 		}
 
 		if len(sectionContents) > 0 {
-			tmpl := g.getTemplateForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, section.ID)
-			if err := g.renderIndex(tmpl, htmlPath, site, section.Path, section, sectionContents, sections, menu, params, pageSize); err != nil {
+			tmpl, layout := g.getTemplateAndLayoutForSection(embeddedTmpl, layoutsBySection, siteDefaultLayout, section.ID)
+			if err := g.renderIndex(tmpl, layout, htmlPath, site, section.Path, section, sectionContents, sections, menu, params, pageSize); err != nil {
 				return count, err
 			}
 			count++
@@ -497,8 +510,7 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 	return count, nil
 }
 
-// renderIndex renders an index page with pagination.
-func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, site *Site, indexPath string, section *Section, contents []*Content, sections []*Section, menu []*Section, params map[string]string, pageSize int) error {
+func (g *HTMLGenerator) renderIndex(tmpl *template.Template, layout *Layout, htmlPath string, site *Site, indexPath string, section *Section, contents []*Content, sections []*Section, menu []*Section, params map[string]string, pageSize int) error {
 	totalPages := (len(contents) + pageSize - 1) / pageSize
 	if totalPages == 0 {
 		totalPages = 1
@@ -540,6 +552,10 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 			AssetPath:   basePath,
 			Params:      params,
 		}
+		if layout != nil {
+			data.CustomCSS = layout.CSS
+			data.ExcludeDefaultCSS = layout.ExcludeDefaultCSS
+		}
 
 		if page > 1 {
 			data.PrevURL = g.getPaginationURL(basePath, indexPath, page-1)
@@ -548,7 +564,6 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, htmlPath string, si
 			data.NextURL = g.getPaginationURL(basePath, indexPath, page+1)
 		}
 
-		// Determine output path
 		outputPath := g.workspace.GetPaginationHTMLPath(site.Slug, indexPath, page)
 		if err := EnsureDir(outputPath); err != nil {
 			return err
@@ -640,6 +655,10 @@ func (g *HTMLGenerator) renderAuthorPages(embeddedTmpl *template.Template, siteD
 			AssetPath: basePath,
 			Params:    params,
 		}
+		if siteDefaultLayout != nil {
+			data.CustomCSS = siteDefaultLayout.CSS
+			data.ExcludeDefaultCSS = siteDefaultLayout.ExcludeDefaultCSS
+		}
 
 		outputPath := filepath.Join(htmlPath, "authors", contributor.Handle, "index.html")
 		if err := EnsureDir(outputPath); err != nil {
@@ -689,6 +708,10 @@ func (g *HTMLGenerator) renderAuthorPages(embeddedTmpl *template.Template, siteD
 			IsAuthor:  true,
 			AssetPath: basePath,
 			Params:    params,
+		}
+		if siteDefaultLayout != nil {
+			data.CustomCSS = siteDefaultLayout.CSS
+			data.ExcludeDefaultCSS = siteDefaultLayout.ExcludeDefaultCSS
 		}
 
 		outputPath := filepath.Join(htmlPath, "authors", username, "index.html")

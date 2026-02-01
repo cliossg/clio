@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS layout (
     name TEXT NOT NULL,
     description TEXT,
     code TEXT,
+    css TEXT,
+    exclude_default_css INTEGER DEFAULT 0,
     header_image_id TEXT,
     created_by TEXT,
     updated_by TEXT,

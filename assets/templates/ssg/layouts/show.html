@@ -36,5 +36,18 @@
     </div>
     {{ end }}
 
+    {{ if .Layout.CSS }}
+    <div class="content-body">
+        <h3>Custom CSS</h3>
+        <pre class="code-block">{{ .Layout.CSS }}</pre>
+    </div>
+    {{ end }}
+
+    {{ if .Layout.ExcludeDefaultCSS }}
+    <div class="content-body">
+        <p><strong>Note:</strong> Default Clio CSS is excluded for this layout.</p>
+    </div>
+    {{ end }}
+
 </div>
 {{ end }}

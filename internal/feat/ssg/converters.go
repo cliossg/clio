@@ -293,6 +293,12 @@ func layoutFromSQLC(l sqlc.Layout) *Layout {
 	if l.Code.Valid {
 		layout.Code = l.Code.String
 	}
+	if l.Css.Valid {
+		layout.CSS = l.Css.String
+	}
+	if l.ExcludeDefaultCss.Valid {
+		layout.ExcludeDefaultCSS = l.ExcludeDefaultCss.Int64 == 1
+	}
 	if l.HeaderImageID.Valid {
 		layout.HeaderImageID = parseUUID(l.HeaderImageID.String)
 	}

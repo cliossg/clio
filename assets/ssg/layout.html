@@ -25,7 +25,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="{{ .AssetPath }}static/css/styles.css" rel="stylesheet">
+    <link href="{{ .AssetPath }}static/css/core.css" rel="stylesheet">
+    {{ if not .ExcludeDefaultCSS }}
+    <link href="{{ .AssetPath }}static/css/theme.css" rel="stylesheet">
+    {{ end }}
+    {{ if .CustomCSS }}
+    <style>{{ .CustomCSS | safeHTML }}</style>
+    {{ end }}
     <link rel="icon" href="{{ .AssetPath }}favicon.ico" type="image/x-icon">
 </head>
 <body{{ if index .Params "ssg.blocks.bgcolor" }} style="--blocks-bgcolor: {{ index .Params "ssg.blocks.bgcolor" }}"{{ end }}>

@@ -20,6 +20,20 @@
             <small>Use Go template syntax. Available variables: .Content, .Site, .Section</small>
         </div>
 
+        <div class="form-group">
+            <label for="css">Custom CSS</label>
+            <textarea id="css" name="css" rows="10" placeholder="Enter custom CSS styles..."></textarea>
+            <small>Custom styles to include in pages using this layout</small>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="exclude_default_css">
+                Exclude default Clio CSS
+            </label>
+            <small>When enabled, the default Clio stylesheet will not be included</small>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create Layout</button>
             <a href="/ssg/list-layouts?site_id={{ .Site.ID }}" class="btn">Cancel</a>

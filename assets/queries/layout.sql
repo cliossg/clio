@@ -1,6 +1,6 @@
 -- name: CreateLayout :one
-INSERT INTO layout (id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO layout (id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetLayout :one
@@ -17,6 +17,8 @@ UPDATE layout SET
     name = ?,
     description = ?,
     code = ?,
+    css = ?,
+    exclude_default_css = ?,
     header_image_id = ?,
     updated_by = ?,
     updated_at = ?

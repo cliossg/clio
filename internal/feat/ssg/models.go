@@ -153,17 +153,19 @@ func (c *Content) DisplayHandle() string {
 
 // Layout represents a content layout template.
 type Layout struct {
-	ID            uuid.UUID `json:"id"`
-	SiteID        uuid.UUID `json:"site_id"`
-	ShortID       string    `json:"short_id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	Code          string    `json:"code"`
-	HeaderImageID uuid.UUID `json:"header_image_id"`
-	CreatedBy     uuid.UUID `json:"-"`
-	UpdatedBy     uuid.UUID `json:"-"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID                uuid.UUID `json:"id"`
+	SiteID            uuid.UUID `json:"site_id"`
+	ShortID           string    `json:"short_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	Code              string    `json:"code"`
+	CSS               string    `json:"css"`
+	ExcludeDefaultCSS bool      `json:"exclude_default_css"`
+	HeaderImageID     uuid.UUID `json:"header_image_id"`
+	CreatedBy         uuid.UUID `json:"-"`
+	UpdatedBy         uuid.UUID `json:"-"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // NewLayout creates a new Layout instance.

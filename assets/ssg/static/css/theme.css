@@ -1,30 +1,12 @@
-/* Clio SSG - Static styles based on adrianpk.com */
+/* Clio SSG - Theme styles (can be excluded) */
 
 /* ============================================
-   BASE STYLES
+   BASE THEME
    ============================================ */
 
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
-html, body {
-    overflow-x: hidden;
-}
-
 body {
-    font-family: 'Montserrat', sans-serif;
-    line-height: 1.6;
-    margin: 0;
-    padding: 0;
     background-color: #fdfdfd;
     color: #333;
-}
-
-.site-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
 }
 
 h1 {
