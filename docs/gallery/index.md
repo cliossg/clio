@@ -18,6 +18,19 @@
 | ![Import Content](import.png) | |
 | Import Content | |
 
+## Proofreading
+
+AI-powered writing assistant that checks grammar, style, repetitions, and overused phrases.
+
+| | |
+|:---:|:---:|
+| ![Proofreading](proofreading.png) | ![Processing text](proofreading-processing.png) |
+| Proofreading | Processing text |
+| ![Results with summary](proofreading-result.png) | ![Suggested changes](proofreading-changes.png) |
+| Results with summary | Suggested changes |
+| ![Changes applied](proofreading-applied.png) | |
+| Changes applied | |
+
 ## Sections & Layouts
 
 | | |
@@ -42,8 +55,8 @@
 |:---:|:---:|
 | ![Images List](list-images.png) | ![Edit Image](edit-image.png) |
 | Images List | Edit Image |
-| ![View Image](view-image.png) | ![View Image 2](view-image-2.png) |
-| View Image | View Image |
+| ![View Image](view-image.png) | |
+| View Image | |
 
 ## Tags & Settings
 

@@ -58,6 +58,8 @@
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">Img</button>
                 </div>
                 <div class="editor-toolbar-group">
+                    <button type="button" class="toolbar-btn" id="proofread-btn" onclick="proofreadText()" title="Proofread text">Proofread</button>
+                    <button type="button" class="toolbar-btn" onclick="openMetaModal()" title="SEO & Settings">Meta</button>
                     <button type="button" class="toolbar-btn" onclick="toggleZenMode()" title="Zen Mode (Alt+Z)">Zen</button>
                 </div>
             </div>
@@ -175,6 +177,64 @@
 <div id="floating-buttons" class="floating-buttons hidden">
     <button type="button" class="floating-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode (Alt+D)">Dark</button>
     <button type="button" class="floating-btn" onclick="toggleZenMode()" title="Exit Zen Mode (Alt+Z)">Exit</button>
+</div>
+
+<!-- Meta/SEO Modal -->
+<div id="meta-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>SEO & Settings</h2>
+            <button type="button" class="modal-close" onclick="closeMetaModal()">&times;</button>
+        </div>
+        <form id="meta-form">
+            <input type="hidden" name="content_id" id="meta-content-id" value="">
+
+            <h3 style="margin-top: 0; font-size: 1rem;">SEO</h3>
+            <div class="form-group">
+                <label for="meta-description">Meta Description</label>
+                <textarea id="meta-description" name="description" rows="2" placeholder="Brief description for search engines"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="meta-keywords">Keywords</label>
+                <input type="text" id="meta-keywords" name="keywords" placeholder="keyword1, keyword2, keyword3">
+            </div>
+            <div class="form-group">
+                <label for="meta-robots">Robots</label>
+                <select id="meta-robots" name="robots">
+                    <option value="" selected>Default (index, follow)</option>
+                    <option value="noindex">No Index</option>
+                    <option value="nofollow">No Follow</option>
+                    <option value="noindex, nofollow">No Index, No Follow</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="meta-canonical">Canonical URL</label>
+                <input type="url" id="meta-canonical" name="canonical_url" placeholder="https://...">
+            </div>
+
+            <h3 style="font-size: 1rem;">Display Settings</h3>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="table_of_contents"> Show Table of Contents
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="share"> Show Share Buttons
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="comments"> Enable Comments
+                </label>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMetaModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Image Upload Modal -->
@@ -467,6 +527,7 @@ document.body.addEventListener('htmx:afterSwap', updateSaveTimeDisplay);
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeImageModal();
+        closeMetaModal();
     }
 });
 
@@ -476,5 +537,276 @@ document.getElementById('image-modal').addEventListener('click', function(e) {
         closeImageModal();
     }
 });
+
+document.getElementById('meta-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeMetaModal();
+    }
+});
+
+// Meta Modal functions
+function openMetaModal() {
+    if (!contentId) {
+        alert('Please save the content first before editing meta settings.');
+        return;
+    }
+    document.getElementById('meta-content-id').value = contentId;
+    document.getElementById('meta-modal').classList.remove('hidden');
+}
+
+function closeMetaModal() {
+    document.getElementById('meta-modal').classList.add('hidden');
+}
+
+// Meta form submission
+document.getElementById('meta-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch('/ssg/update-meta', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            closeMetaModal();
+            // Show brief success feedback
+            const btn = document.querySelector('.toolbar-btn[onclick="openMetaModal()"]');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 1500);
+            }
+        } else {
+            alert('Failed to save meta settings. Please try again.');
+        }
+    } catch (err) {
+        alert('Error saving meta: ' + err.message);
+    }
+});
+
+// Proofread functionality
+let proofreadState = {
+    active: false,
+    originalText: '',
+    corrections: [],
+    selectedText: '',
+    correctedText: ''
+};
+
+async function proofreadText() {
+    const btn = document.getElementById('proofread-btn');
+
+    // Get selected text or entire body
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+    const textToProofread = selectedText || bodyTextarea.value;
+
+    if (!textToProofread) {
+        alert('No text to proofread');
+        return;
+    }
+
+    // Save state
+    proofreadState.originalText = bodyTextarea.value;
+    proofreadState.selectedText = selectedText;
+    proofreadState.active = true;
+
+    // Show loading state
+    btn.disabled = true;
+    btn.textContent = 'Proofreading...';
+    preview.innerHTML = '<div class="proofread-loading"><p>Proofreading text...</p></div>';
+
+    try {
+        const response = await fetch(`/ssg/proofread-content?site_id=${siteId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToProofread })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Proofread failed');
+        }
+
+        const result = await response.json();
+        proofreadState.corrections = result.corrections || [];
+
+        if (result.result.mode === 'none') {
+            showProofreadResult(null, 'No corrections needed.');
+        } else {
+            showProofreadResult(result.result.text, result.summary);
+        }
+    } catch (err) {
+        preview.innerHTML = `<div class="proofread-error"><p>Error: ${err.message}</p></div>`;
+        resetProofreadUI();
+    }
+}
+
+function showProofreadResult(correctedText, summary) {
+    const btn = document.getElementById('proofread-btn');
+    btn.disabled = false;
+    btn.textContent = 'Proofread';
+
+    if (!correctedText) {
+        preview.innerHTML = `
+            <div class="proofread-result no-changes">
+                <p>${escapeHtml(summary)}</p>
+                <div class="proofread-actions">
+                    <button type="button" class="btn-secondary" onclick="cancelProofread()">OK</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    proofreadState.correctedText = correctedText;
+
+    preview.innerHTML = `
+        <div class="proofread-result">
+            <div class="proofread-summary">${escapeHtml(summary)}</div>
+            <div class="proofread-text">${escapeHtml(correctedText)}</div>
+            <div class="proofread-actions">
+                <button type="button" class="btn-apply" onclick="applyProofread()">Apply</button>
+                <button type="button" class="btn-secondary" onclick="showCorrections()">Changes (${proofreadState.corrections.length})</button>
+                <button type="button" class="btn-secondary" onclick="cancelProofread()">Discard</button>
+            </div>
+        </div>
+    `;
+}
+
+function applyProofread() {
+    const correctedText = proofreadState.correctedText;
+
+    if (proofreadState.selectedText) {
+        // Replace only the selection
+        const start = bodyTextarea.value.indexOf(proofreadState.selectedText);
+        if (start !== -1) {
+            bodyTextarea.value = bodyTextarea.value.substring(0, start) + correctedText + bodyTextarea.value.substring(start + proofreadState.selectedText.length);
+        }
+    } else {
+        // Replace entire content
+        bodyTextarea.value = correctedText;
+    }
+
+    updatePreview();
+    resetProofreadState();
+}
+
+function cancelProofread() {
+    updatePreview();
+    resetProofreadState();
+}
+
+function resetProofreadState() {
+    proofreadState.active = false;
+    proofreadState.originalText = '';
+    proofreadState.selectedText = '';
+    proofreadState.corrections = [];
+    proofreadState.correctedText = '';
+}
+
+function resetProofreadUI() {
+    const btn = document.getElementById('proofread-btn');
+    btn.disabled = false;
+    btn.textContent = 'Proofread';
+}
+
+function showCorrections() {
+    const corrections = proofreadState.corrections;
+    if (!corrections.length) {
+        alert('No corrections to show');
+        return;
+    }
+
+    const grouped = {
+        grammar: corrections.filter(c => c.type === 'grammar'),
+        style: corrections.filter(c => c.type === 'style'),
+        echo: corrections.filter(c => c.type === 'echo'),
+        overuse: corrections.filter(c => c.type === 'overuse')
+    };
+
+    let html = `<div class="corrections-modal">
+        <div class="corrections-modal-content">
+            <div class="corrections-modal-header">
+                <h3>Corrections</h3>
+                <button type="button" class="corrections-modal-close" onclick="this.closest('.corrections-modal').remove()">&times;</button>
+            </div>
+            <div class="corrections-modal-body">`;
+
+    let correctionIndex = 0;
+    for (const [type, items] of Object.entries(grouped)) {
+        if (items.length === 0) continue;
+        html += `<div class="correction-group"><h4>${type.charAt(0).toUpperCase() + type.slice(1)} (${items.length})</h4>`;
+        for (const c of items) {
+            html += `<div class="correction-item" data-index="${correctionIndex}" data-original="${escapeHtml(c.original)}" data-replacement="${escapeHtml(c.replacement || '')}">`;
+            html += `<div class="correction-content">`;
+            if (c.replacement) {
+                html += `<div class="correction-change"><span class="correction-original">${escapeHtml(c.original)}</span><span class="correction-arrow"> → </span><span class="correction-replacement">${escapeHtml(c.replacement)}</span></div>`;
+            } else {
+                html += `<div class="correction-change"><span class="correction-original">${escapeHtml(c.original)}</span></div>`;
+            }
+            html += `<div class="correction-explanation">${escapeHtml(c.explanation)}</div>`;
+            html += `</div>`;
+            if (c.replacement) {
+                html += `<div class="correction-actions"><button type="button" class="correction-apply-btn" onclick="applySingleCorrection(this)">Apply</button></div>`;
+            }
+            html += `</div>`;
+            correctionIndex++;
+        }
+        html += '</div>';
+    }
+
+    html += '</div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    refreshCorrectionsState();
+}
+
+function applySingleCorrection(btn) {
+    const item = btn.closest('.correction-item');
+    const original = item.dataset.original;
+    const replacement = item.dataset.replacement;
+
+    const textarea = document.getElementById('body');
+    if (!textarea.value.includes(original)) {
+        alert('This correction is no longer applicable - text not found');
+        return;
+    }
+
+    textarea.value = textarea.value.replace(original, replacement);
+    item.classList.add('applied');
+    btn.disabled = true;
+    btn.textContent = 'Applied';
+
+    updatePreview();
+    refreshCorrectionsState();
+}
+
+function refreshCorrectionsState() {
+    const textarea = document.getElementById('body');
+    const text = textarea.value;
+
+    document.querySelectorAll('.correction-item:not(.applied)').forEach(item => {
+        const original = item.dataset.original;
+        const btn = item.querySelector('.correction-apply-btn');
+        if (!btn) return;
+
+        const isValid = text.includes(original);
+        item.classList.toggle('invalid', !isValid);
+        btn.disabled = !isValid;
+        if (!isValid && btn.textContent === 'Apply') {
+            btn.textContent = 'N/A';
+        }
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 </script>
 {{ end }}

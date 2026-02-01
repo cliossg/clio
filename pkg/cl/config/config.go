@@ -15,6 +15,7 @@ type Config struct {
 	Auth        AuthConfig        `yaml:"auth"`
 	SSG         SSGConfig         `yaml:"ssg"`
 	Credentials CredentialsConfig `yaml:"credentials"`
+	LLM         LLMConfig         `yaml:"llm"`
 }
 
 func (c *Config) IsDev() bool {
@@ -47,6 +48,13 @@ type CredentialsConfig struct {
 	Path string `yaml:"path"`
 }
 
+type LLMConfig struct {
+	Provider    string  `yaml:"provider"`    // "openai" (default)
+	APIKey      string  `yaml:"api_key"`
+	Model       string  `yaml:"model"`       // default: "gpt-4o"
+	Temperature float64 `yaml:"temperature"` // default: 0.3
+}
+
 func Load() *Config {
 	// Determine environment first
 	env := os.Getenv("CLIO_ENV")
@@ -74,6 +82,7 @@ func Load() *Config {
 		Log:      LogConfig{Level: "info"},
 		Auth:     AuthConfig{SessionTTL: "720h"}, // 30 days
 		SSG:      SSGConfig{SitesBasePath: sitesPath, PreviewAddr: ":3000"},
+		LLM:      LLMConfig{Provider: "openai", Model: "gpt-4o", Temperature: 0.3},
 	}
 
 	data, err := os.ReadFile("config.yaml")
@@ -102,6 +111,15 @@ func Load() *Config {
 	}
 	if v := os.Getenv("CLIO_SSG_PREVIEW_ADDR"); v != "" {
 		cfg.SSG.PreviewAddr = v
+	}
+	if v := os.Getenv("OPENAI_API_KEY"); v != "" && cfg.LLM.APIKey == "" {
+		cfg.LLM.APIKey = v
+	}
+	if v := os.Getenv("CLIO_LLM_API_KEY"); v != "" {
+		cfg.LLM.APIKey = v
+	}
+	if v := os.Getenv("CLIO_LLM_MODEL"); v != "" {
+		cfg.LLM.Model = v
 	}
 
 	return cfg

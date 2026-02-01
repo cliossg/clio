@@ -17,6 +17,7 @@ import (
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/git"
+	"github.com/cliossg/clio/pkg/cl/llm"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
 	"github.com/cliossg/clio/pkg/cl/render"
@@ -38,6 +39,7 @@ type Handler struct {
 	generator      *Generator
 	htmlGen        *HTMLGenerator
 	publisher      *Publisher
+	llmClient      *llm.Client
 	siteCtxMw      func(http.Handler) http.Handler
 	sessionMw      func(http.Handler) http.Handler
 	templatesFS    embed.FS
@@ -49,6 +51,7 @@ type Handler struct {
 func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
 	gitClient := git.NewClient(log)
+	llmClient := llm.NewClient(cfg.LLM.APIKey, cfg.LLM.Model, cfg.LLM.Temperature)
 	return &Handler{
 		service:        service,
 		profileService: profileService,
@@ -56,6 +59,7 @@ func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessi
 		generator:      NewGenerator(workspace),
 		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
 		publisher:      NewPublisher(workspace, gitClient),
+		llmClient:      llmClient,
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
 		templatesFS:    templatesFS,
@@ -212,6 +216,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Get("/ssg/edit-content", h.HandleEditContent)
 				r.Post("/ssg/update-content", h.HandleUpdateContent)
 				r.Post("/ssg/autosave-content", h.HandleAutosaveContent)
+				r.Post("/ssg/proofread-content", h.HandleProofreadContent)
 				r.Post("/ssg/delete-content", h.HandleDeleteContent)
 
 				// Tags
@@ -1335,6 +1340,42 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "text/html")
 	timestamp := time.Now().Unix()
 	w.Write([]byte(fmt.Sprintf(`<div id="save-status" class="save-status saved" data-saved-at="%d" data-content-id="%s"><span id="save-indicator" class="htmx-indicator">Saving...</span><span id="save-text">Saved just now</span></div>`, timestamp, content.ID.String())))
+}
+
+func (h *Handler) HandleProofreadContent(w http.ResponseWriter, r *http.Request) {
+	if !h.llmClient.IsConfigured() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "LLM API key not configured"})
+		return
+	}
+
+	var req llm.ProofreadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request"})
+		return
+	}
+
+	if req.Text == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Text is required"})
+		return
+	}
+
+	result, err := h.llmClient.Proofread(r.Context(), req.Text)
+	if err != nil {
+		h.log.Errorf("Proofread failed: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) HandleDeleteContent(w http.ResponseWriter, r *http.Request) {
