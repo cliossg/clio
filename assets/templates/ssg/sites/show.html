@@ -31,8 +31,8 @@
     </dl>
 
     <div class="site-nav">
-        <h3>Content Management</h3>
         <div class="nav-grid">
+            <h3>Content Management</h3>
             <a href="/ssg/list-contents?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Content</strong>
                 <span>Manage posts, pages, and articles</span>
@@ -57,11 +57,9 @@
                 <span>Import Markdown from ~/Documents/Clio</span>
             </a>
             {{ end }}
-        </div>
 
-        {{ if $isAdmin }}
-        <h3>Site Configuration</h3>
-        <div class="nav-grid">
+            {{ if $isAdmin }}
+            <h3>Site Configuration</h3>
             <a href="/ssg/list-layouts?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Layouts</strong>
                 <span>Content display templates</span>
@@ -70,12 +68,11 @@
                 <strong>Settings</strong>
                 <span>Site settings and configuration</span>
             </a>
-        </div>
-        {{ end }}
+            {{ end }}
 
-        {{ if $canEdit }}
-        <h3>Markdown & Generation</h3>
-        <div class="nav-grid">
+            {{ if $canEdit }}
+            <h3 class="span-2">Markdown</h3>
+            <h3 class="col-3">Generation</h3>
             <form method="POST" action="/ssg/backup-markdown" class="nav-card-form">
                 <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
@@ -98,8 +95,8 @@
                     <span>Deploy to Git repository</span>
                 </button>
             </form>
+            {{ end }}
         </div>
-        {{ end }}
     </div>
 
 </div>

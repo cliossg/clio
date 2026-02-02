@@ -562,8 +562,25 @@ h1, h2, h3 {
 
 .nav-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 1rem;
+}
+
+.nav-grid h3 {
+    grid-column: 1 / -1;
+    margin: 1.5rem 0 0 0;
+}
+
+.nav-grid h3:first-child {
+    margin-top: 0;
+}
+
+.nav-grid h3.span-2 {
+    grid-column: 1 / span 2;
+}
+
+.nav-grid h3.col-3 {
+    grid-column: 3 / -1;
 }
 
 .nav-card {

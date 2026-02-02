@@ -452,7 +452,7 @@ document.getElementById('image-upload-form').addEventListener('submit', async (e
 
         if (response.ok) {
             closeImageModal();
-            window.location.reload();
+            window.location.href = `/ssg/edit-content?id=${contentId}&site_id=${siteId}`;
         } else {
             alert('Upload failed. Please try again.');
         }
