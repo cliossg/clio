@@ -8,6 +8,11 @@ Clio is a static site generator with a web-based content management interface. W
 
 - [**Import**](import/index.md): Bring Markdown files from your computer into Clio
 - [**Proofread**](proofread/index.md): AI-powered grammar, style, and clarity checking
+- [**Embeds**](embeds/index.md): Include YouTube, Vimeo, TikTok, and SoundCloud content
+
+### Site Management
+
+- [**Backup and Restore**](backup/index.md): Export your site and restore it on another instance
 
 ### Coming Soon
 

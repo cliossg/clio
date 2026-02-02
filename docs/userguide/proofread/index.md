@@ -54,6 +54,19 @@ Click **Changes** to see every correction grouped by type:
 
 Each correction shows the original text, the replacement, and an explanation of why it was changed.
 
+### Applying Corrections Selectively
+
+You don't have to accept all corrections at once. In the Changes view:
+
+1. Review each correction individually
+2. Click **Apply** next to the corrections you want to keep
+3. Skip the ones you disagree with
+4. Close the modal when done
+
+Each correction is applied immediately to your text. Corrections that are no longer applicable (because the text was already changed) are marked as "N/A" and disabled.
+
+This gives you full control: accept the grammar fixes but keep your stylistic choices, or vice versa.
+
 ## Proofreading a Selection
 
 You can proofread just part of your content:
@@ -80,8 +93,9 @@ This is useful for revising a specific paragraph without reprocessing the entire
 1. Click **Proofread**
 2. Click **Changes** to see the full list
 3. Read through each correction and its explanation
-4. Decide whether to **Apply** or **Discard**
-5. If you discard, manually apply the corrections you agree with
+4. Click **Apply** next to corrections you agree with
+5. Skip corrections you want to keep as-is
+6. Close the modal when done
 
 ### Iterative polishing
 
