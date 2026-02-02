@@ -1,5 +1,6 @@
 {{ define "content" }}
 <div class="card">
+    <div id="flash-container"></div>
     <p class="breadcrumb"><a href="/ssg/list-contents?site_id={{ .Site.ID }}">← Content</a></p>
     <div class="card-header">
         <h1>Edit Content</h1>
@@ -65,6 +66,7 @@
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')" title="Code">&lt;/&gt;</button>
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')" title="Link">Link</button>
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">Img</button>
+                    <button type="button" class="toolbar-btn" onclick="openEmbedModal()" title="Embed video/audio">Embed</button>
                 </div>
                 <div class="editor-toolbar-group">
                     <button type="button" class="toolbar-btn" id="proofread-btn" onclick="proofreadText()" title="Proofread text">Proofread</button>
@@ -187,9 +189,11 @@
         <div class="form-actions">
             <button type="button" class="btn btn-primary"
                     hx-post="/ssg/autosave-content"
+                    hx-trigger="click"
                     hx-include="#content-form"
                     hx-target="#save-status"
-                    hx-swap="outerHTML">Save</button>
+                    hx-swap="outerHTML"
+                    hx-indicator="#save-indicator">Save</button>
         </div>
     </form>
 </div>
@@ -302,6 +306,45 @@
     </div>
 </div>
 
+<!-- Embed Modal -->
+<div id="embed-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 28rem;">
+        <div class="modal-header">
+            <h2>Insert Embed</h2>
+            <button type="button" class="modal-close" onclick="closeEmbedModal()">&times;</button>
+        </div>
+        <form id="embed-form" onsubmit="insertEmbed(event)">
+            <div class="form-group">
+                <label for="embed-provider">Provider</label>
+                <select id="embed-provider" name="provider" required>
+                    <option value="youtube">YouTube</option>
+                    <option value="vimeo">Vimeo</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="soundcloud">SoundCloud</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="embed-id">Video/Track ID</label>
+                <input type="text" id="embed-id" name="id" placeholder="dQw4w9WgXcQ" required>
+                <small id="embed-help" class="form-help">The ID from the URL (e.g., youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>)</small>
+            </div>
+            <div class="form-group">
+                <label for="embed-ratio">Aspect Ratio</label>
+                <select id="embed-ratio" name="ratio">
+                    <option value="16:9">16:9 (standard video)</option>
+                    <option value="4:3">4:3 (older format)</option>
+                    <option value="1:1">1:1 (square)</option>
+                    <option value="9:16">9:16 (vertical/TikTok)</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEmbedModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Insert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="/static/js/vendor/htmx.min.js"></script>
 <script src="/static/js/vendor/marked.min.js"></script>
 <script src="/static/js/vendor/tagify.min.js"></script>
@@ -319,7 +362,36 @@ const splitter = document.getElementById('splitter');
 const previewPane = document.querySelector('.editor-pane-preview');
 const floatingButtons = document.getElementById('floating-buttons');
 
-// Initialize marked
+// Initialize marked with embed extension
+const embedRenderer = {
+    code(code, language) {
+        if (language === 'embed') {
+            const config = parseEmbedYAML(code);
+            if (config.provider && config.id) {
+                return `<div class="embed-placeholder">
+                    <span class="embed-icon">▶</span>
+                    <span class="embed-label">${escapeHtml(config.provider)}: ${escapeHtml(config.id)}</span>
+                </div>`;
+            }
+        }
+        return false; // Fallback to default
+    }
+};
+
+function parseEmbedYAML(code) {
+    const config = {};
+    code.split('\n').forEach(line => {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+            const key = line.substring(0, colonIndex).trim();
+            const value = line.substring(colonIndex + 1).trim();
+            config[key] = value;
+        }
+    });
+    return config;
+}
+
+marked.use({ renderer: embedRenderer });
 marked.setOptions({
     breaks: true,
     gfm: true
@@ -538,6 +610,67 @@ function closeMetaModal() {
     document.getElementById('meta-modal').classList.add('hidden');
 }
 
+// Embed Modal functions
+function openEmbedModal() {
+    document.getElementById('embed-modal').classList.remove('hidden');
+    document.getElementById('embed-id').focus();
+}
+
+function closeEmbedModal() {
+    document.getElementById('embed-modal').classList.add('hidden');
+    document.getElementById('embed-form').reset();
+}
+
+function insertEmbed(e) {
+    e.preventDefault();
+    const provider = document.getElementById('embed-provider').value;
+    const id = document.getElementById('embed-id').value.trim();
+    const ratio = document.getElementById('embed-ratio').value;
+
+    if (!id) return;
+
+    const embedBlock = '```embed\nprovider: ' + provider + '\nid: ' + id + '\nratio: ' + ratio + '\n```';
+
+    const start = bodyTextarea.selectionStart;
+    const text = bodyTextarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(start);
+
+    const needsNewlineBefore = before.length > 0 && !before.endsWith('\n\n');
+    const needsNewlineAfter = after.length > 0 && !after.startsWith('\n');
+
+    const insert = (needsNewlineBefore ? '\n\n' : '') + embedBlock + (needsNewlineAfter ? '\n\n' : '');
+
+    bodyTextarea.value = before + insert + after;
+    bodyTextarea.focus();
+    bodyTextarea.selectionStart = bodyTextarea.selectionEnd = start + insert.length;
+
+    updatePreview();
+    closeEmbedModal();
+}
+
+// Update embed help text based on provider
+document.getElementById('embed-provider').addEventListener('change', function() {
+    const help = document.getElementById('embed-help');
+    const idInput = document.getElementById('embed-id');
+    const examples = {
+        youtube: { text: 'youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>', placeholder: 'dQw4w9WgXcQ' },
+        vimeo: { text: 'vimeo.com/<strong>123456789</strong>', placeholder: '123456789' },
+        tiktok: { text: 'tiktok.com/@user/video/<strong>7234567890123456789</strong>', placeholder: '7234567890123456789' },
+        soundcloud: { text: 'Paste the full URL or path: <strong>artist/track-name</strong>', placeholder: 'https://soundcloud.com/artist/track' }
+    };
+    const example = examples[this.value];
+    help.innerHTML = example.text;
+    idInput.placeholder = example.placeholder;
+
+    // Auto-select 9:16 for TikTok
+    if (this.value === 'tiktok') {
+        document.getElementById('embed-ratio').value = '9:16';
+    } else if (document.getElementById('embed-ratio').value === '9:16') {
+        document.getElementById('embed-ratio').value = '16:9';
+    }
+});
+
 // Meta form submission
 document.getElementById('meta-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -572,6 +705,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeMetaModal();
         closeImageModal();
+        closeEmbedModal();
     }
 });
 
@@ -579,6 +713,12 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('meta-modal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeMetaModal();
+    }
+});
+
+document.getElementById('embed-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEmbedModal();
     }
 });
 
@@ -634,12 +774,35 @@ document.getElementById('meta-modal').addEventListener('click', function(e) {
             if (status && status.dataset.savedAt) {
                 lastSavedAt = parseInt(status.dataset.savedAt);
             }
+            // Show "Saved!" feedback on manual save button click
+            const triggerElt = e.detail.requestConfig && e.detail.requestConfig.elt;
+            if (triggerElt && triggerElt.tagName === 'BUTTON' && triggerElt.closest('.form-actions')) {
+                const btn = triggerElt;
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 1500);
+            }
         }
+    });
+
+    // Handle HTMX errors
+    document.body.addEventListener('htmx:responseError', function(e) {
+        showFlash('error', 'Failed to save: ' + (e.detail.xhr.statusText || 'Unknown error'));
     });
 
     // Update display every second
     setInterval(updateSaveTime, 1000);
 })();
+
+// Flash message helper
+function showFlash(type, message) {
+    const container = document.getElementById('flash-container');
+    const flash = document.createElement('div');
+    flash.className = 'flash flash-' + type;
+    flash.innerHTML = '<span>' + escapeHtml(message) + '</span><button type="button" onclick="this.parentElement.remove()">&times;</button>';
+    container.appendChild(flash);
+    setTimeout(() => flash.remove(), 5000);
+}
 
 // Proofread functionality
 let proofreadState = {

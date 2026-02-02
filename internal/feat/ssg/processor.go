@@ -82,6 +82,9 @@ func (p *Processor) ProcessContent(content *Content) (string, error) {
 	// Post-process images with captions (using |||long description syntax)
 	html = p.enhanceImages(html, imagesMeta)
 
+	// Process embed code blocks
+	html = processEmbeds(html)
+
 	return html, nil
 }
 
