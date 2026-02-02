@@ -24,12 +24,10 @@ AI-powered writing assistant that checks grammar, style, repetitions, and overus
 
 | | |
 |:---:|:---:|
-| ![Proofreading](proofreading.png) | ![Processing text](proofreading-processing.png) |
-| Proofreading | Processing text |
-| ![Results with summary](proofreading-result.png) | ![Suggested changes](proofreading-changes.png) |
-| Results with summary | Suggested changes |
-| ![Changes applied](proofreading-applied.png) | |
-| Changes applied | |
+| ![Processing text](proofread-processing.png) | ![Results with summary](proofread-result.png) |
+| Processing text | Results with summary |
+| ![Suggested changes](proofread-changes.png) | ![Changes applied](proofread-done.png) |
+| Suggested changes | Changes applied |
 
 ## Sections & Layouts
 
