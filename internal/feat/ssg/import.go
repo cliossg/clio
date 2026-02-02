@@ -211,6 +211,8 @@ func parseFrontmatter(content string) (map[string]string, string) {
 					frontmatter[k] = fmt.Sprintf("%d", val)
 				case float64:
 					frontmatter[k] = fmt.Sprintf("%v", val)
+				case time.Time:
+					frontmatter[k] = val.Format(time.RFC3339)
 				}
 			}
 		}

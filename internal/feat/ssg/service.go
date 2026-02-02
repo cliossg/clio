@@ -2015,6 +2015,7 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 
 	if len(file.Frontmatter) > 0 {
 		fm := ParseImportFrontmatter(file.Frontmatter)
+		typedFM, _, _ = ParseTypedFrontmatter("---\n" + joinFrontmatter(file.Frontmatter) + "\n---\n")
 
 		if sectionPath, ok := file.Frontmatter["section"]; ok && sectionPath != "" {
 			if section, err := s.GetSectionByPath(ctx, siteID, sectionPath); err == nil {
@@ -2026,6 +2027,15 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 		content.UserID = userID
 		content.CreatedBy = userID
 		content.UpdatedBy = userID
+
+		if typedFM != nil {
+			if typedFM.CreatedAt != nil {
+				content.CreatedAt = *typedFM.CreatedAt
+			}
+			if typedFM.PublishedAt != nil {
+				content.PublishedAt = typedFM.PublishedAt
+			}
+		}
 
 		if fm.ShortID != "" {
 			content.ShortID = fm.ShortID
@@ -2056,8 +2066,6 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 		if err := s.CreateContent(ctx, content); err != nil {
 			return nil, nil, fmt.Errorf("cannot create content: %w", err)
 		}
-
-		typedFM, _, _ = ParseTypedFrontmatter("---\n" + joinFrontmatter(file.Frontmatter) + "\n---\n")
 		if typedFM != nil && len(typedFM.Tags) > 0 {
 			for _, tagName := range typedFM.Tags {
 				_ = s.AddTagToContent(ctx, content.ID, tagName, siteID)
@@ -2145,6 +2153,9 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 func joinFrontmatter(fm map[string]string) string {
 	var lines []string
 	for k, v := range fm {
+		if strings.ContainsAny(v, ":\"'#[]{}") || strings.HasPrefix(v, " ") || strings.HasSuffix(v, " ") {
+			v = "'" + strings.ReplaceAll(v, "'", "''") + "'"
+		}
 		lines = append(lines, k+": "+v)
 	}
 	return strings.Join(lines, "\n")
