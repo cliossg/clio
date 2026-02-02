@@ -37,16 +37,16 @@ title: My Video Title
 
 ### Required fields
 
-| Field | Description |
-|-------|-------------|
+| Field      | Description                                                 |
+| ---------- | ----------------------------------------------------------- |
 | `provider` | The platform: `youtube`, `vimeo`, `tiktok`, or `soundcloud` |
-| `id` | The video or track ID from the platform |
+| `id`       | The video or track ID from the platform                     |
 
 ### Optional fields
 
-| Field | Description | Default |
-|-------|-------------|---------|
-| `ratio` | Aspect ratio | `16:9` |
+| Field   | Description         | Default                 |
+| ------- | ------------------- | ----------------------- |
+| `ratio` | Aspect ratio        | `16:9`                  |
 | `title` | Accessibility title | Platform name + "video" |
 
 ## Supported Providers
@@ -100,12 +100,12 @@ For SoundCloud, paste the full URL or just the path:
 
 Choose the ratio that matches your content:
 
-| Ratio | Use case | Padding |
-|-------|----------|---------|
-| `16:9` | Standard video (YouTube, Vimeo) | 56.25% |
-| `4:3` | Older video formats | 75% |
-| `1:1` | Square video | 100% |
-| `9:16` | Vertical video (TikTok, Reels) | 177.78% |
+| Ratio  | Use case                        | Padding |
+| ------ | ------------------------------- | ------- |
+| `16:9` | Standard video (YouTube, Vimeo) | 56.25%  |
+| `4:3`  | Older video formats             | 75%     |
+| `1:1`  | Square video                    | 100%    |
+| `9:16` | Vertical video (TikTok, Reels)  | 177.78% |
 
 The default is `16:9`, which works for most videos.
 
@@ -127,8 +127,8 @@ While editing in Clio, embeds appear as placeholders showing the provider and ID
 
 ```
 ┌─────────────────────────────┐
-│            ▶               │
-│     youtube: dQw4w9WgXcQ   │
+│            ▶                │
+│     youtube: dQw4w9WgXcQ    │
 └─────────────────────────────┘
 ```
 
