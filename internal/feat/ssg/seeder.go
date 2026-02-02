@@ -12,7 +12,7 @@ import (
 )
 
 type SeederProfileService interface {
-	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
 type Seeder struct {
@@ -131,7 +131,7 @@ func (s *Seeder) seedContributors(ctx context.Context, siteID uuid.UUID) error {
 			return fmt.Errorf("cannot marshal social links for %s: %w", c.handle, err)
 		}
 
-		p, err := s.profileService.CreateProfile(ctx, c.handle, c.name, c.surname, c.bio, string(socialLinksJSON), "", "")
+		p, err := s.profileService.CreateProfile(ctx, siteID, c.handle, c.name, c.surname, c.bio, string(socialLinksJSON), "", "")
 		if err != nil {
 			return fmt.Errorf("cannot create profile for %s: %w", c.handle, err)
 		}

@@ -11,13 +11,14 @@ import (
 )
 
 const createProfile = `-- name: CreateProfile :one
-INSERT INTO profile (id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at
+INSERT INTO profile (id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at
 `
 
 type CreateProfileParams struct {
 	ID          string    `json:"id"`
+	SiteID      string    `json:"site_id"`
 	ShortID     string    `json:"short_id"`
 	Slug        string    `json:"slug"`
 	Name        string    `json:"name"`
@@ -34,6 +35,7 @@ type CreateProfileParams struct {
 func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error) {
 	row := q.db.QueryRowContext(ctx, createProfile,
 		arg.ID,
+		arg.SiteID,
 		arg.ShortID,
 		arg.Slug,
 		arg.Name,
@@ -49,6 +51,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 	var i Profile
 	err := row.Scan(
 		&i.ID,
+		&i.SiteID,
 		&i.ShortID,
 		&i.Slug,
 		&i.Name,
@@ -74,7 +77,7 @@ func (q *Queries) DeleteProfile(ctx context.Context, id string) error {
 }
 
 const getProfile = `-- name: GetProfile :one
-SELECT id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile WHERE id = ?
+SELECT id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile WHERE id = ?
 `
 
 func (q *Queries) GetProfile(ctx context.Context, id string) (Profile, error) {
@@ -82,6 +85,7 @@ func (q *Queries) GetProfile(ctx context.Context, id string) (Profile, error) {
 	var i Profile
 	err := row.Scan(
 		&i.ID,
+		&i.SiteID,
 		&i.ShortID,
 		&i.Slug,
 		&i.Name,
@@ -98,14 +102,20 @@ func (q *Queries) GetProfile(ctx context.Context, id string) (Profile, error) {
 }
 
 const getProfileBySlug = `-- name: GetProfileBySlug :one
-SELECT id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile WHERE slug = ?
+SELECT id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile WHERE site_id = ? AND slug = ?
 `
 
-func (q *Queries) GetProfileBySlug(ctx context.Context, slug string) (Profile, error) {
-	row := q.db.QueryRowContext(ctx, getProfileBySlug, slug)
+type GetProfileBySlugParams struct {
+	SiteID string `json:"site_id"`
+	Slug   string `json:"slug"`
+}
+
+func (q *Queries) GetProfileBySlug(ctx context.Context, arg GetProfileBySlugParams) (Profile, error) {
+	row := q.db.QueryRowContext(ctx, getProfileBySlug, arg.SiteID, arg.Slug)
 	var i Profile
 	err := row.Scan(
 		&i.ID,
+		&i.SiteID,
 		&i.ShortID,
 		&i.Slug,
 		&i.Name,
@@ -122,11 +132,11 @@ func (q *Queries) GetProfileBySlug(ctx context.Context, slug string) (Profile, e
 }
 
 const listProfiles = `-- name: ListProfiles :many
-SELECT id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile ORDER BY name ASC
+SELECT id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at FROM profile WHERE site_id = ? ORDER BY name ASC
 `
 
-func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
-	rows, err := q.db.QueryContext(ctx, listProfiles)
+func (q *Queries) ListProfiles(ctx context.Context, siteID string) ([]Profile, error) {
+	rows, err := q.db.QueryContext(ctx, listProfiles, siteID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +146,7 @@ func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
 		var i Profile
 		if err := rows.Scan(
 			&i.ID,
+			&i.SiteID,
 			&i.ShortID,
 			&i.Slug,
 			&i.Name,
@@ -172,7 +183,7 @@ UPDATE profile SET
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at
 `
 
 type UpdateProfileParams struct {
@@ -202,6 +213,7 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 	var i Profile
 	err := row.Scan(
 		&i.ID,
+		&i.SiteID,
 		&i.ShortID,
 		&i.Slug,
 		&i.Name,

@@ -20,7 +20,7 @@ import (
 )
 
 type ProfileService interface {
-	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
 // Handler handles authentication routes.
@@ -560,7 +560,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if slug == "" {
 		slug = normalizeSlug(strings.Split(email, "@")[0])
 	}
-	userProfile, err := h.profileService.CreateProfile(r.Context(), slug, name, "", "", "[]", "", user.ID.String())
+	userProfile, err := h.profileService.CreateProfile(r.Context(), uuid.Nil, slug, name, "", "", "[]", "", user.ID.String())
 	if err != nil {
 		h.log.Errorf("Cannot create profile for user: %v", err)
 	} else {

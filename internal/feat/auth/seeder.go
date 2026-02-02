@@ -11,10 +11,11 @@ import (
 
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/logger"
+	"github.com/google/uuid"
 )
 
 type SeederProfileService interface {
-	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
 // Seeder handles seeding auth-related data.
@@ -66,7 +67,7 @@ func (s *Seeder) Start(ctx context.Context) error {
 	slug := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
 	bio := "Site administrator and content curator."
 	socialLinks := `[{"Platform":"GitHub","URL":"https://github.com/admin"},{"Platform":"X","URL":"https://x.com/admin"}]`
-	userProfile, err := s.profileService.CreateProfile(ctx, slug, "Site", "Admin", bio, socialLinks, "", user.ID.String())
+	userProfile, err := s.profileService.CreateProfile(ctx, uuid.Nil, slug, "Site", "Admin", bio, socialLinks, "", user.ID.String())
 	if err != nil {
 		s.log.Errorf("Cannot create profile for admin user: %v", err)
 	} else {

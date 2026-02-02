@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -227,6 +228,33 @@ func parseFrontmatter(content string) (map[string]string, string) {
 // extractFirstH1 extracts the first H1 heading from markdown content.
 var h1Regex = regexp.MustCompile(`(?m)^#\s+(.+)$`)
 
+var markdownImageRegex = regexp.MustCompile(`!\[.*?\]\((/images/[^)]+)\)`)
+var htmlImageRegex = regexp.MustCompile(`<img[^>]+src=["'](/images/[^"']+)["']`)
+
+func ExtractImagePaths(body string) []string {
+	pathMap := make(map[string]bool)
+
+	for _, match := range markdownImageRegex.FindAllStringSubmatch(body, -1) {
+		if len(match) > 1 {
+			path := strings.TrimPrefix(match[1], "/images/")
+			pathMap[path] = true
+		}
+	}
+
+	for _, match := range htmlImageRegex.FindAllStringSubmatch(body, -1) {
+		if len(match) > 1 {
+			path := strings.TrimPrefix(match[1], "/images/")
+			pathMap[path] = true
+		}
+	}
+
+	var paths []string
+	for path := range pathMap {
+		paths = append(paths, path)
+	}
+	return paths
+}
+
 func extractFirstH1(content string) string {
 	matches := h1Regex.FindStringSubmatch(content)
 	if len(matches) > 1 {
@@ -265,6 +293,9 @@ func ParseImportFrontmatter(fm map[string]string) *ContentFrontmatter {
 	}
 	if v, ok := fm["slug"]; ok {
 		cf.Slug = v
+	}
+	if v, ok := fm["short-id"]; ok {
+		cf.ShortID = v
 	}
 	if v, ok := fm["author"]; ok {
 		cf.Author = v
@@ -334,4 +365,135 @@ func GetImportPath(basePath, siteSlug string) string {
 		basePath = DefaultImportBasePath
 	}
 	return filepath.Join(basePath, "Clio", siteSlug)
+}
+
+// ImportFrontmatter represents typed frontmatter that preserves arrays.
+type ImportFrontmatter struct {
+	Title           string     `yaml:"title"`
+	Slug            string     `yaml:"slug"`
+	ShortID         string     `yaml:"short-id"`
+	Section         string     `yaml:"section"`
+	Author          string     `yaml:"author"`
+	Contributor     string     `yaml:"contributor"`
+	Tags            []string   `yaml:"tags"`
+	Layout          string     `yaml:"layout"`
+	Draft           bool       `yaml:"draft"`
+	Featured        bool       `yaml:"featured"`
+	Summary         string     `yaml:"summary"`
+	Description     string     `yaml:"description"`
+	Image           string     `yaml:"image"`
+	SocialImage     string     `yaml:"social-image"`
+	PublishedAt     *time.Time `yaml:"published-at"`
+	CreatedAt       *time.Time `yaml:"created-at"`
+	UpdatedAt       *time.Time `yaml:"updated-at"`
+	Robots          string     `yaml:"robots"`
+	Keywords        string     `yaml:"keywords"`
+	CanonicalURL    string     `yaml:"canonical-url"`
+	Sitemap         string     `yaml:"sitemap"`
+	TableOfContents bool       `yaml:"table-of-contents"`
+	Comments        bool       `yaml:"comments"`
+	Share           bool       `yaml:"share"`
+	Kind            string     `yaml:"kind"`
+	Series          string     `yaml:"series"`
+	SeriesOrder     int        `yaml:"series-order"`
+}
+
+// ParseTypedFrontmatter extracts typed YAML frontmatter from markdown content.
+func ParseTypedFrontmatter(content string) (*ImportFrontmatter, string, error) {
+	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
+		return nil, content, nil
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	var fmLines []string
+	inFrontmatter := false
+	lineNum := 0
+	bodyStart := 0
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineNum++
+
+		if lineNum == 1 && strings.TrimSpace(line) == "---" {
+			inFrontmatter = true
+			bodyStart = len(line) + 1
+			continue
+		}
+
+		if inFrontmatter {
+			if strings.TrimSpace(line) == "---" {
+				inFrontmatter = false
+				bodyStart += len(line) + 1
+				break
+			}
+			fmLines = append(fmLines, line)
+			bodyStart += len(line) + 1
+		}
+	}
+
+	if inFrontmatter {
+		return nil, content, nil
+	}
+
+	fm := &ImportFrontmatter{}
+	if len(fmLines) > 0 {
+		fmContent := strings.Join(fmLines, "\n")
+		if err := yaml.Unmarshal([]byte(fmContent), fm); err != nil {
+			return nil, content, err
+		}
+	}
+
+	body := ""
+	if bodyStart < len(content) {
+		body = strings.TrimLeft(content[bodyStart:], "\n\r")
+	}
+
+	return fm, body, nil
+}
+
+// ImportType represents the type of import based on available metadata.
+type ImportType string
+
+const (
+	ImportTypeRich  ImportType = "rich"
+	ImportTypeBasic ImportType = "basic"
+	ImportTypePoor  ImportType = "poor"
+)
+
+// DetectImportType determines the import type based on directory structure.
+func DetectImportType(importPath string) ImportType {
+	metaPath := filepath.Join(importPath, "meta")
+	if info, err := os.Stat(metaPath); err == nil && info.IsDir() {
+		return ImportTypeRich
+	}
+
+	contentPath := filepath.Join(importPath, "content")
+	if info, err := os.Stat(contentPath); err == nil && info.IsDir() {
+		return ImportTypeRich
+	}
+
+	return ImportTypePoor
+}
+
+// DetectImportTypeFromFiles determines import type by checking frontmatter in files.
+func DetectImportTypeFromFiles(files []ImportFile) ImportType {
+	for _, file := range files {
+		if section, ok := file.Frontmatter["section"]; ok && section != "" {
+			return ImportTypeBasic
+		}
+	}
+	return ImportTypePoor
+}
+
+// ImportPresumptions provides defaults for poor imports.
+type ImportPresumptions struct {
+	DefaultSectionID uuid.UUID
+	DirectoryMapping map[string]uuid.UUID
+}
+
+// NewImportPresumptions creates default presumptions.
+func NewImportPresumptions() *ImportPresumptions {
+	return &ImportPresumptions{
+		DirectoryMapping: make(map[string]uuid.UUID),
+	}
 }

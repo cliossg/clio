@@ -236,6 +236,57 @@ func (q *Queries) DeleteSectionImage(ctx context.Context, id string) error {
 	return err
 }
 
+const getAllContentImagesBySiteID = `-- name: GetAllContentImagesBySiteID :many
+SELECT
+    c.short_id as content_short_id,
+    i.file_path as image_path,
+    ci.is_header,
+    ci.is_featured,
+    ci.order_num
+FROM content_images ci
+JOIN content c ON ci.content_id = c.id
+JOIN image i ON ci.image_id = i.id
+WHERE c.site_id = ?
+ORDER BY c.short_id, ci.order_num
+`
+
+type GetAllContentImagesBySiteIDRow struct {
+	ContentShortID sql.NullString `json:"content_short_id"`
+	ImagePath      string         `json:"image_path"`
+	IsHeader       sql.NullInt64  `json:"is_header"`
+	IsFeatured     sql.NullInt64  `json:"is_featured"`
+	OrderNum       sql.NullInt64  `json:"order_num"`
+}
+
+func (q *Queries) GetAllContentImagesBySiteID(ctx context.Context, siteID string) ([]GetAllContentImagesBySiteIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllContentImagesBySiteID, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllContentImagesBySiteIDRow
+	for rows.Next() {
+		var i GetAllContentImagesBySiteIDRow
+		if err := rows.Scan(
+			&i.ContentShortID,
+			&i.ImagePath,
+			&i.IsHeader,
+			&i.IsFeatured,
+			&i.OrderNum,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getContentImageWithDetails = `-- name: GetContentImageWithDetails :one
 SELECT
     ci.id as content_image_id,

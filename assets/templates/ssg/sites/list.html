@@ -23,6 +23,10 @@
                 {{ if $isAdmin }}
                 <td>
                     <a href="/ssg/edit-site?id={{ .ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
+                    <form method="POST" action="/ssg/delete-site" style="display:inline;" onclick="event.stopPropagation()" onsubmit="if(confirm('Delete site {{ .Name }}? Only database records will be removed. You must delete the filesystem manually.')){if(localStorage.getItem('currentSiteId')==='{{ .ID }}')localStorage.removeItem('currentSiteId');return true;}return false;">
+                        <input type="hidden" name="id" value="{{ .ID }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
                 </td>
                 {{ end }}
             </tr>
@@ -30,4 +34,14 @@
         </tbody>
     </table>
 </div>
+<script>
+(function() {
+    var storedId = localStorage.getItem('currentSiteId');
+    if (!storedId) return;
+    var validIds = [{{ range .Sites }}'{{ .ID }}',{{ end }}];
+    if (validIds.indexOf(storedId) === -1) {
+        localStorage.removeItem('currentSiteId');
+    }
+})();
+</script>
 {{ end }}

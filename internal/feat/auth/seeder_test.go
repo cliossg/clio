@@ -13,17 +13,18 @@ import (
 )
 
 type mockProfileService struct {
-	createProfileFunc func(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	createProfileFunc func(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
-func (m *mockProfileService) CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
+func (m *mockProfileService) CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
 	if m.createProfileFunc != nil {
-		return m.createProfileFunc(ctx, slug, name, surname, bio, socialLinks, photoPath, createdBy)
+		return m.createProfileFunc(ctx, siteID, slug, name, surname, bio, socialLinks, photoPath, createdBy)
 	}
 	return &profile.Profile{
-		ID:   uuid.New(),
-		Slug: slug,
-		Name: name,
+		ID:     uuid.New(),
+		SiteID: siteID,
+		Slug:   slug,
+		Name:   name,
 	}, nil
 }
 
@@ -213,9 +214,8 @@ func TestSeederStartWithProfileError(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Mock profile service that returns an error
 	mockProfile := &mockProfileService{
-		createProfileFunc: func(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
+		createProfileFunc: func(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
 			return nil, os.ErrPermission
 		},
 	}

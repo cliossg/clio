@@ -1,0 +1,53 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">{{ .Site.Name }}</a></p>
+    <div class="card-header">
+        <h1>Restore</h1>
+        <span class="text-muted">Rehydrate site from a backup directory</span>
+    </div>
+
+    <form method="POST" action="/ssg/restore-markdown?site_id={{ .Site.ID }}">
+        <div class="form-group">
+            <label for="restore_path">Backup Directory</label>
+            <input type="text" name="restore_path" id="restore_path" value="{{ .RestorePath }}" placeholder="~/path/to/backup or /absolute/path" required>
+            <small class="form-help">Path to a backup directory containing <code>content/</code>, <code>meta/</code>, and <code>images/</code></small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Restore</button>
+            <a href="/ssg/get-site?id={{ .Site.ID }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div class="restore-info">
+        <h3>What gets restored</h3>
+        <ul>
+            <li><strong>Sections</strong> from <code>meta/sections.yml</code></li>
+            <li><strong>Contributors</strong> from <code>meta/contributors.yml</code></li>
+            <li><strong>Tags</strong> from <code>meta/tags.yml</code></li>
+            <li><strong>Images</strong> from <code>images/</code> with metadata from <code>meta/images.yml</code></li>
+            <li><strong>Content</strong> from <code>content/*.md</code> files</li>
+        </ul>
+        <p class="text-muted">Existing entities are not duplicated. Only new items are created.</p>
+    </div>
+</div>
+
+<style>
+.restore-info {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color, #ddd);
+}
+.restore-info h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+.restore-info ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+.restore-info li {
+    margin-bottom: 0.25rem;
+}
+</style>
+{{ end }}

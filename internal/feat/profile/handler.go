@@ -182,7 +182,7 @@ func (h *Handler) HandleCreateProfile(w http.ResponseWriter, r *http.Request) {
 	bio := strings.TrimSpace(r.FormValue("bio"))
 	socialLinks := buildSocialLinksJSON(r)
 
-	profile, err := h.service.CreateProfile(ctx, slug, name, surname, bio, socialLinks, "", userID.String())
+	profile, err := h.service.CreateProfile(ctx, uuid.Nil, slug, name, surname, bio, socialLinks, "", userID.String())
 	if err != nil {
 		h.log.Errorf("Cannot create profile: %v", err)
 		roles := middleware.GetUserRoles(ctx)
@@ -363,7 +363,12 @@ func (h *Handler) HandleServePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename = filepath.Base(filename)
+	filename = filepath.Clean(filename)
+	if strings.Contains(filename, "..") {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
 	filePath := filepath.Join(profilesBasePath, filename)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {

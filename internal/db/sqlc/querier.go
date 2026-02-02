@@ -50,6 +50,7 @@ type Querier interface {
 	DeleteTag(ctx context.Context, id string) error
 	DeleteUser(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID string) error
+	GetAllContentImagesBySiteID(ctx context.Context, siteID string) ([]GetAllContentImagesBySiteIDRow, error)
 	GetAllContentWithMeta(ctx context.Context, siteID string) ([]GetAllContentWithMetaRow, error)
 	GetContent(ctx context.Context, id string) (Content, error)
 	GetContentBySectionID(ctx context.Context, sectionID sql.NullString) ([]Content, error)
@@ -77,7 +78,7 @@ type Querier interface {
 	GetMeta(ctx context.Context, id string) (Meta, error)
 	GetMetaByContentID(ctx context.Context, contentID string) (Meta, error)
 	GetProfile(ctx context.Context, id string) (Profile, error)
-	GetProfileBySlug(ctx context.Context, slug string) (Profile, error)
+	GetProfileBySlug(ctx context.Context, arg GetProfileBySlugParams) (Profile, error)
 	GetPublishedContentBySiteID(ctx context.Context, siteID string) ([]Content, error)
 	GetSection(ctx context.Context, id string) (Section, error)
 	GetSectionByPath(ctx context.Context, arg GetSectionByPathParams) (Section, error)
@@ -107,7 +108,7 @@ type Querier interface {
 	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
 	ListContributorsWithProfile(ctx context.Context, siteID string) ([]ListContributorsWithProfileRow, error)
 	ListImportsBySiteID(ctx context.Context, siteID string) ([]ListImportsBySiteIDRow, error)
-	ListProfiles(ctx context.Context) ([]Profile, error)
+	ListProfiles(ctx context.Context, siteID string) ([]Profile, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveAllTagsFromContent(ctx context.Context, contentID string) error

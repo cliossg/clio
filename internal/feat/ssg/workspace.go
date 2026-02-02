@@ -90,9 +90,19 @@ func (w *Workspace) GetImagesPath(slug string) string {
 	return filepath.Join(w.basePath, slug, "images")
 }
 
+// GetMetaPath returns the meta output path for a specific site.
+// e.g., _workspace/sites/my-blog/meta
+func (w *Workspace) GetMetaPath(slug string) string {
+	return filepath.Join(w.basePath, slug, "meta")
+}
+
 // GetProfilesPath returns the global profiles path.
 func (w *Workspace) GetProfilesPath() string {
 	return DefaultProfilesBasePath
+}
+
+func (w *Workspace) GetProfilesExportPath(slug string) string {
+	return filepath.Join(w.GetSiteBasePath(slug), "profiles")
 }
 
 // GetStaticPath returns the static assets path inside HTML output.

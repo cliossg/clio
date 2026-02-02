@@ -26,7 +26,7 @@ import (
 )
 
 type ProfileService interface {
-	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 	GetProfile(ctx context.Context, id uuid.UUID) (*profile.Profile, error)
 	UpdateProfile(ctx context.Context, p *profile.Profile) error
 	DeleteProfile(ctx context.Context, id uuid.UUID) error
@@ -37,6 +37,8 @@ type Handler struct {
 	profileService ProfileService
 	workspace      *Workspace
 	generator      *Generator
+	metaGenerator  *MetaGenerator
+	metaLoader     *MetaLoader
 	htmlGen        *HTMLGenerator
 	publisher      *Publisher
 	llmClient      *llm.Client
@@ -57,6 +59,8 @@ func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessi
 		profileService: profileService,
 		workspace:      workspace,
 		generator:      NewGenerator(workspace),
+		metaGenerator:  NewMetaGenerator(workspace),
+		metaLoader:     NewMetaLoader(service, profileService, workspace),
 		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
 		publisher:      NewPublisher(workspace, gitClient),
 		llmClient:      llmClient,
@@ -301,6 +305,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 				r.Get("/ssg/import/preview", h.HandlePreviewImport)
 				r.Post("/ssg/import/do", h.HandleDoImport)
 				r.Post("/ssg/import/reimport", h.HandleReimport)
+
+				// Restore (rehydrate site from backup)
+				r.Get("/ssg/restore-markdown", h.HandleShowRestore)
+				r.Post("/ssg/restore-markdown", h.HandleDoRestore)
 			})
 		})
 	})
@@ -353,6 +361,11 @@ type PageData struct {
 	ImportFiles []ImportFile
 	ImportRows  []ImportRow
 	ImportPath  string
+	ImportType  ImportType
+	HasMeta     bool
+
+	// Restore fields
+	RestorePath string
 }
 
 // ImportRow represents a unified row in the import table
@@ -657,7 +670,6 @@ func (h *Handler) HandleDeleteSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get site first to get the slug for directory deletion
 	site, err := h.service.GetSite(r.Context(), siteID)
 	if err != nil {
 		h.log.Errorf("Cannot get site for deletion: %v", err)
@@ -671,12 +683,7 @@ func (h *Handler) HandleDeleteSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete site directories (errors logged but not fatal)
-	if err := h.workspace.DeleteSiteDirectories(site.Slug); err != nil {
-		h.log.Errorf("Cannot delete site directories: %v", err)
-	}
-
-	h.log.Infof("Deleted site %s", site.Slug)
+	h.log.Infof("Deleted site %s (filesystem not removed)", site.Slug)
 	http.Redirect(w, r, "/ssg/list-sites", http.StatusSeeOther)
 }
 
@@ -2771,6 +2778,7 @@ func (h *Handler) HandleCreateContributor(w http.ResponseWriter, r *http.Request
 
 	contributorProfile, err := h.profileService.CreateProfile(
 		r.Context(),
+		site.ID,
 		normalizeSlug(handle),
 		name,
 		surname,
@@ -2937,7 +2945,7 @@ func (h *Handler) HandleUpdateContributor(w http.ResponseWriter, r *http.Request
 				h.profileService.UpdateProfile(r.Context(), existingProfile)
 			}
 		} else {
-			newProfile, err := h.profileService.CreateProfile(r.Context(), profileSlug, profileName, profileSurname, profileBio, socialLinks, "", userID)
+			newProfile, err := h.profileService.CreateProfile(r.Context(), site.ID, profileSlug, profileName, profileSurname, profileBio, socialLinks, "", userID)
 			if err == nil && newProfile != nil {
 				h.service.SetContributorProfile(r.Context(), contributor.ID, newProfile.ID, userID)
 			}
@@ -3246,7 +3254,33 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 		h.log.Infof("Markdown generation had %d errors", len(result.Errors))
 	}
 
-	// Check if backup repo is configured
+	layouts, _ := h.service.GetLayouts(r.Context(), site.ID)
+	contributors, _ := h.service.GetContributors(r.Context(), site.ID)
+	tags, _ := h.service.GetTags(r.Context(), site.ID)
+	sections, _ := h.service.GetSections(r.Context(), site.ID)
+	images, _ := h.service.GetImages(r.Context(), site.ID)
+	contentImages, _ := h.service.GetAllContentImages(r.Context(), site.ID)
+
+	contributorPhotoPaths := make(map[string]string)
+	for _, c := range contributors {
+		if c.ProfileID == nil {
+			continue
+		}
+		profile, err := h.profileService.GetProfile(r.Context(), *c.ProfileID)
+		if err != nil || profile.PhotoPath == "" {
+			continue
+		}
+		contributorPhotoPaths[c.Handle] = profile.PhotoPath
+	}
+
+	if _, err := h.metaGenerator.GenerateMeta(site.Slug, layouts, contributors, tags, sections, images, contentImages, contributorPhotoPaths); err != nil {
+		h.log.Errorf("Meta generation failed: %v", err)
+	}
+
+	if err := h.copyContributorProfiles(r.Context(), site.ID, site.Slug, contributors); err != nil {
+		h.log.Errorf("Profile copy failed: %v", err)
+	}
+
 	repoURL, _ := h.service.GetSettingByRefKey(r.Context(), site.ID, "ssg.backup.repo.url")
 
 	if repoURL != nil && repoURL.Value != "" {
@@ -3306,6 +3340,33 @@ func (h *Handler) HandleBackupMarkdown(w http.ResponseWriter, r *http.Request) {
 
 	// No backup repo configured, just redirect with markdown success
 	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=markdown", http.StatusSeeOther)
+}
+
+func (h *Handler) copyContributorProfiles(ctx context.Context, siteID uuid.UUID, siteSlug string, contributors []*Contributor) error {
+	destPath := h.workspace.GetProfilesExportPath(siteSlug)
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return err
+	}
+
+	for _, c := range contributors {
+		if c.ProfileID == nil {
+			continue
+		}
+		profile, err := h.profileService.GetProfile(ctx, *c.ProfileID)
+		if err != nil || profile.PhotoPath == "" {
+			continue
+		}
+		srcPath := filepath.Join(profilesBasePath, profile.PhotoPath)
+		dstPath := filepath.Join(destPath, profile.PhotoPath)
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			h.log.Errorf("Cannot create directory for profile photo %s: %v", profile.PhotoPath, err)
+			continue
+		}
+		if err := copyFile(srcPath, dstPath); err != nil {
+			h.log.Errorf("Cannot copy profile photo %s: %v", profile.PhotoPath, err)
+		}
+	}
+	return nil
 }
 
 func (h *Handler) HandleGenerateHTML(w http.ResponseWriter, r *http.Request) {
@@ -3602,12 +3663,19 @@ func (h *Handler) HandleListImport(w http.ResponseWriter, r *http.Request) {
 		sections = []*Section{}
 	}
 
+	importType := DetectImportType(importPath)
+	if importType == ImportTypePoor && len(files) > 0 {
+		importType = DetectImportTypeFromFiles(files)
+	}
+
 	data := PageData{
 		Title:      "Import",
 		Site:       site,
 		Sections:   sections,
 		ImportRows: rows,
 		ImportPath: importPath,
+		ImportType: importType,
+		HasMeta:    HasMetaDirectory(importPath),
 	}
 
 	h.render(w, r, "ssg/import/list", data)
@@ -3742,9 +3810,9 @@ func (h *Handler) HandleDoImport(w http.ResponseWriter, r *http.Request) {
 	var reimportedCount int
 	var importErrors []string
 
-	// Handle new imports
+	importPath := h.getImportPath(ctx, site)
+
 	if len(filePaths) > 0 {
-		importPath := h.getImportPath(ctx, site)
 		files, err := h.service.ScanImportDirectory(ctx, importPath)
 		if err != nil {
 			h.renderError(w, r, http.StatusInternalServerError, "Failed to scan directory")
@@ -3790,7 +3858,6 @@ func (h *Handler) HandleDoImport(w http.ResponseWriter, r *http.Request) {
 		reimportedCount++
 	}
 
-	// Build success message
 	var msgs []string
 	if importedCount > 0 {
 		msgs = append(msgs, fmt.Sprintf("Imported %d", importedCount))
@@ -3832,6 +3899,165 @@ func (h *Handler) HandleReimport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.siteRedirect(w, r, "/ssg/import/list?success=File reimported successfully")
+}
+
+func (h *Handler) HandleShowRestore(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	setting, _ := h.service.GetSettingByRefKey(ctx, site.ID, "restore.path")
+	restorePath := ""
+	if setting != nil {
+		restorePath = setting.Value
+	}
+
+	data := PageData{
+		Title:       "Restore",
+		Site:        site,
+		RestorePath: restorePath,
+		Error:       r.URL.Query().Get("error"),
+		Success:     r.URL.Query().Get("success"),
+	}
+
+	h.render(w, r, "ssg/restore/show", data)
+}
+
+func (h *Handler) HandleDoRestore(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site := getSiteFromContext(ctx)
+	if site == nil {
+		h.renderError(w, r, http.StatusBadRequest, "Site context required")
+		return
+	}
+
+	userIDStr := middleware.GetUserID(ctx)
+	if userIDStr == "" {
+		h.renderError(w, r, http.StatusUnauthorized, "User not found")
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.renderError(w, r, http.StatusUnauthorized, "Invalid user ID")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	restorePath := r.FormValue("restore_path")
+	if restorePath == "" {
+		h.siteRedirect(w, r, "/ssg/restore-markdown?error=Restore path is required")
+		return
+	}
+
+	if strings.HasPrefix(restorePath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			h.siteRedirect(w, r, "/ssg/restore-markdown?error=Failed to expand home directory")
+			return
+		}
+		restorePath = filepath.Join(home, restorePath[2:])
+	}
+
+	if _, err := os.Stat(restorePath); os.IsNotExist(err) {
+		h.siteRedirect(w, r, "/ssg/restore-markdown?error=Directory does not exist")
+		return
+	}
+
+	var msgs []string
+	var meta *BackupMeta
+
+	if HasMetaDirectory(restorePath) {
+		metaPath := GetMetaPath(restorePath)
+		var err error
+		meta, err = h.metaLoader.LoadMeta(metaPath)
+		if err != nil {
+			h.siteRedirect(w, r, "/ssg/restore-markdown?error=Failed to load meta: "+err.Error())
+			return
+		}
+
+		hydrationResult, _ := h.metaLoader.HydrateFromMetaWithPath(ctx, site.ID, meta, userID, metaPath)
+		if hydrationResult != nil {
+			if hydrationResult.LayoutsCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Layouts: %d", hydrationResult.LayoutsCreated))
+			}
+			if hydrationResult.SectionsCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Sections: %d", hydrationResult.SectionsCreated))
+			}
+			if hydrationResult.ContributorsCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Contributors: %d", hydrationResult.ContributorsCreated))
+			}
+			if hydrationResult.TagsCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Tags: %d", hydrationResult.TagsCreated))
+			}
+		}
+
+		if HasImagesDirectory(restorePath) {
+			imageResult, _ := h.metaLoader.HydrateImages(ctx, site.ID, site.Slug, restorePath, meta, userID)
+			if imageResult != nil && imageResult.ImagesCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Images: %d", imageResult.ImagesCreated))
+			}
+		}
+	}
+
+	if HasProfilesDirectory(restorePath) {
+		profilesCopied, _ := CopyProfiles(restorePath, h.workspace.GetProfilesPath())
+		if profilesCopied > 0 {
+			msgs = append(msgs, fmt.Sprintf("Profile files: %d", profilesCopied))
+		}
+
+		if meta != nil {
+			profileResult, _ := h.metaLoader.HydrateProfiles(ctx, site.ID, restorePath, meta, userID)
+			if profileResult != nil && profileResult.ProfilesCreated > 0 {
+				msgs = append(msgs, fmt.Sprintf("Profiles: %d", profileResult.ProfilesCreated))
+			}
+		}
+	}
+
+	contentPath := GetContentPath(restorePath)
+	scanner := NewImportScanner([]string{contentPath})
+	files, err := scanner.ScanFiles()
+	if err != nil {
+		h.siteRedirect(w, r, "/ssg/restore-markdown?error=Failed to scan content: "+err.Error())
+		return
+	}
+
+	var contentImported int
+	var importErrors []string
+	for _, file := range files {
+		_, _, err := h.service.ImportFile(ctx, site.ID, userID, file, uuid.Nil)
+		if err == nil {
+			contentImported++
+		} else {
+			importErrors = append(importErrors, file.Name+": "+err.Error())
+		}
+	}
+	if contentImported > 0 {
+		msgs = append(msgs, fmt.Sprintf("Content: %d", contentImported))
+	}
+	if len(importErrors) > 0 {
+		msgs = append(msgs, fmt.Sprintf("Errors: %d", len(importErrors)))
+	}
+
+	if len(meta.ContentImages) > 0 {
+		ciResult, _ := h.metaLoader.HydrateContentImages(ctx, site.ID, meta)
+		if ciResult != nil && ciResult.LinksCreated > 0 {
+			msgs = append(msgs, fmt.Sprintf("Content images: %d", ciResult.LinksCreated))
+		}
+	}
+
+	successMsg := strings.Join(msgs, ", ")
+	if successMsg == "" {
+		successMsg = "No data to restore"
+	}
+
+	h.siteRedirect(w, r, "/ssg/restore-markdown?success="+successMsg)
 }
 
 // getImportPath returns the import path for a site, using settings if configured.

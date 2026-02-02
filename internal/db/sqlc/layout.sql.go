@@ -13,7 +13,7 @@ import (
 const createLayout = `-- name: CreateLayout :one
 INSERT INTO layout (id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css
+RETURNING id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at
 `
 
 type CreateLayoutParams struct {
@@ -56,13 +56,13 @@ func (q *Queries) CreateLayout(ctx context.Context, arg CreateLayoutParams) (Lay
 		&i.Name,
 		&i.Description,
 		&i.Code,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 		&i.HeaderImageID,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Css,
-		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
@@ -77,7 +77,7 @@ func (q *Queries) DeleteLayout(ctx context.Context, id string) error {
 }
 
 const getLayout = `-- name: GetLayout :one
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE id = ?
+SELECT id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE id = ?
 `
 
 func (q *Queries) GetLayout(ctx context.Context, id string) (Layout, error) {
@@ -90,19 +90,19 @@ func (q *Queries) GetLayout(ctx context.Context, id string) (Layout, error) {
 		&i.Name,
 		&i.Description,
 		&i.Code,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 		&i.HeaderImageID,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Css,
-		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
 
 const getLayoutByName = `-- name: GetLayoutByName :one
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE site_id = ? AND name = ?
+SELECT id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE site_id = ? AND name = ?
 `
 
 type GetLayoutByNameParams struct {
@@ -120,19 +120,19 @@ func (q *Queries) GetLayoutByName(ctx context.Context, arg GetLayoutByNameParams
 		&i.Name,
 		&i.Description,
 		&i.Code,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 		&i.HeaderImageID,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Css,
-		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }
 
 const getLayoutsBySiteID = `-- name: GetLayoutsBySiteID :many
-SELECT id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css FROM layout WHERE site_id = ? ORDER BY name
+SELECT id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at FROM layout WHERE site_id = ? ORDER BY name
 `
 
 func (q *Queries) GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layout, error) {
@@ -151,13 +151,13 @@ func (q *Queries) GetLayoutsBySiteID(ctx context.Context, siteID string) ([]Layo
 			&i.Name,
 			&i.Description,
 			&i.Code,
+			&i.Css,
+			&i.ExcludeDefaultCss,
 			&i.HeaderImageID,
 			&i.CreatedBy,
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Css,
-			&i.ExcludeDefaultCss,
 		); err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ UPDATE layout SET
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, code, header_image_id, created_by, updated_by, created_at, updated_at, css, exclude_default_css
+RETURNING id, site_id, short_id, name, description, code, css, exclude_default_css, header_image_id, created_by, updated_by, created_at, updated_at
 `
 
 type UpdateLayoutParams struct {
@@ -218,13 +218,13 @@ func (q *Queries) UpdateLayout(ctx context.Context, arg UpdateLayoutParams) (Lay
 		&i.Name,
 		&i.Description,
 		&i.Code,
+		&i.Css,
+		&i.ExcludeDefaultCss,
 		&i.HeaderImageID,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Css,
-		&i.ExcludeDefaultCss,
 	)
 	return i, err
 }

@@ -8,6 +8,7 @@ import (
 
 type Profile struct {
 	ID          uuid.UUID
+	SiteID      uuid.UUID
 	ShortID     string
 	Slug        string
 	Name        string
@@ -21,10 +22,11 @@ type Profile struct {
 	UpdatedAt   time.Time
 }
 
-func NewProfile(slug, name, surname, createdBy string) *Profile {
+func NewProfile(siteID uuid.UUID, slug, name, surname, createdBy string) *Profile {
 	now := time.Now()
 	return &Profile{
 		ID:          uuid.New(),
+		SiteID:      siteID,
 		ShortID:     uuid.New().String()[:8],
 		Slug:        slug,
 		Name:        name,

@@ -168,6 +168,7 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 	}
 
 	imagesDir := p.workspace.GetImagesPath(siteSlug)
+	metaDir := p.workspace.GetMetaPath(siteSlug)
 	profilesDir := p.workspace.GetProfilesPath()
 
 	parentTempDir, err := os.MkdirTemp("", "clio-backup-*")
@@ -236,6 +237,16 @@ func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug stri
 		}
 		if err := copyDirRecursive(profilesDir, profilesDst); err != nil {
 			return nil, fmt.Errorf("cannot copy profiles: %w", err)
+		}
+	}
+
+	if _, err := os.Stat(metaDir); err == nil {
+		metaDst := filepath.Join(tempDir, "meta")
+		if err := os.MkdirAll(metaDst, 0755); err != nil {
+			return nil, fmt.Errorf("cannot create meta dir: %w", err)
+		}
+		if err := copyDirRecursive(metaDir, metaDst); err != nil {
+			return nil, fmt.Errorf("cannot copy meta: %w", err)
 		}
 	}
 

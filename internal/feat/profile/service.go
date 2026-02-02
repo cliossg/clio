@@ -20,10 +20,10 @@ var (
 type Service interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
-	CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*Profile, error)
+	CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*Profile, error)
 	GetProfile(ctx context.Context, id uuid.UUID) (*Profile, error)
-	GetProfileBySlug(ctx context.Context, slug string) (*Profile, error)
-	ListProfiles(ctx context.Context) ([]*Profile, error)
+	GetProfileBySlug(ctx context.Context, siteID uuid.UUID, slug string) (*Profile, error)
+	ListProfiles(ctx context.Context, siteID uuid.UUID) ([]*Profile, error)
 	UpdateProfile(ctx context.Context, profile *Profile) error
 	DeleteProfile(ctx context.Context, id uuid.UUID) error
 }
@@ -63,16 +63,17 @@ func (s *service) ensureQueries() {
 	}
 }
 
-func (s *service) CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*Profile, error) {
+func (s *service) CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*Profile, error) {
 	s.ensureQueries()
 
-	profile := NewProfile(slug, name, surname, createdBy)
+	profile := NewProfile(siteID, slug, name, surname, createdBy)
 	profile.Bio = bio
 	profile.SocialLinks = socialLinks
 	profile.PhotoPath = photoPath
 
 	params := sqlc.CreateProfileParams{
 		ID:          profile.ID.String(),
+		SiteID:      profile.SiteID.String(),
 		ShortID:     profile.ShortID,
 		Slug:        profile.Slug,
 		Name:        profile.Name,
@@ -108,10 +109,13 @@ func (s *service) GetProfile(ctx context.Context, id uuid.UUID) (*Profile, error
 	return fromSQLCProfile(p), nil
 }
 
-func (s *service) GetProfileBySlug(ctx context.Context, slug string) (*Profile, error) {
+func (s *service) GetProfileBySlug(ctx context.Context, siteID uuid.UUID, slug string) (*Profile, error) {
 	s.ensureQueries()
 
-	p, err := s.queries.GetProfileBySlug(ctx, slug)
+	p, err := s.queries.GetProfileBySlug(ctx, sqlc.GetProfileBySlugParams{
+		SiteID: siteID.String(),
+		Slug:   slug,
+	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrProfileNotFound
@@ -122,10 +126,10 @@ func (s *service) GetProfileBySlug(ctx context.Context, slug string) (*Profile, 
 	return fromSQLCProfile(p), nil
 }
 
-func (s *service) ListProfiles(ctx context.Context) ([]*Profile, error) {
+func (s *service) ListProfiles(ctx context.Context, siteID uuid.UUID) ([]*Profile, error) {
 	s.ensureQueries()
 
-	profiles, err := s.queries.ListProfiles(ctx)
+	profiles, err := s.queries.ListProfiles(ctx, siteID.String())
 	if err != nil {
 		return nil, fmt.Errorf("cannot list profiles: %w", err)
 	}
@@ -176,8 +180,10 @@ func (s *service) DeleteProfile(ctx context.Context, id uuid.UUID) error {
 
 func fromSQLCProfile(p sqlc.Profile) *Profile {
 	id, _ := uuid.Parse(p.ID)
+	siteID, _ := uuid.Parse(p.SiteID)
 	return &Profile{
 		ID:          id,
+		SiteID:      siteID,
 		ShortID:     p.ShortID,
 		Slug:        p.Slug,
 		Name:        p.Name,

@@ -125,13 +125,13 @@ type Layout struct {
 	Name              string         `json:"name"`
 	Description       sql.NullString `json:"description"`
 	Code              sql.NullString `json:"code"`
+	Css               sql.NullString `json:"css"`
+	ExcludeDefaultCss sql.NullInt64  `json:"exclude_default_css"`
 	HeaderImageID     sql.NullString `json:"header_image_id"`
 	CreatedBy         sql.NullString `json:"created_by"`
 	UpdatedBy         sql.NullString `json:"updated_by"`
 	CreatedAt         sql.NullTime   `json:"created_at"`
 	UpdatedAt         sql.NullTime   `json:"updated_at"`
-	Css               sql.NullString `json:"css"`
-	ExcludeDefaultCss sql.NullInt64  `json:"exclude_default_css"`
 }
 
 type Meta struct {
@@ -157,6 +157,7 @@ type Meta struct {
 
 type Profile struct {
 	ID          string    `json:"id"`
+	SiteID      string    `json:"site_id"`
 	ShortID     string    `json:"short_id"`
 	Slug        string    `json:"slug"`
 	Name        string    `json:"name"`

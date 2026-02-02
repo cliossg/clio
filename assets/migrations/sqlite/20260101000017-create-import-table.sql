@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS import (
     id TEXT PRIMARY KEY,
     short_id TEXT NOT NULL,
-    file_path TEXT NOT NULL UNIQUE,
+    file_path TEXT NOT NULL,
     file_hash TEXT,
     file_mtime TIMESTAMP,
     content_id TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS import (
 CREATE INDEX IF NOT EXISTS idx_import_site_id ON import(site_id);
 CREATE INDEX IF NOT EXISTS idx_import_content_id ON import(content_id);
 CREATE INDEX IF NOT EXISTS idx_import_status ON import(status);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_import_file_path ON import(file_path);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_import_site_file_path ON import(site_id, file_path);
 
 -- +migrate Down
 DROP TABLE IF EXISTS import;

@@ -1,8 +1,9 @@
 -- +migrate Up
 CREATE TABLE profile (
     id TEXT PRIMARY KEY,
+    site_id TEXT NOT NULL REFERENCES site(id) ON DELETE CASCADE,
     short_id TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL,
     name TEXT NOT NULL,
     surname TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
@@ -13,7 +14,7 @@ CREATE TABLE profile (
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL
 );
-CREATE UNIQUE INDEX idx_profile_slug ON profile(slug);
+CREATE UNIQUE INDEX idx_profile_site_slug ON profile(site_id, slug);
 
 -- +migrate Down
 DROP TABLE profile;

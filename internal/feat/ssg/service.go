@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/cliossg/clio/internal/db/sqlc"
@@ -44,6 +45,7 @@ type Service interface {
 	// Section operations
 	CreateSection(ctx context.Context, section *Section) error
 	GetSection(ctx context.Context, id uuid.UUID) (*Section, error)
+	GetSectionByPath(ctx context.Context, siteID uuid.UUID, path string) (*Section, error)
 	GetSections(ctx context.Context, siteID uuid.UUID) ([]*Section, error)
 	UpdateSection(ctx context.Context, section *Section) error
 	DeleteSection(ctx context.Context, id uuid.UUID) error
@@ -81,7 +83,9 @@ type Service interface {
 	CreateImage(ctx context.Context, image *Image) error
 	GetImage(ctx context.Context, id uuid.UUID) (*Image, error)
 	GetImages(ctx context.Context, siteID uuid.UUID) ([]*Image, error)
+	GetImageByPath(ctx context.Context, siteID uuid.UUID, filePath string) (*Image, error)
 	GetContentImagesWithDetails(ctx context.Context, contentID uuid.UUID) ([]*ContentImageWithDetails, error)
+	GetAllContentImages(ctx context.Context, siteID uuid.UUID) (map[string][]MetaContentImage, error)
 	GetContentImageDetails(ctx context.Context, contentImageID uuid.UUID) (*ContentImageDetails, error)
 	LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error
 	UnlinkImageFromContent(ctx context.Context, contentImageID uuid.UUID) error
@@ -101,6 +105,7 @@ type Service interface {
 	// Contributor operations
 	CreateContributor(ctx context.Context, contributor *Contributor) error
 	GetContributor(ctx context.Context, id uuid.UUID) (*Contributor, error)
+	GetContributorByHandle(ctx context.Context, siteID uuid.UUID, handle string) (*Contributor, error)
 	GetContributors(ctx context.Context, siteID uuid.UUID) ([]*Contributor, error)
 	UpdateContributor(ctx context.Context, contributor *Contributor) error
 	DeleteContributor(ctx context.Context, id uuid.UUID) error
@@ -486,7 +491,7 @@ func (s *service) CreateSection(ctx context.Context, section *Section) error {
 		ShortID:       nullString(section.ShortID),
 		Name:          section.Name,
 		Description:   nullString(section.Description),
-		Path:          nullString(section.Path),
+		Path:          sql.NullString{String: section.Path, Valid: true},
 		LayoutID:      nullString(section.LayoutID.String()),
 		LayoutName:    nullString(section.LayoutName),
 		HeroTitleDark: nullInt(boolToInt(section.HeroTitleDark)),
@@ -513,6 +518,23 @@ func (s *service) GetSection(ctx context.Context, id uuid.UUID) (*Section, error
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("cannot get section: %w", err)
+	}
+
+	return sectionFromSQLC(sqlcSection), nil
+}
+
+func (s *service) GetSectionByPath(ctx context.Context, siteID uuid.UUID, path string) (*Section, error) {
+	s.ensureQueries()
+
+	sqlcSection, err := s.queries.GetSectionByPath(ctx, sqlc.GetSectionByPathParams{
+		SiteID: siteID.String(),
+		Path:   sql.NullString{String: path, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get section by path: %w", err)
 	}
 
 	return sectionFromSQLC(sqlcSection), nil
@@ -572,7 +594,7 @@ func (s *service) UpdateSection(ctx context.Context, section *Section) error {
 	params := sqlc.UpdateSectionParams{
 		Name:          section.Name,
 		Description:   nullString(section.Description),
-		Path:          nullString(section.Path),
+		Path:          sql.NullString{String: section.Path, Valid: true},
 		LayoutID:      nullString(section.LayoutID.String()),
 		LayoutName:    nullString(section.LayoutName),
 		HeroTitleDark: nullInt(boolToInt(section.HeroTitleDark)),
@@ -1072,6 +1094,23 @@ func (s *service) GetImages(ctx context.Context, siteID uuid.UUID) ([]*Image, er
 	return images, nil
 }
 
+func (s *service) GetImageByPath(ctx context.Context, siteID uuid.UUID, filePath string) (*Image, error) {
+	s.ensureQueries()
+
+	sqlcImage, err := s.queries.GetImageByPath(ctx, sqlc.GetImageByPathParams{
+		SiteID:   siteID.String(),
+		FilePath: filePath,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get image by path: %w", err)
+	}
+
+	return imageFromSQLC(sqlcImage), nil
+}
+
 func (s *service) GetContentImagesWithDetails(ctx context.Context, contentID uuid.UUID) ([]*ContentImageWithDetails, error) {
 	s.ensureQueries()
 
@@ -1103,6 +1142,31 @@ func (s *service) GetContentImagesWithDetails(ctx context.Context, contentID uui
 	}
 
 	return images, nil
+}
+
+func (s *service) GetAllContentImages(ctx context.Context, siteID uuid.UUID) (map[string][]MetaContentImage, error) {
+	s.ensureQueries()
+
+	rows, err := s.queries.GetAllContentImagesBySiteID(ctx, siteID.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get all content images: %w", err)
+	}
+
+	result := make(map[string][]MetaContentImage)
+	for _, row := range rows {
+		if !row.ContentShortID.Valid {
+			continue
+		}
+		shortID := row.ContentShortID.String
+		result[shortID] = append(result[shortID], MetaContentImage{
+			ImagePath:  row.ImagePath,
+			IsHeader:   row.IsHeader.Int64 == 1,
+			IsFeatured: row.IsFeatured.Int64 == 1,
+			OrderNum:   int(row.OrderNum.Int64),
+		})
+	}
+
+	return result, nil
 }
 
 func (s *service) LinkImageToContent(ctx context.Context, contentID, imageID uuid.UUID, isHeader bool) error {
@@ -1456,6 +1520,23 @@ func (s *service) GetContributor(ctx context.Context, id uuid.UUID) (*Contributo
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("cannot get contributor: %w", err)
+	}
+
+	return contributorFromSQLC(row)
+}
+
+func (s *service) GetContributorByHandle(ctx context.Context, siteID uuid.UUID, handle string) (*Contributor, error) {
+	s.ensureQueries()
+
+	row, err := s.queries.GetContributorByHandle(ctx, sqlc.GetContributorByHandleParams{
+		SiteID: siteID.String(),
+		Handle: handle,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("cannot get contributor by handle: %w", err)
 	}
 
 	return contributorFromSQLC(row)
@@ -1921,24 +2002,35 @@ func (s *service) ScanImportDirectory(ctx context.Context, importPath string) ([
 func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file ImportFile, sectionID uuid.UUID) (*Content, *Import, error) {
 	s.ensureQueries()
 
-	// Check if file was already imported
 	existing, err := s.GetImportByFilePath(ctx, file.Path)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, nil, fmt.Errorf("cannot check existing import: %w", err)
 	}
-	if existing != nil && existing.ContentID != nil {
+	if existing != nil && existing.ContentID != nil && existing.SiteID == siteID {
 		return nil, nil, fmt.Errorf("file already imported")
 	}
 
-	// Create content from file
-	content := NewContent(siteID, sectionID, file.Title, file.Body)
-	content.UserID = userID
-	content.CreatedBy = userID
-	content.UpdatedBy = userID
+	resolvedSectionID := sectionID
+	var typedFM *ImportFrontmatter
 
-	// Apply frontmatter if present
 	if len(file.Frontmatter) > 0 {
 		fm := ParseImportFrontmatter(file.Frontmatter)
+
+		if sectionPath, ok := file.Frontmatter["section"]; ok && sectionPath != "" {
+			if section, err := s.GetSectionByPath(ctx, siteID, sectionPath); err == nil {
+				resolvedSectionID = section.ID
+			}
+		}
+
+		content := NewContent(siteID, resolvedSectionID, file.Title, file.Body)
+		content.UserID = userID
+		content.CreatedBy = userID
+		content.UpdatedBy = userID
+
+		if fm.ShortID != "" {
+			content.ShortID = fm.ShortID
+		}
+
 		if fm.Summary != "" {
 			content.Summary = fm.Summary
 		}
@@ -1956,15 +2048,84 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 		}
 		if fm.Contributor != "" {
 			content.ContributorHandle = fm.Contributor
+			if contributor, err := s.GetContributorByHandle(ctx, siteID, fm.Contributor); err == nil {
+				content.ContributorID = &contributor.ID
+			}
 		}
+
+		if err := s.CreateContent(ctx, content); err != nil {
+			return nil, nil, fmt.Errorf("cannot create content: %w", err)
+		}
+
+		typedFM, _, _ = ParseTypedFrontmatter("---\n" + joinFrontmatter(file.Frontmatter) + "\n---\n")
+		if typedFM != nil && len(typedFM.Tags) > 0 {
+			for _, tagName := range typedFM.Tags {
+				_ = s.AddTagToContent(ctx, content.ID, tagName, siteID)
+			}
+		}
+
+		if fm.Description != "" || fm.Robots != "" || fm.Keywords != "" ||
+			fm.CanonicalURL != "" || fm.Sitemap != "" || fm.TableOfContents || fm.Comments || fm.Share {
+			meta := NewMeta(siteID, content.ID)
+			meta.Description = fm.Description
+			meta.Robots = fm.Robots
+			meta.Keywords = fm.Keywords
+			meta.CanonicalURL = fm.CanonicalURL
+			meta.Sitemap = fm.Sitemap
+			meta.TableOfContents = fm.TableOfContents
+			meta.Comments = fm.Comments
+			meta.Share = fm.Share
+			meta.CreatedBy = userID
+			meta.UpdatedBy = userID
+			_ = s.CreateMeta(ctx, meta)
+		}
+
+		if fm.Image != "" {
+			imgPath := strings.TrimPrefix(fm.Image, "/images/")
+			if img, err := s.GetImageByPath(ctx, siteID, imgPath); err == nil {
+				_ = s.LinkImageToContent(ctx, content.ID, img.ID, true)
+			}
+		}
+
+		imagePaths := ExtractImagePaths(file.Body)
+		for _, imgPath := range imagePaths {
+			if img, err := s.GetImageByPath(ctx, siteID, imgPath); err == nil {
+				_ = s.LinkImageToContent(ctx, content.ID, img.ID, false)
+			}
+		}
+
+		now := time.Now()
+		imp := NewImport(siteID, userID, file.Path)
+		imp.FileHash = file.Hash
+		imp.FileMtime = &file.Mtime
+		imp.ContentID = &content.ID
+		imp.Status = ImportStatusImported
+		imp.ImportedAt = &now
+
+		if err := s.CreateImport(ctx, imp); err != nil {
+			_ = s.DeleteContent(ctx, content.ID)
+			return nil, nil, fmt.Errorf("cannot create import: %w", err)
+		}
+
+		return content, imp, nil
 	}
 
-	// Create the content
+	content := NewContent(siteID, resolvedSectionID, file.Title, file.Body)
+	content.UserID = userID
+	content.CreatedBy = userID
+	content.UpdatedBy = userID
+
 	if err := s.CreateContent(ctx, content); err != nil {
 		return nil, nil, fmt.Errorf("cannot create content: %w", err)
 	}
 
-	// Create import record
+	imagePaths := ExtractImagePaths(file.Body)
+	for _, imgPath := range imagePaths {
+		if img, err := s.GetImageByPath(ctx, siteID, imgPath); err == nil {
+			_ = s.LinkImageToContent(ctx, content.ID, img.ID, false)
+		}
+	}
+
 	now := time.Now()
 	imp := NewImport(siteID, userID, file.Path)
 	imp.FileHash = file.Hash
@@ -1974,12 +2135,19 @@ func (s *service) ImportFile(ctx context.Context, siteID, userID uuid.UUID, file
 	imp.ImportedAt = &now
 
 	if err := s.CreateImport(ctx, imp); err != nil {
-		// Rollback content creation
 		_ = s.DeleteContent(ctx, content.ID)
 		return nil, nil, fmt.Errorf("cannot create import: %w", err)
 	}
 
 	return content, imp, nil
+}
+
+func joinFrontmatter(fm map[string]string) string {
+	var lines []string
+	for k, v := range fm {
+		lines = append(lines, k+": "+v)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (s *service) ReimportFile(ctx context.Context, importID uuid.UUID, force bool) (*Content, error) {

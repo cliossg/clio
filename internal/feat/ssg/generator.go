@@ -27,6 +27,8 @@ func NewGenerator(workspace *Workspace) *Generator {
 type ContentFrontmatter struct {
 	Title           string     `yaml:"title"`
 	Slug            string     `yaml:"slug"`
+	ShortID         string     `yaml:"short-id,omitempty"`
+	Section         string     `yaml:"section,omitempty"`
 	Author          string     `yaml:"author,omitempty"`
 	Contributor     string     `yaml:"contributor,omitempty"`
 	Tags            []string   `yaml:"tags,omitempty"`
@@ -89,6 +91,8 @@ func (g *Generator) generateContentMarkdown(basePath string, content *Content) e
 	frontmatter := ContentFrontmatter{
 		Title:       content.Heading,
 		Slug:        content.Slug(),
+		ShortID:     content.ShortID,
+		Section:     content.SectionPath,
 		Author:      content.AuthorUsername,
 		Contributor: content.ContributorHandle,
 		Layout:      content.SectionName,

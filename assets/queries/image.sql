@@ -105,6 +105,19 @@ FROM content_images ci
 JOIN image i ON ci.image_id = i.id
 WHERE ci.id = ?;
 
+-- name: GetAllContentImagesBySiteID :many
+SELECT
+    c.short_id as content_short_id,
+    i.file_path as image_path,
+    ci.is_header,
+    ci.is_featured,
+    ci.order_num
+FROM content_images ci
+JOIN content c ON ci.content_id = c.id
+JOIN image i ON ci.image_id = i.id
+WHERE c.site_id = ?
+ORDER BY c.short_id, ci.order_num;
+
 -- name: DeleteContentImage :exec
 DELETE FROM content_images WHERE id = ?;
 

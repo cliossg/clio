@@ -13,24 +13,24 @@ import (
 
 type mockProfileService struct {
 	db         *sql.DB
-	createFunc func(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
+	createFunc func(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error)
 }
 
-func (m *mockProfileService) CreateProfile(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
+func (m *mockProfileService) CreateProfile(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
 	if m.createFunc != nil {
-		return m.createFunc(ctx, slug, name, surname, bio, socialLinks, photoPath, createdBy)
+		return m.createFunc(ctx, siteID, slug, name, surname, bio, socialLinks, photoPath, createdBy)
 	}
 
-	// Create a real profile in the database
 	p := &profile.Profile{
-		ID:   uuid.New(),
-		Slug: slug,
-		Name: name,
+		ID:     uuid.New(),
+		SiteID: siteID,
+		Slug:   slug,
+		Name:   name,
 	}
 	if m.db != nil {
-		_, err := m.db.Exec(`INSERT INTO profile (id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-			p.ID.String(), uuid.New().String()[:8], slug, name, surname, bio, socialLinks, photoPath, uuid.New().String(), uuid.New().String())
+		_, err := m.db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, surname, bio, social_links, photo_path, created_by, updated_by, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+			p.ID.String(), siteID.String(), uuid.New().String()[:8], slug, name, surname, bio, socialLinks, photoPath, uuid.New().String(), uuid.New().String())
 		if err != nil {
 			return nil, err
 		}
@@ -178,9 +178,8 @@ func TestSeederStartWithProfileError(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Mock profile service that returns an error
 	mockProfile := &mockProfileService{
-		createFunc: func(ctx context.Context, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
+		createFunc: func(ctx context.Context, siteID uuid.UUID, slug, name, surname, bio, socialLinks, photoPath, createdBy string) (*profile.Profile, error) {
 			return nil, errors.New("profile service error")
 		},
 	}

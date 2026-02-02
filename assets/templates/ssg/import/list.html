@@ -6,6 +6,23 @@
         <span class="text-muted">Import Markdown files from <code>{{ .ImportPath }}</code></span>
     </div>
 
+    {{ if .HasMeta }}
+    <div class="alert alert-info import-type-rich">
+        <strong>Rich Import:</strong> Backup metadata detected (<code>meta/</code> directory found).
+        Sections, contributors, and tags will be automatically created during import.
+    </div>
+    {{ else if eq .ImportType "basic" }}
+    <div class="alert alert-info import-type-basic">
+        <strong>Basic Import:</strong> Files contain <code>section</code> in frontmatter.
+        Content will be assigned to matching sections automatically.
+    </div>
+    {{ else if eq .ImportType "poor" }}
+    <div class="alert alert-warning import-type-poor">
+        <strong>Simple Import:</strong> No section metadata found in files.
+        Select a target section below for all imports.
+    </div>
+    {{ end }}
+
     {{ if .Error }}
     <div class="alert alert-danger">{{ .Error }}</div>
     {{ end }}

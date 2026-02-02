@@ -74,15 +74,19 @@
         {{ end }}
 
         {{ if $canEdit }}
-        <h3>Generation</h3>
+        <h3>Markdown & Generation</h3>
         <div class="nav-grid">
             <form method="POST" action="/ssg/backup-markdown" class="nav-card-form">
                 <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
-                    <strong>Backup Markdown</strong>
-                    <span>Export and version content as .md files</span>
+                    <strong>Backup</strong>
+                    <span>Export content, meta, and images</span>
                 </button>
             </form>
+            <a href="/ssg/restore-markdown?site_id={{ .Site.ID }}" class="nav-card">
+                <strong>Restore</strong>
+                <span>Rehydrate from backup directory</span>
+            </a>
             <a href="http://{{ .Site.Slug }}.localhost:3000/" target="_blank" class="nav-card">
                 <strong>Preview</strong>
                 <span>Live preview with auto-generation</span>
