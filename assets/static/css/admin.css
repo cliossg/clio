@@ -583,6 +583,14 @@ h1, h2, h3 {
     grid-column: 3 / -1;
 }
 
+.nav-grid h3.span-3 {
+    grid-column: 1 / span 3;
+}
+
+.nav-grid h3.col-4 {
+    grid-column: 4 / -1;
+}
+
 .nav-card {
     display: flex;
     flex-direction: column;

@@ -12,18 +12,15 @@
     <nav>
         <a href="/ssg/list-sites" id="sites-link">Sites</a>
         {{ if .Site }}
-        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-sections?site_id={{ .Site.ID }}">Sections</a>{{ end }}
-        <a href="/ssg/list-contents?site_id={{ .Site.ID }}">Content</a>
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-layouts?site_id={{ .Site.ID }}">Layouts</a>{{ end }}
-        <a href="/ssg/list-tags?site_id={{ .Site.ID }}">Tags</a>
-        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-settings?site_id={{ .Site.ID }}">Settings</a>{{ end }}
-        <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
-        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-contributors?site_id={{ .Site.ID }}">Contributors</a>{{ end }}
         <a href="/ssg/list-messages?site_id={{ .Site.ID }}">Messages</a>
-        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/admin/list-users">Users</a>{{ end }}
-        {{ end }}
+        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-contributors?site_id={{ .Site.ID }}">Contributors</a>{{ end }}
+        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-settings?site_id={{ .Site.ID }}">Settings</a>{{ end }}
+        {{ else }}
         <a href="/api/tokens">API</a>
+        {{ if hasRole .CurrentUserRoles "admin" }}<a href="/admin/list-users">Users</a>{{ end }}
         <a href="/get-profile">Profile</a>
+        {{ end }}
         <span style="float: right;">
             {{ if .CurrentUserName }}{{ .CurrentUserName }} &middot; {{ end }}
             <form action="/signout" method="POST" style="display: inline;">

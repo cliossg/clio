@@ -32,20 +32,10 @@
 
     <div class="site-nav">
         <div class="nav-grid">
-            <h3>Content Management</h3>
+            <h3>Content</h3>
             <a href="/ssg/list-contents?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Content</strong>
                 <span>Manage posts, pages, and articles</span>
-            </a>
-            {{ if $isAdmin }}
-            <a href="/ssg/list-sections?site_id={{ .Site.ID }}" class="nav-card">
-                <strong>Sections</strong>
-                <span>Organize content into sections</span>
-            </a>
-            {{ end }}
-            <a href="/ssg/list-tags?site_id={{ .Site.ID }}" class="nav-card">
-                <strong>Tags</strong>
-                <span>Categorize and tag content</span>
             </a>
             <a href="/ssg/list-images?site_id={{ .Site.ID }}" class="nav-card">
                 <strong>Images</strong>
@@ -58,21 +48,21 @@
             </a>
             {{ end }}
 
+            <h3>Organization</h3>
             {{ if $isAdmin }}
-            <h3>Site Configuration</h3>
-            <a href="/ssg/list-layouts?site_id={{ .Site.ID }}" class="nav-card">
-                <strong>Layouts</strong>
-                <span>Content display templates</span>
-            </a>
-            <a href="/ssg/list-settings?site_id={{ .Site.ID }}" class="nav-card">
-                <strong>Settings</strong>
-                <span>Site settings and configuration</span>
+            <a href="/ssg/list-sections?site_id={{ .Site.ID }}" class="nav-card">
+                <strong>Sections</strong>
+                <span>Organize content into sections</span>
             </a>
             {{ end }}
+            <a href="/ssg/list-tags?site_id={{ .Site.ID }}" class="nav-card">
+                <strong>Tags</strong>
+                <span>Categorize and tag content</span>
+            </a>
 
             {{ if $canEdit }}
             <h3 class="span-2">Markdown</h3>
-            <h3 class="col-3">Generation</h3>
+            <h3 class="col-3">Publish</h3>
             <form method="POST" action="/ssg/backup-markdown" class="nav-card-form">
                 <input type="hidden" name="site_id" value="{{ .Site.ID }}">
                 <button type="submit" class="nav-card">
