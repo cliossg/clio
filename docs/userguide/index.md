@@ -14,6 +14,9 @@ Clio is a static site generator with a web-based content management interface. W
 
 - [**Backup and Restore**](backup/index.md): Export your site and restore it on another instance
 - [**Scheduled Publishing**](scheduling/index.md): Publish content automatically at a future date and time
+- [**Google Analytics**](analytics/index.md): Track visitor traffic with Google Analytics
+- [**Cookie Banner**](cookie-banner/index.md): Cookie consent banner for your site
+- [**Google Search**](search/index.md): Add site search using Google Programmable Search Engine
 
 ### Coming Soon
 

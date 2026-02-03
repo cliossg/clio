@@ -170,8 +170,14 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", "display", 3, true},
 		{"Blocks multi-section", "Show related content from other sections", "true", "ssg.blocks.multisection", "display", 4, true},
 		{"Blocks background color", "Background color for related content blocks", "#f0f4f8", "ssg.blocks.bgcolor", "display", 5, true},
+		// Analytics
+		{"Google Analytics enabled", "Enable Google Analytics tracking", "true", "ssg.analytics.enabled", "analytics", 1, true},
+		{"Google Analytics ID", "Google Analytics measurement ID (e.g. G-XXXXXXXXXX)", "", "ssg.analytics.id", "analytics", 2, true},
+		// Cookie banner
+		{"Cookie banner enabled", "Show cookie consent banner", "true", "ssg.cookie.banner.enabled", "site", 5, true},
+		{"Cookie banner text", "Cookie banner consent message", "This site uses cookies to improve your experience. By continuing to use this site, you accept our use of cookies.", "ssg.cookie.banner.text", "site", 6, true},
 		// Search
-		{"Google Search enabled", "Enable Google site search", "false", "ssg.search.google.enabled", "search", 1, true},
+		{"Google Search enabled", "Enable Google site search", "true", "ssg.search.google.enabled", "search", 1, true},
 		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", "search", 2, true},
 		// Git
 		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", "git", 1, true},

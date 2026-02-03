@@ -1,18 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {{ if .Params.analytics_id }}
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ .Params.analytics_id }}"></script>
+    {{ if and (eq (index .Params "ssg.analytics.enabled") "true") (index .Params "ssg.analytics.id") }}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ index .Params "ssg.analytics.id" }}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', '{{ .Params.analytics_id }}');
+        gtag('config', '{{ index .Params "ssg.analytics.id" }}');
     </script>
+    {{ end }}
+    {{ $searchEnabled := and (eq (index .Params "ssg.search.google.enabled") "true") (index .Params "ssg.search.google.id") }}
+    {{ if $searchEnabled }}
+    <script async src="https://cse.google.com/cse.js?cx={{ index .Params "ssg.search.google.id" }}"></script>
     {{ end }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {{ if .IsAuthor }}
+    {{ if .IsSearch }}
+    <title>Search - {{ .Site.Name }}</title>
+    <meta name="description" content="Search {{ .Site.Name }}">
+    {{ else if .IsAuthor }}
     <title>@{{ .Author.Handle }} - {{ .Site.Name }}</title>
     <meta name="description" content="{{ .Author.Bio }}">
     {{ else if .IsIndex }}
@@ -43,10 +50,29 @@
             {{ range .Menu }}
             <a href="{{ $basePath }}{{ .Path }}/"{{ if and $currentSection (eq $currentSection.Path .Path) }} class="active"{{ end }}>{{ .Name }}</a>
             {{ end }}
+            {{ if $searchEnabled }}
+            <div class="nav-search">
+                <button class="nav-search-toggle" aria-label="Search" onclick="toggleSearch()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <div class="nav-search-box hidden">
+                    <div class="gcse-searchbox-only" data-resultsUrl="{{ .AssetPath }}search/" data-queryParameterName="q"></div>
+                </div>
+            </div>
+            <script>
+                function toggleSearch() {
+                    var box = document.querySelector('.nav-search-box');
+                    box.classList.toggle('hidden');
+                    setTimeout(function() { box.classList.toggle('expanded'); }, 10);
+                }
+            </script>
+            {{ end }}
         </div>
     </nav>
 
-    {{ if .IsAuthor }}
+    {{ if .IsSearch }}
+    {{ template "search.html" . }}
+    {{ else if .IsAuthor }}
     {{ template "author" . }}
     {{ else if .IsIndex }}
     {{ template "hero.html" . }}

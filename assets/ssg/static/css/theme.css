@@ -53,6 +53,50 @@ nav a.active {
     color: #2563eb;
 }
 
+/* Nav search */
+nav .site-container {
+    justify-content: flex-start;
+}
+
+.nav-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.nav-search-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #333;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.nav-search-toggle:hover {
+    color: #2563eb;
+}
+
+.nav-search-box {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.nav-search-box.expanded {
+    width: 260px;
+}
+
+.nav-search-box.hidden {
+    display: none;
+}
+
 /* ============================================
    HERO STYLES
    ============================================ */

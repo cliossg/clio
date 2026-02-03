@@ -57,6 +57,7 @@ type SSGPageData struct {
 	Blocks            *GeneratedBlocks
 	IsIndex           bool
 	IsAuthor          bool
+	IsSearch          bool
 	IsPaginated       bool
 	CurrentPage       int
 	TotalPages        int
@@ -162,6 +163,12 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		result.Errors = append(result.Errors, fmt.Sprintf("author pages: %v", err))
 	}
 	result.AuthorPages = authorCount
+
+	if paramsMap["ssg.search.google.enabled"] == "true" && paramsMap["ssg.search.google.id"] != "" {
+		if err := g.generateSearchPage(embeddedTmpl, siteDefaultLayout, htmlPath, site, menu, paramsMap); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("search page: %v", err))
+		}
+	}
 
 	if err := g.copyProfilePhotos(htmlPath, contributors, userAuthors); err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("profile photos: %v", err))
@@ -757,6 +764,42 @@ func (g *HTMLGenerator) renderAuthorPages(embeddedTmpl *template.Template, siteD
 	}
 
 	return count, nil
+}
+
+func (g *HTMLGenerator) generateSearchPage(embeddedTmpl *template.Template, siteDefaultLayout *Layout, htmlPath string, site *Site, menu []*Section, params map[string]string) error {
+	basePath := g.getAssetPath(params)
+
+	tmpl := embeddedTmpl
+	if siteDefaultLayout != nil && siteDefaultLayout.Code != "" {
+		if customTmpl, err := g.parseCustomLayout(siteDefaultLayout.Code); err == nil {
+			tmpl = customTmpl
+		}
+	}
+
+	data := SSGPageData{
+		Site:      site,
+		Menu:      menu,
+		IsSearch:  true,
+		AssetPath: basePath,
+		Params:    params,
+	}
+	if siteDefaultLayout != nil {
+		data.CustomCSS = siteDefaultLayout.CSS
+		data.ExcludeDefaultCSS = siteDefaultLayout.ExcludeDefaultCSS
+	}
+
+	outputPath := filepath.Join(htmlPath, "search", "index.html")
+	if err := EnsureDir(outputPath); err != nil {
+		return err
+	}
+
+	f, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return tmpl.ExecuteTemplate(f, "layout.html", data)
 }
 
 func (g *HTMLGenerator) getUniqueUserAuthors(contents []*Content, excludeHandles map[string]bool) []string {
