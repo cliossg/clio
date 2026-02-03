@@ -11,9 +11,9 @@ import (
 )
 
 const createSetting = `-- name: CreateSetting :one
-INSERT INTO setting (id, site_id, short_id, name, description, value, ref_key, category, position, system, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at
+INSERT INTO setting (id, site_id, short_id, name, description, value, ref_key, category, position, system, type, constraints, ui_control, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at
 `
 
 type CreateSettingParams struct {
@@ -27,6 +27,9 @@ type CreateSettingParams struct {
 	Category    sql.NullString `json:"category"`
 	Position    sql.NullInt64  `json:"position"`
 	System      sql.NullInt64  `json:"system"`
+	Type        sql.NullString `json:"type"`
+	Constraints sql.NullString `json:"constraints"`
+	UiControl   sql.NullString `json:"ui_control"`
 	CreatedBy   sql.NullString `json:"created_by"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
@@ -45,6 +48,9 @@ func (q *Queries) CreateSetting(ctx context.Context, arg CreateSettingParams) (S
 		arg.Category,
 		arg.Position,
 		arg.System,
+		arg.Type,
+		arg.Constraints,
+		arg.UiControl,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 		arg.CreatedAt,
@@ -64,6 +70,9 @@ func (q *Queries) CreateSetting(ctx context.Context, arg CreateSettingParams) (S
 		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.Type,
+		&i.Constraints,
+		&i.UiControl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,7 +89,7 @@ func (q *Queries) DeleteSetting(ctx context.Context, id string) error {
 }
 
 const getSetting = `-- name: GetSetting :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE id = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at FROM setting WHERE id = ?
 `
 
 func (q *Queries) GetSetting(ctx context.Context, id string) (Setting, error) {
@@ -99,6 +108,9 @@ func (q *Queries) GetSetting(ctx context.Context, id string) (Setting, error) {
 		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.Type,
+		&i.Constraints,
+		&i.UiControl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -106,7 +118,7 @@ func (q *Queries) GetSetting(ctx context.Context, id string) (Setting, error) {
 }
 
 const getSettingByName = `-- name: GetSettingByName :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? AND name = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at FROM setting WHERE site_id = ? AND name = ?
 `
 
 type GetSettingByNameParams struct {
@@ -130,6 +142,9 @@ func (q *Queries) GetSettingByName(ctx context.Context, arg GetSettingByNamePara
 		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.Type,
+		&i.Constraints,
+		&i.UiControl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -137,7 +152,7 @@ func (q *Queries) GetSettingByName(ctx context.Context, arg GetSettingByNamePara
 }
 
 const getSettingByRefKey = `-- name: GetSettingByRefKey :one
-SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? AND ref_key = ?
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at FROM setting WHERE site_id = ? AND ref_key = ?
 `
 
 type GetSettingByRefKeyParams struct {
@@ -161,6 +176,9 @@ func (q *Queries) GetSettingByRefKey(ctx context.Context, arg GetSettingByRefKey
 		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.Type,
+		&i.Constraints,
+		&i.UiControl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -168,7 +186,7 @@ func (q *Queries) GetSettingByRefKey(ctx context.Context, arg GetSettingByRefKey
 }
 
 const getSettingsBySiteID = `-- name: GetSettingsBySiteID :many
-SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at FROM setting WHERE site_id = ? ORDER BY category, position, name
+SELECT id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at FROM setting WHERE site_id = ? ORDER BY category, position, name
 `
 
 func (q *Queries) GetSettingsBySiteID(ctx context.Context, siteID string) ([]Setting, error) {
@@ -193,6 +211,9 @@ func (q *Queries) GetSettingsBySiteID(ctx context.Context, siteID string) ([]Set
 			&i.Position,
 			&i.CreatedBy,
 			&i.UpdatedBy,
+			&i.Type,
+			&i.Constraints,
+			&i.UiControl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -218,10 +239,13 @@ UPDATE setting SET
     category = ?,
     position = ?,
     system = ?,
+    type = ?,
+    constraints = ?,
+    ui_control = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, created_at, updated_at
+RETURNING id, site_id, short_id, name, description, value, ref_key, system, category, position, created_by, updated_by, type, constraints, ui_control, created_at, updated_at
 `
 
 type UpdateSettingParams struct {
@@ -232,6 +256,9 @@ type UpdateSettingParams struct {
 	Category    sql.NullString `json:"category"`
 	Position    sql.NullInt64  `json:"position"`
 	System      sql.NullInt64  `json:"system"`
+	Type        sql.NullString `json:"type"`
+	Constraints sql.NullString `json:"constraints"`
+	UiControl   sql.NullString `json:"ui_control"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
 	ID          string         `json:"id"`
@@ -246,6 +273,9 @@ func (q *Queries) UpdateSetting(ctx context.Context, arg UpdateSettingParams) (S
 		arg.Category,
 		arg.Position,
 		arg.System,
+		arg.Type,
+		arg.Constraints,
+		arg.UiControl,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
 		arg.ID,
@@ -264,6 +294,9 @@ func (q *Queries) UpdateSetting(ctx context.Context, arg UpdateSettingParams) (S
 		&i.Position,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.Type,
+		&i.Constraints,
+		&i.UiControl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

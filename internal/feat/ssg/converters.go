@@ -392,6 +392,17 @@ func settingFromSQLC(s sqlc.Setting) *Setting {
 	if s.Position.Valid {
 		setting.Position = int(s.Position.Int64)
 	}
+	if s.Type.Valid && s.Type.String != "" {
+		setting.Type = s.Type.String
+	} else {
+		setting.Type = SettingTypeString
+	}
+	if s.Constraints.Valid {
+		setting.Constraints = s.Constraints.String
+	}
+	if s.UiControl.Valid {
+		setting.UIControl = s.UiControl.String
+	}
 
 	return setting
 }

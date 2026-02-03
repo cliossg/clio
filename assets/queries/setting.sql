@@ -1,6 +1,6 @@
 -- name: CreateSetting :one
-INSERT INTO setting (id, site_id, short_id, name, description, value, ref_key, category, position, system, created_by, updated_by, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO setting (id, site_id, short_id, name, description, value, ref_key, category, position, system, type, constraints, ui_control, created_by, updated_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSetting :one
@@ -24,6 +24,9 @@ UPDATE setting SET
     category = ?,
     position = ?,
     system = ?,
+    type = ?,
+    constraints = ?,
+    ui_control = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?

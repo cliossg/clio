@@ -158,39 +158,41 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		category    string
 		position    int
 		system      bool
+		typ         string
+		constraints string
 	}{
 		// Site
-		{"Site description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", "site", 1, true},
-		{"Hero image", "Hero image filename", "", "hero_image", "site", 2, true},
-		{"Site base path", "Base path for GitHub Pages subpath hosting", "/", "ssg.site.base_path", "site", 3, true},
-		{"Site base URL", "Full base URL for the site (e.g. https://example.com)", "https://example.com", "ssg.site.base_url", "site", 4, true},
+		{"Site description", "Site description shown in hero and meta", "A personal blog about coding, essays, and food", "site_description", "site", 1, true, SettingTypeText, ""},
+		{"Hero image", "Hero image filename", "", "hero_image", "site", 2, true, SettingTypeString, ""},
+		{"Site base path", "Base path for GitHub Pages subpath hosting", "/", "ssg.site.base_path", "site", 3, true, SettingTypeString, ""},
+		{"Site base URL", "Full base URL for the site (e.g. https://example.com)", "https://example.com", "ssg.site.base_url", "site", 4, true, SettingTypeString, ""},
 		// Display
-		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", "display", 1, true},
-		{"Blocks enabled", "Enable related content blocks", "true", "ssg.blocks.enabled", "display", 2, true},
-		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", "display", 3, true},
-		{"Blocks multi-section", "Show related content from other sections", "true", "ssg.blocks.multisection", "display", 4, true},
-		{"Blocks background color", "Background color for related content blocks", "#f0f4f8", "ssg.blocks.bgcolor", "display", 5, true},
+		{"Index max items", "Maximum items shown on index pages", "9", "ssg.index.maxitems", "display", 1, true, SettingTypeInteger, `{"min":1,"max":100}`},
+		{"Blocks enabled", "Enable related content blocks", "true", "ssg.blocks.enabled", "display", 2, true, SettingTypeBoolean, ""},
+		{"Blocks max items", "Maximum items shown in content blocks", "5", "ssg.blocks.maxitems", "display", 3, true, SettingTypeInteger, `{"min":1,"max":20}`},
+		{"Blocks multi-section", "Show related content from other sections", "true", "ssg.blocks.multisection", "display", 4, true, SettingTypeBoolean, ""},
+		{"Blocks background color", "Background color for related content blocks", "#f0f4f8", "ssg.blocks.bgcolor", "display", 5, true, SettingTypeString, ""},
 		// Analytics
-		{"Google Analytics enabled", "Enable Google Analytics tracking", "true", "ssg.analytics.enabled", "analytics", 1, true},
-		{"Google Analytics ID", "Google Analytics measurement ID (e.g. G-XXXXXXXXXX)", "", "ssg.analytics.id", "analytics", 2, true},
+		{"Google Analytics enabled", "Enable Google Analytics tracking", "true", "ssg.analytics.enabled", "analytics", 1, true, SettingTypeBoolean, ""},
+		{"Google Analytics ID", "Google Analytics measurement ID (e.g. G-XXXXXXXXXX)", "", "ssg.analytics.id", "analytics", 2, true, SettingTypeString, ""},
 		// Cookie banner
-		{"Cookie banner enabled", "Show cookie consent banner", "true", "ssg.cookie.banner.enabled", "site", 5, true},
-		{"Cookie banner text", "Cookie banner consent message", "This site uses cookies to improve your experience. By continuing to use this site, you accept our use of cookies.", "ssg.cookie.banner.text", "site", 6, true},
+		{"Cookie banner enabled", "Show cookie consent banner", "true", "ssg.cookie.banner.enabled", "site", 5, true, SettingTypeBoolean, ""},
+		{"Cookie banner text", "Cookie banner consent message", "This site uses cookies to improve your experience. By continuing to use this site, you accept our use of cookies.", "ssg.cookie.banner.text", "site", 6, true, SettingTypeText, ""},
 		// Search
-		{"Google Search enabled", "Enable Google site search", "true", "ssg.search.google.enabled", "search", 1, true},
-		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", "search", 2, true},
+		{"Google Search enabled", "Enable Google site search", "true", "ssg.search.google.enabled", "search", 1, true, SettingTypeBoolean, ""},
+		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", "search", 2, true, SettingTypeString, ""},
 		// Git
-		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", "git", 1, true},
-		{"Publish branch", "Git branch for publishing", "gh-pages", "ssg.publish.branch", "git", 2, true},
-		{"Publish auth token", "Authentication token for publishing", "", "ssg.publish.auth.token", "git", 3, true},
-		{"Backup repository URL", "Git repository URL for markdown backup", "", "ssg.backup.repo.url", "git", 4, true},
-		{"Backup branch", "Git branch for markdown backup", "main", "ssg.backup.branch", "git", 5, true},
-		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", "git", 6, true},
-		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.git.commit.user.name", "git", 7, true},
-		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.git.commit.user.email", "git", 8, true},
+		{"Publish repository URL", "Git repository URL for publishing", "", "ssg.publish.repo.url", "git", 1, true, SettingTypeString, ""},
+		{"Publish branch", "Git branch for publishing", "gh-pages", "ssg.publish.branch", "git", 2, true, SettingTypeString, ""},
+		{"Publish auth token", "Authentication token for publishing", "", "ssg.publish.auth.token", "git", 3, true, SettingTypeString, ""},
+		{"Backup repository URL", "Git repository URL for markdown backup", "", "ssg.backup.repo.url", "git", 4, true, SettingTypeString, ""},
+		{"Backup branch", "Git branch for markdown backup", "main", "ssg.backup.branch", "git", 5, true, SettingTypeString, ""},
+		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", "git", 6, true, SettingTypeString, ""},
+		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.git.commit.user.name", "git", 7, true, SettingTypeString, ""},
+		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.git.commit.user.email", "git", 8, true, SettingTypeString, ""},
 		// Scheduling
-		{"Scheduled publish enabled", "Enable automatic publishing of scheduled content", "true", "ssg.scheduled.publish.enabled", "scheduling", 1, true},
-		{"Scheduled publish interval", "How often to check for scheduled content (e.g. 1h, 30m)", "15m", "ssg.scheduled.publish.interval", "scheduling", 2, true},
+		{"Scheduled publish enabled", "Enable automatic publishing of scheduled content", "true", "ssg.scheduled.publish.enabled", "scheduling", 1, true, SettingTypeBoolean, ""},
+		{"Scheduled publish interval", "How often to check for scheduled content (e.g. 1h, 30m)", "15m", "ssg.scheduled.publish.interval", "scheduling", 2, true, SettingTypeString, ""},
 	}
 
 	for _, d := range defaults {
@@ -200,6 +202,8 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		param.Category = d.category
 		param.Position = d.position
 		param.System = d.system
+		param.Type = d.typ
+		param.Constraints = d.constraints
 		if err := s.service.CreateSetting(ctx, param); err != nil {
 			return fmt.Errorf("cannot create param %s: %w", d.name, err)
 		}

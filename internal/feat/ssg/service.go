@@ -910,6 +910,10 @@ func (s *service) GetTagsForContent(ctx context.Context, contentID uuid.UUID) ([
 func (s *service) CreateSetting(ctx context.Context, param *Setting) error {
 	s.ensureQueries()
 
+	if err := param.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
 	params := sqlc.CreateSettingParams{
 		ID:          param.ID.String(),
 		SiteID:      param.SiteID.String(),
@@ -921,6 +925,9 @@ func (s *service) CreateSetting(ctx context.Context, param *Setting) error {
 		Category:    nullString(param.Category),
 		Position:    nullInt(int64(param.Position)),
 		System:      nullInt(boolToInt(param.System)),
+		Type:        nullString(param.Type),
+		Constraints: nullString(param.Constraints),
+		UiControl:   nullString(param.UIControl),
 		CreatedBy:   nullString(param.CreatedBy.String()),
 		UpdatedBy:   nullString(param.UpdatedBy.String()),
 		CreatedAt:   nullTime(&param.CreatedAt),
@@ -1002,6 +1009,10 @@ func (s *service) GetSettings(ctx context.Context, siteID uuid.UUID) ([]*Setting
 func (s *service) UpdateSetting(ctx context.Context, param *Setting) error {
 	s.ensureQueries()
 
+	if err := param.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
 	params := sqlc.UpdateSettingParams{
 		Name:        param.Name,
 		Description: nullString(param.Description),
@@ -1010,6 +1021,9 @@ func (s *service) UpdateSetting(ctx context.Context, param *Setting) error {
 		Category:    nullString(param.Category),
 		Position:    nullInt(int64(param.Position)),
 		System:      nullInt(boolToInt(param.System)),
+		Type:        nullString(param.Type),
+		Constraints: nullString(param.Constraints),
+		UiControl:   nullString(param.UIControl),
 		UpdatedBy:   nullString(param.UpdatedBy.String()),
 		UpdatedAt:   nullTime(&param.UpdatedAt),
 		ID:          param.ID.String(),

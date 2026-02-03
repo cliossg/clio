@@ -3,6 +3,8 @@
     <p class="breadcrumb"><a href="/ssg/list-settings?site_id={{ .Site.ID }}">← Settings</a></p>
     <h1>Edit Setting</h1>
 
+    {{ if .Error }}<div class="alert alert-error">{{ .Error }}</div>{{ end }}
+
     <form method="POST" action="/ssg/update-setting">
         <input type="hidden" name="site_id" value="{{ .Site.ID }}">
         <input type="hidden" name="id" value="{{ .Setting.ID }}">
@@ -19,7 +21,26 @@
 
         <div class="form-group">
             <label for="value">Value</label>
-            <textarea id="value" name="value" rows="3">{{ .Setting.Value }}</textarea>
+            {{ $ctrl := .Setting.ResolveUIControl }}
+            {{ if eq $ctrl "switch" }}
+                <label class="toggle">
+                    <input type="checkbox" name="value" value="true" {{ if eq .Setting.Value "true" }}checked{{ end }}>
+                    <span class="toggle-label">{{ if eq .Setting.Value "true" }}Enabled{{ else }}Disabled{{ end }}</span>
+                </label>
+            {{ else if eq $ctrl "textarea" }}
+                <textarea id="value" name="value" rows="3">{{ .Setting.Value }}</textarea>
+            {{ else if eq $ctrl "stepper" }}
+                <input type="number" id="value" name="value" value="{{ .Setting.Value }}"{{ with .Setting.ConstraintMin }} min="{{ . }}"{{ end }}{{ with .Setting.ConstraintMax }} max="{{ . }}"{{ end }}>
+            {{ else if eq $ctrl "select" }}
+                <select id="value" name="value">
+                    {{ $currentVal := .Setting.Value }}
+                    {{ range .Setting.ConstraintOptions }}
+                    <option value="{{ . }}" {{ if eq . $currentVal }}selected{{ end }}>{{ . }}</option>
+                    {{ end }}
+                </select>
+            {{ else }}
+                <input type="text" id="value" name="value" value="{{ .Setting.Value }}">
+            {{ end }}
         </div>
 
         <div class="form-group">

@@ -217,6 +217,9 @@ type Setting struct {
 	Position    sql.NullInt64  `json:"position"`
 	CreatedBy   sql.NullString `json:"created_by"`
 	UpdatedBy   sql.NullString `json:"updated_by"`
+	Type        sql.NullString `json:"type"`
+	Constraints sql.NullString `json:"constraints"`
+	UiControl   sql.NullString `json:"ui_control"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
 }

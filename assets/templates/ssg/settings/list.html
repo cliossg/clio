@@ -20,8 +20,16 @@
             {{ range .Settings }}
             <tr class="clickable-row" onclick="window.location='/ssg/get-setting?id={{ .ID }}&site_id={{ $.Site.ID }}'">
                 <td>{{ .Name }}</td>
-                <td><code>{{ .MaskedValue }}</code></td>
-                <td style="text-align: center;">{{ if .System }}<span class="badge">System</span>{{ else }}<span class="badge badge-outline">User</span>{{ end }}</td>
+                <td>
+                    {{ if eq .Type "boolean" }}
+                        {{ if eq .Value "true" }}<span class="badge badge-success">true</span>{{ else }}<span class="badge badge-muted">false</span>{{ end }}
+                    {{ else }}
+                        <code>{{ .MaskedValue }}</code>
+                    {{ end }}
+                </td>
+                <td style="text-align: center;">
+                    <span class="badge badge-outline">{{ .Type }}</span>
+                </td>
                 <td>
                     <a href="/ssg/edit-setting?id={{ .ID }}&site_id={{ $.Site.ID }}" class="btn btn-sm" onclick="event.stopPropagation()">Edit</a>
                 </td>

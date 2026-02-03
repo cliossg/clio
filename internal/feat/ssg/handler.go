@@ -1883,6 +1883,13 @@ func (h *Handler) HandleCreateSetting(w http.ResponseWriter, r *http.Request) {
 	param := NewSetting(site.ID, r.FormValue("name"), r.FormValue("value"))
 	param.Description = r.FormValue("description")
 	param.RefKey = r.FormValue("ref_key")
+	if t := r.FormValue("type"); t != "" {
+		param.Type = t
+	} else {
+		param.Type = SettingTypeString
+	}
+	param.Constraints = r.FormValue("constraints")
+	param.UIControl = r.FormValue("ui_control")
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
@@ -1989,7 +1996,15 @@ func (h *Handler) HandleUpdateSetting(w http.ResponseWriter, r *http.Request) {
 		param.Name = r.FormValue("name")
 		param.Description = r.FormValue("description")
 	}
-	param.Value = r.FormValue("value")
+	if param.Type == SettingTypeBoolean {
+		if r.FormValue("value") == "true" {
+			param.Value = "true"
+		} else {
+			param.Value = "false"
+		}
+	} else {
+		param.Value = r.FormValue("value")
+	}
 
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {

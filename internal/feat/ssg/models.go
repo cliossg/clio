@@ -1,7 +1,10 @@
 package ssg
 
 import (
+	"encoding/json"
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -245,6 +248,25 @@ func NewMeta(siteID, contentID uuid.UUID) *Meta {
 	}
 }
 
+// Setting type constants.
+const (
+	SettingTypeString  = "string"
+	SettingTypeText    = "text"
+	SettingTypeBoolean = "boolean"
+	SettingTypeInteger = "integer"
+	SettingTypeFloat   = "float"
+	SettingTypeEnum    = "enum"
+)
+
+// SettingConstraints defines validation rules for a setting value.
+type SettingConstraints struct {
+	Min       *float64 `json:"min,omitempty"`
+	Max       *float64 `json:"max,omitempty"`
+	MaxLength *int     `json:"max_length,omitempty"`
+	Pattern   *string  `json:"pattern,omitempty"`
+	Options   []string `json:"options,omitempty"`
+}
+
 // Setting represents a site configuration setting.
 type Setting struct {
 	ID          uuid.UUID `json:"id"`
@@ -257,6 +279,9 @@ type Setting struct {
 	Category    string    `json:"category"`
 	Position    int       `json:"position"`
 	System      bool      `json:"system"`
+	Type        string    `json:"type"`
+	Constraints string    `json:"constraints"`
+	UIControl   string    `json:"ui_control"`
 	CreatedBy   uuid.UUID `json:"-"`
 	UpdatedBy   uuid.UUID `json:"-"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -300,6 +325,145 @@ func (p *Setting) MaskedValue() string {
 		return "***"
 	}
 	return p.Value[:4] + "***..." + p.Value[len(p.Value)-4:]
+}
+
+// ParseConstraints parses the JSON constraints string into a SettingConstraints struct.
+func (p *Setting) ParseConstraints() (*SettingConstraints, error) {
+	if p.Constraints == "" {
+		return &SettingConstraints{}, nil
+	}
+	var sc SettingConstraints
+	if err := json.Unmarshal([]byte(p.Constraints), &sc); err != nil {
+		return nil, fmt.Errorf("invalid constraints JSON: %w", err)
+	}
+	return &sc, nil
+}
+
+// Validate validates the setting Value against its Type and Constraints.
+func (p *Setting) Validate() error {
+	t := p.Type
+	if t == "" {
+		t = SettingTypeString
+	}
+
+	switch t {
+	case SettingTypeBoolean:
+		if p.Value != "" && p.Value != "true" && p.Value != "false" {
+			return fmt.Errorf("boolean setting %q must be 'true' or 'false', got %q", p.Name, p.Value)
+		}
+	case SettingTypeInteger:
+		if p.Value != "" {
+			v, err := strconv.ParseInt(p.Value, 10, 64)
+			if err != nil {
+				return fmt.Errorf("integer setting %q has invalid value %q", p.Name, p.Value)
+			}
+			sc, err := p.ParseConstraints()
+			if err != nil {
+				return err
+			}
+			if sc.Min != nil && float64(v) < *sc.Min {
+				return fmt.Errorf("integer setting %q value %d is below minimum %v", p.Name, v, *sc.Min)
+			}
+			if sc.Max != nil && float64(v) > *sc.Max {
+				return fmt.Errorf("integer setting %q value %d exceeds maximum %v", p.Name, v, *sc.Max)
+			}
+		}
+	case SettingTypeFloat:
+		if p.Value != "" {
+			v, err := strconv.ParseFloat(p.Value, 64)
+			if err != nil {
+				return fmt.Errorf("float setting %q has invalid value %q", p.Name, p.Value)
+			}
+			sc, err := p.ParseConstraints()
+			if err != nil {
+				return err
+			}
+			if sc.Min != nil && v < *sc.Min {
+				return fmt.Errorf("float setting %q value %v is below minimum %v", p.Name, v, *sc.Min)
+			}
+			if sc.Max != nil && v > *sc.Max {
+				return fmt.Errorf("float setting %q value %v exceeds maximum %v", p.Name, v, *sc.Max)
+			}
+		}
+	case SettingTypeEnum:
+		if p.Value != "" {
+			sc, err := p.ParseConstraints()
+			if err != nil {
+				return err
+			}
+			if len(sc.Options) > 0 {
+				found := false
+				for _, opt := range sc.Options {
+					if opt == p.Value {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return fmt.Errorf("enum setting %q value %q is not in allowed options %v", p.Name, p.Value, sc.Options)
+				}
+			}
+		}
+	case SettingTypeString, SettingTypeText:
+		if p.Value != "" {
+			sc, err := p.ParseConstraints()
+			if err != nil {
+				return err
+			}
+			if sc.MaxLength != nil && len(p.Value) > *sc.MaxLength {
+				return fmt.Errorf("setting %q value exceeds max length %d", p.Name, *sc.MaxLength)
+			}
+		}
+	}
+	return nil
+}
+
+// ResolveUIControl returns the UI control to use for this setting.
+func (p *Setting) ResolveUIControl() string {
+	if p.UIControl != "" {
+		return p.UIControl
+	}
+	switch p.Type {
+	case SettingTypeBoolean:
+		return "switch"
+	case SettingTypeText:
+		return "textarea"
+	case SettingTypeInteger:
+		return "stepper"
+	case SettingTypeFloat:
+		return "input"
+	case SettingTypeEnum:
+		return "select"
+	default:
+		return "input"
+	}
+}
+
+// ConstraintOptions returns the options from constraints, if any.
+func (p *Setting) ConstraintOptions() []string {
+	sc, err := p.ParseConstraints()
+	if err != nil {
+		return nil
+	}
+	return sc.Options
+}
+
+// ConstraintMin returns the min constraint value, or nil.
+func (p *Setting) ConstraintMin() *float64 {
+	sc, err := p.ParseConstraints()
+	if err != nil {
+		return nil
+	}
+	return sc.Min
+}
+
+// ConstraintMax returns the max constraint value, or nil.
+func (p *Setting) ConstraintMax() *float64 {
+	sc, err := p.ParseConstraints()
+	if err != nil {
+		return nil
+	}
+	return sc.Max
 }
 
 // Image represents an image asset.
