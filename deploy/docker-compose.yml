@@ -3,6 +3,7 @@ services:
     image: ghcr.io/cliossg/clio:latest
     container_name: clio-app
     restart: unless-stopped
+    user: "${CLIO_UID:-1000}:${CLIO_GID:-1000}"
     environment:
       CLIO_ENV: prod
       CLIO_LOG_LEVEL: ${LOG_LEVEL:-info}

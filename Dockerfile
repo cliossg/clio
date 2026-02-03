@@ -21,17 +21,11 @@ FROM alpine:3.21
 
 RUN apk add --no-cache ca-certificates tzdata
 
-RUN addgroup -g 1000 clio && \
-    adduser -u 1000 -G clio -s /bin/sh -D clio
-
 WORKDIR /app
 
 COPY --from=builder /app/clio /app/clio
 
-RUN mkdir -p /app/data/db /app/data/sites && \
-    chown -R clio:clio /app
-
-USER clio
+RUN mkdir -p /app/data/db /app/data/sites
 
 EXPOSE 8080 3000
 

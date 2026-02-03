@@ -5,6 +5,17 @@ REPO="cliossg/clio"
 BRANCH="main"
 BASE_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/deploy"
 INSTALL_DIR="${CLIO_DIR:-clio}"
+APP_PORT=8080
+PREVIEW_PORT=3000
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --app-port) APP_PORT="$2"; shift 2 ;;
+        --preview-port) PREVIEW_PORT="$2"; shift 2 ;;
+        --dir) INSTALL_DIR="$2"; shift 2 ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
 
 echo "Installing Clio into ./${INSTALL_DIR}"
 echo ""
@@ -32,8 +43,10 @@ SECRET=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64
 cat > .env <<EOF
 SESSION_SECRET=${SECRET}
 LOG_LEVEL=info
-APP_PORT=8080
-PREVIEW_PORT=3000
+APP_PORT=${APP_PORT}
+PREVIEW_PORT=${PREVIEW_PORT}
+CLIO_UID=$(id -u)
+CLIO_GID=$(id -g)
 EOF
 
 echo "Starting Clio..."
@@ -49,7 +62,7 @@ for i in $(seq 1 30); do
 done
 
 echo ""
-echo "Dashboard: http://localhost:8080"
+echo "Dashboard: http://localhost:${APP_PORT}"
 if [ -f ./data/credentials.txt ]; then
     echo ""
     cat ./data/credentials.txt
@@ -60,7 +73,7 @@ else
 fi
 
 echo ""
-echo "Preview server: http://localhost:3000"
+echo "Preview server: http://localhost:${PREVIEW_PORT}"
 echo "Data directory:  ${INSTALL_DIR}/data/"
 echo ""
 echo "To stop:   cd ${INSTALL_DIR} && docker compose down"

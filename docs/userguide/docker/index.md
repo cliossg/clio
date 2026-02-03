@@ -28,13 +28,21 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/ins
 
 This creates a `clio` directory, downloads the configuration, generates a session secret, pulls the Docker image, and starts Clio. When it finishes, it prints your dashboard URL and login credentials.
 
+By default, the dashboard runs on port 8080 and the preview server on port 3000. If those ports are already in use on your machine, you can change them:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/install.sh) --app-port 9090 --preview-port 9091
+```
+
 To use a different directory name:
 
 ```bash
-CLIO_DIR=myblog bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/install.sh) --dir myblog
 ```
 
-After Quick Install completes, open `http://localhost:8080`, sign in, and you are ready. To make your site public, continue to [Making Your Site Public](#making-your-site-public).
+All parameters are optional and can be combined.
+
+After Quick Install completes, open `http://localhost:8080` (or the port you chose), sign in, and you are ready. To make your site public, continue to [Making Your Site Public](#making-your-site-public).
 
 **A note on running scripts from the internet.** The script is short and does exactly four things: checks that Docker is installed, downloads a `docker-compose.yml`, generates an `.env` file with a random secret, and runs `docker compose up -d`. You can [read the source](https://github.com/cliossg/clio/blob/main/deploy/install.sh) before running it. If you prefer to do each step yourself, use the [Manual Setup](#manual-setup) below instead.
 
@@ -86,6 +94,7 @@ services:
     image: ghcr.io/cliossg/clio:latest
     container_name: clio-app
     restart: unless-stopped
+    user: "${CLIO_UID:-1000}:${CLIO_GID:-1000}"
     environment:
       CLIO_ENV: prod
       CLIO_LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -137,7 +146,11 @@ SESSION_SECRET=
 LOG_LEVEL=info
 APP_PORT=8080
 PREVIEW_PORT=3000
+CLIO_UID=1000
+CLIO_GID=1000
 ```
+
+Replace `1000` with your actual user and group ID. On Mac or Linux, run `id -u` and `id -g` to find them.
 
 Now generate a random session secret. Run one of these commands:
 
@@ -162,6 +175,8 @@ SESSION_SECRET=a7Bx9kL2mN4pQ8rT1uW3yZ6cE0fH5jD
 LOG_LEVEL=info
 APP_PORT=8080
 PREVIEW_PORT=3000
+CLIO_UID=1000
+CLIO_GID=1000
 ```
 
 ### Step 5: Start Clio
@@ -247,6 +262,7 @@ services:
     image: ghcr.io/cliossg/clio:latest
     container_name: clio-app
     restart: unless-stopped
+    user: "${CLIO_UID:-1000}:${CLIO_GID:-1000}"
     environment:
       CLIO_ENV: prod
       CLIO_LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -377,6 +393,7 @@ services:
     image: ghcr.io/cliossg/clio:latest
     container_name: clio-app
     restart: unless-stopped
+    user: "${CLIO_UID:-1000}:${CLIO_GID:-1000}"
     environment:
       CLIO_ENV: prod
       CLIO_LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -566,10 +583,10 @@ Verify the tunnel routes to `app:3000` (not `app:8080` or `localhost:3000`).
 
 ### Permission errors on data directory
 
-The container runs as user ID 1000. If the `data` directory was created by root or another user:
+The install script automatically configures the container to run with your user ID. If you set things up manually or the `data` directory was created by root or another user:
 
 ```bash
-sudo chown -R 1000:1000 ./data
+sudo chown -R $(id -u):$(id -g) ./data
 ```
 
 ### Container keeps restarting
