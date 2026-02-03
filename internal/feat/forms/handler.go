@@ -109,9 +109,12 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 // HandleSubmit processes a form submission from the public internet.
 func (h *Handler) HandleSubmit(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		h.jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid form data"})
-		return
+	if err := r.ParseMultipartForm(2 << 20); err != nil {
+		// Fallback: also handles url-encoded forms
+		if err2 := r.ParseForm(); err2 != nil {
+			h.jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid form data"})
+			return
+		}
 	}
 
 	// Honeypot check
@@ -175,7 +178,17 @@ func (h *Handler) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Infof("Form submission received from %s for site %s", sub.Email, siteIDStr)
-	h.jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
+
+	if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/json") {
+		h.jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
+		return
+	}
+
+	redirectURL := r.Header.Get("Referer")
+	if redirectURL == "" {
+		redirectURL = "/"
+	}
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 // --- Dashboard handlers ---

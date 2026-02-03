@@ -74,5 +74,42 @@ func generateContactForm(siteID string, endpointURL string) string {
     <textarea id="cf-message" name="message" rows="5" required></textarea>
   </div>
   <button type="submit">Send</button>
-</form>`, action, escapedSiteID)
+  <div class="form-status"></div>
+</form>
+<script>
+(function(){
+  var form = document.querySelector('.clio-form');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = form.querySelector('button[type="submit"]');
+    var status = form.querySelector('.form-status');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    status.className = 'form-status';
+    status.style.display = 'none';
+    fetch(form.action, {
+      method: 'POST',
+      headers: {'Accept': 'application/json'},
+      body: new FormData(form)
+    }).then(function(r) {
+      if (r.ok) {
+        status.className = 'form-status success';
+        status.textContent = 'Message sent. Thank you!';
+        status.style.display = 'block';
+        form.reset();
+      } else {
+        return r.json().then(function(d) { throw new Error(d.error || 'Failed'); });
+      }
+    }).catch(function(err) {
+      status.className = 'form-status error';
+      status.textContent = err.message || 'Something went wrong. Please try again.';
+      status.style.display = 'block';
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    });
+  });
+})();
+</script>`, action, escapedSiteID)
 }

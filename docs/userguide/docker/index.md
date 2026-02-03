@@ -2,21 +2,47 @@
 
 Clio is distributed as a Docker image. The image contains the compiled application, the admin dashboard, the preview server, and the static site generator. You do not need Go, Node.js, or any build tools on your machine. You only need Docker.
 
-This guide walks through every step, from installing Docker to having a public website. Pick the scenario that matches your goal:
+There are two ways to get started. Pick one:
+
+- **[Quick Install](#quick-install)** — A single command that does everything. If it works, skip straight to [Making Your Site Public](#making-your-site-public).
+- **[Manual Setup](#manual-setup)** — Step-by-step if you prefer to control each part, or if Quick Install did not work.
+
+Both paths produce the same result: Clio running locally at `http://localhost:8080`.
+
+Once Clio is running, you can optionally make your site public:
 
 | I want to... | Go to |
 |---|---|
-| Try Clio on my computer | [Local Setup](#local-setup) |
-| Put my site on the internet with a temporary URL | [Quick Tunnel](#quick-tunnel-temporary-url) |
-| Put my site on the internet with my own domain | [Named Tunnel](#named-tunnel-permanent-custom-domain) |
-
-All three scenarios start with the same Local Setup and build on top of it.
+| A temporary public URL for testing | [Quick Tunnel](#quick-tunnel-temporary-url) |
+| A permanent URL with my own domain | [Named Tunnel](#named-tunnel-permanent-custom-domain) |
 
 ---
 
-## Local Setup
+## Quick Install
 
-This gets Clio running on your machine. The dashboard and preview server are only accessible from `localhost`.
+Requires Docker to be installed and running. On Mac or Windows, install [Docker Desktop](https://www.docker.com/products/docker-desktop/). On Linux, follow the [official guide](https://docs.docker.com/engine/install/).
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/install.sh)
+```
+
+This creates a `clio` directory, downloads the configuration, generates a session secret, pulls the Docker image, and starts Clio. When it finishes, it prints your dashboard URL and login credentials.
+
+To use a different directory name:
+
+```bash
+CLIO_DIR=myblog bash <(curl -fsSL https://raw.githubusercontent.com/cliossg/clio/main/deploy/install.sh)
+```
+
+After Quick Install completes, open `http://localhost:8080`, sign in, and you are ready. To make your site public, continue to [Making Your Site Public](#making-your-site-public).
+
+**A note on running scripts from the internet.** The script is short and does exactly four things: checks that Docker is installed, downloads a `docker-compose.yml`, generates an `.env` file with a random secret, and runs `docker compose up -d`. You can [read the source](https://github.com/cliossg/clio/blob/main/deploy/install.sh) before running it. If you prefer to do each step yourself, use the [Manual Setup](#manual-setup) below instead.
+
+---
+
+## Manual Setup
+
+This is the step-by-step alternative to [Quick Install](#quick-install). If you already ran Quick Install successfully, skip to [Making Your Site Public](#making-your-site-public).
 
 ### Step 1: Install Docker
 

@@ -67,6 +67,7 @@
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')" title="Link">Link</button>
                     <button type="button" class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">Img</button>
                     <button type="button" class="toolbar-btn" onclick="openEmbedModal()" title="Embed video/audio">Embed</button>
+                    <button type="button" class="toolbar-btn" onclick="insertForm()" title="Insert contact form">Form</button>
                 </div>
                 <div class="editor-toolbar-group">
                     <button type="button" class="toolbar-btn" id="proofread-btn" onclick="proofreadText()" title="Proofread text">Proofread</button>
@@ -626,6 +627,17 @@ function openMetaModal() {
 
 function closeMetaModal() {
     document.getElementById('meta-modal').classList.add('hidden');
+}
+
+function insertForm() {
+    var formBlock = '```form\ntype: contact\n```';
+    var textarea = document.getElementById('body');
+    var start = textarea.selectionStart;
+    var before = textarea.value.substring(0, start);
+    if (before.length > 0 && before[before.length - 1] !== '\n') {
+        formBlock = '\n' + formBlock;
+    }
+    insertMarkdown('', formBlock);
 }
 
 // Embed Modal functions
