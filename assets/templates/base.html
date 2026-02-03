@@ -20,8 +20,9 @@
         <a href="/ssg/list-images?site_id={{ .Site.ID }}">Images</a>
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/ssg/list-contributors?site_id={{ .Site.ID }}">Contributors</a>{{ end }}
         {{ if hasRole .CurrentUserRoles "admin" }}<a href="/admin/list-users">Users</a>{{ end }}
-        <a href="/get-profile">Profile</a>
         {{ end }}
+        <a href="/api/tokens">API</a>
+        <a href="/get-profile">Profile</a>
         <span style="float: right;">
             {{ if .CurrentUserName }}{{ .CurrentUserName }} &middot; {{ end }}
             <form action="/signout" method="POST" style="display: inline;">

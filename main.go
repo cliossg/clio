@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/cliossg/clio/internal/feat/api"
 	"github.com/cliossg/clio/internal/feat/auth"
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/internal/feat/ssg"
@@ -63,12 +64,16 @@ func main() {
 	ssgSeeder := ssg.NewSeeder(ssgService, profileService, log)
 	ssgScheduler := ssg.NewScheduler(ssgService, ssgHTMLGen, ssgPublisher, log)
 
+	apiService := api.NewService(db, cfg, log)
+	apiTokenMw := api.TokenAuth(apiService)
+	apiHandler := api.NewHandler(apiService, ssgService, ssgWorkspace, ssgHTMLGen, ssgPublisher, apiTokenMw, requiredSessionMw, assetsFS, cfg, log)
+
 	router := chi.NewRouter()
 	middleware.DefaultStack(router)
 
 	fileServer := web.NewFileServer(assetsFS, log)
 
-	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, ssgScheduler, authHandler, profileHandler, ssgHandler, previewServer, fileServer}
+	deps := []any{db, authService, profileService, ssgService, apiService, authSeeder, ssgSeeder, ssgScheduler, authHandler, profileHandler, ssgHandler, apiHandler, previewServer, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {

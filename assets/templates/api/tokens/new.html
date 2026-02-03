@@ -1,0 +1,19 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/api/tokens">← API Tokens</a></p>
+    <h1>New API Token</h1>
+
+    <form method="POST" action="/api/create-token">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required placeholder="e.g. Neovim, CI/CD, Script">
+            <small>A descriptive name to identify this token.</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Token</button>
+            <a href="/api/tokens" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{{ end }}

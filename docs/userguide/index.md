@@ -19,6 +19,10 @@ Clio is a static site generator with a web-based content management interface. W
 - [**Google Search**](search/index.md): Add site search using Google Programmable Search Engine
 - [**Robots.txt**](robots-txt/index.md): Control how search engines and crawlers access your site
 
+### Integration
+
+- [**REST API**](api/index.md): Manage content programmatically with the local REST API
+
 ### Coming Soon
 
 - Sites & Sections

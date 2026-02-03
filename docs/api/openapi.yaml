@@ -1,0 +1,571 @@
+openapi: "3.0.3"
+info:
+  title: Clio REST API
+  description: Local REST API for managing Clio static site generator content.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: not_found
+            message:
+              type: string
+              example: Post not found
+
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        short_id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        active:
+          type: boolean
+        last_published_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          format: uuid
+        section_id:
+          type: string
+          format: uuid
+        short_id:
+          type: string
+        heading:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        kind:
+          type: string
+          enum: [post, page, series]
+        draft:
+          type: boolean
+        featured:
+          type: boolean
+        series:
+          type: string
+        series_order:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        section_path:
+          type: string
+        section_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PostCreate:
+      type: object
+      required:
+        - heading
+      properties:
+        section_id:
+          type: string
+          format: uuid
+        heading:
+          type: string
+        body:
+          type: string
+        summary:
+          type: string
+        kind:
+          type: string
+          enum: [post, page, series]
+          default: post
+        draft:
+          type: boolean
+          default: true
+        featured:
+          type: boolean
+          default: false
+        series:
+          type: string
+        series_order:
+          type: integer
+
+    PostUpdate:
+      type: object
+      properties:
+        section_id:
+          type: string
+          format: uuid
+        heading:
+          type: string
+        body:
+          type: string
+        summary:
+          type: string
+        kind:
+          type: string
+        draft:
+          type: boolean
+        featured:
+          type: boolean
+        series:
+          type: string
+        series_order:
+          type: integer
+
+    Token:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    TokenCreate:
+      type: object
+      properties:
+        name:
+          type: string
+
+    TokenCreated:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Raw token value (shown only once)
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    GenerateResult:
+      type: object
+      properties:
+        status:
+          type: string
+          example: generated
+        pages_generated:
+          type: integer
+        index_pages:
+          type: integer
+        author_pages:
+          type: integer
+        errors:
+          type: integer
+
+    PublishResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [published, no_changes]
+        commit_hash:
+          type: string
+        commit_url:
+          type: string
+        added:
+          type: integer
+        modified:
+          type: integer
+        deleted:
+          type: integer
+
+    BackupResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [backed_up, markdown_generated, no_changes]
+        commit_hash:
+          type: string
+        commit_url:
+          type: string
+        files_generated:
+          type: integer
+        added:
+          type: integer
+        modified:
+          type: integer
+        deleted:
+          type: integer
+        errors:
+          type: integer
+
+  responses:
+    Unauthorized:
+      description: Invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+paths:
+  /tokens:
+    post:
+      summary: Create a new API token
+      tags: [Tokens]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenCreate"
+      responses:
+        "201":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenCreated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      summary: List API tokens
+      tags: [Tokens]
+      responses:
+        "200":
+          description: Token list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Token"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /tokens/{id}:
+    delete:
+      summary: Revoke an API token
+      tags: [Tokens]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Token revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sites:
+    get:
+      summary: List all sites
+      tags: [Sites]
+      responses:
+        "200":
+          description: Site list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sites:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Site"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sites/{id}:
+    get:
+      summary: Get site details
+      tags: [Sites]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Site details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sites/{id}/posts:
+    get:
+      summary: List all posts for a site
+      tags: [Posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Post list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Post"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a new post
+      tags: [Posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreate"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sites/{id}/posts/{post_id}:
+    get:
+      summary: Get a post
+      tags: [Posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update a post
+      tags: [Posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: Post updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a post
+      tags: [Posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Post deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sites/{id}/generate:
+    post:
+      summary: Generate HTML for a site
+      tags: [Publishing]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: HTML generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sites/{id}/publish:
+    post:
+      summary: Generate HTML and publish to git
+      tags: [Publishing]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Site published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sites/{id}/backup:
+    post:
+      summary: Generate and backup markdown to git
+      tags: [Publishing]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Backup completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"

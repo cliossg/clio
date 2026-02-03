@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+type ApiToken struct {
+	ID         string       `json:"id"`
+	UserID     string       `json:"user_id"`
+	Name       string       `json:"name"`
+	TokenHash  string       `json:"token_hash"`
+	LastUsedAt sql.NullTime `json:"last_used_at"`
+	ExpiresAt  sql.NullTime `json:"expires_at"`
+	CreatedAt  time.Time    `json:"created_at"`
+}
+
 type Content struct {
 	ID                string         `json:"id"`
 	SiteID            string         `json:"site_id"`

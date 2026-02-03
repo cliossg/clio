@@ -1,0 +1,46 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-sites">← Sites</a></p>
+    <div class="card-header">
+        <h1>API Tokens</h1>
+        <a href="/api/new-token" class="btn">New Token</a>
+    </div>
+
+    {{ if .Tokens }}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Created</th>
+                <th>Last Used</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Tokens }}
+            <tr>
+                <td>{{ .Name }}</td>
+                <td>{{ .CreatedAt.Format "2006-01-02 15:04" }}</td>
+                <td>
+                    {{ if .LastUsedAt }}
+                        {{ .LastUsedAt.Format "2006-01-02 15:04" }}
+                    {{ else }}
+                        <span class="badge badge-muted">Never</span>
+                    {{ end }}
+                </td>
+                <td>
+                    <form method="POST" action="/api/delete-token" style="display:inline;" onsubmit="return confirm('Revoke token {{ .Name }}? This cannot be undone.');">
+                        <input type="hidden" name="id" value="{{ .ID }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
+                    </form>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No API tokens yet. <a href="/api/new-token">Create your first token</a>.</p>
+    {{ end }}
+
+</div>
+{{ end }}

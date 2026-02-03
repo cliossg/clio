@@ -194,6 +194,8 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		// Scheduling
 		{"Scheduled publish enabled", "Enable automatic publishing of scheduled content", "true", "ssg.scheduled.publish.enabled", "scheduling", 1, true, SettingTypeBoolean, ""},
 		{"Scheduled publish interval", "How often to check for scheduled content (e.g. 1h, 30m)", "15m", "ssg.scheduled.publish.interval", "scheduling", 2, true, SettingTypeString, ""},
+		// API
+		{"API enabled", "Enable the REST API for external clients", "false", "ssg.api.enabled", "api", 1, true, SettingTypeBoolean, ""},
 	}
 
 	for _, d := range defaults {

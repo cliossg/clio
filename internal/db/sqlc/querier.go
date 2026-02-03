@@ -13,6 +13,7 @@ type Querier interface {
 	AddTagToContent(ctx context.Context, arg AddTagToContentParams) error
 	CountContent(ctx context.Context, siteID string) (int64, error)
 	CountSearchContent(ctx context.Context, arg CountSearchContentParams) (int64, error)
+	CreateAPIToken(ctx context.Context, arg CreateAPITokenParams) (ApiToken, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateContentImage(ctx context.Context, arg CreateContentImageParams) error
 	CreateContributor(ctx context.Context, arg CreateContributorParams) (Contributor, error)
@@ -29,6 +30,7 @@ type Querier interface {
 	CreateSite(ctx context.Context, arg CreateSiteParams) (Site, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteAPIToken(ctx context.Context, id string) error
 	DeleteContent(ctx context.Context, id string) error
 	DeleteContentImage(ctx context.Context, id string) error
 	DeleteContentImageByContentAndImage(ctx context.Context, arg DeleteContentImageByContentAndImageParams) error
@@ -50,6 +52,7 @@ type Querier interface {
 	DeleteTag(ctx context.Context, id string) error
 	DeleteUser(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID string) error
+	GetAPITokenByHash(ctx context.Context, tokenHash string) (ApiToken, error)
 	GetAllContentImagesBySiteID(ctx context.Context, siteID string) ([]GetAllContentImagesBySiteIDRow, error)
 	GetAllContentWithMeta(ctx context.Context, siteID string) ([]GetAllContentWithMetaRow, error)
 	GetContent(ctx context.Context, id string) (Content, error)
@@ -104,6 +107,7 @@ type Querier interface {
 	GetUserByName(ctx context.Context, name string) (User, error)
 	GetUserWithProfile(ctx context.Context, name string) (GetUserWithProfileRow, error)
 	GetValidSession(ctx context.Context, id string) (Session, error)
+	ListAPITokensByUser(ctx context.Context, userID string) ([]ApiToken, error)
 	ListAllSites(ctx context.Context) ([]Site, error)
 	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
 	ListContributorsWithProfile(ctx context.Context, siteID string) ([]ListContributorsWithProfileRow, error)
@@ -116,6 +120,7 @@ type Querier interface {
 	SearchContent(ctx context.Context, arg SearchContentParams) ([]Content, error)
 	SetContributorProfile(ctx context.Context, arg SetContributorProfileParams) error
 	SetUserProfile(ctx context.Context, arg SetUserProfileParams) error
+	UpdateAPITokenLastUsed(ctx context.Context, arg UpdateAPITokenLastUsedParams) error
 	UpdateContent(ctx context.Context, arg UpdateContentParams) (Content, error)
 	UpdateContributor(ctx context.Context, arg UpdateContributorParams) (Contributor, error)
 	UpdateImage(ctx context.Context, arg UpdateImageParams) (Image, error)
