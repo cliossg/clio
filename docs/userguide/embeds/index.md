@@ -134,13 +134,26 @@ While editing in Clio, embeds appear as placeholders showing the provider and ID
 
 The actual video player only appears in the generated site. This keeps the editor fast and avoids loading external resources while you write.
 
+## Editor Button
+
+The content editor toolbar includes an **Embed** button that simplifies inserting embeds without writing the syntax manually.
+
+1. Place the cursor where you want the embed
+2. Click the **Embed** button in the toolbar
+3. Select the provider (YouTube, Vimeo, TikTok, SoundCloud, or raw HTML)
+4. Paste the video/track ID
+5. Choose the aspect ratio
+6. Click **Insert**
+
+The button generates the same Markdown block described in the Syntax section above — it's a shortcut, not a different format. You can also type the block manually and the result is identical. For TikTok, the ratio auto-switches to 9:16. For raw HTML embeds (tweets, maps, widgets), select the HTML provider and paste the embed code directly.
+
 ## Common Workflows
 
 ### Adding a video to an article
 
 1. Find the video on YouTube, Vimeo, etc.
 2. Copy the video ID from the URL
-3. Add the embed block to your Markdown:
+3. Click **Embed** in the toolbar or add the block manually:
 
 ````markdown
 Here's a great tutorial:
