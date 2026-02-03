@@ -3,12 +3,15 @@ package ssg
 import (
 	"context"
 	"embed"
+	"encoding/xml"
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -162,6 +165,15 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 
 	if err := g.copyProfilePhotos(htmlPath, contributors, userAuthors); err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("profile photos: %v", err))
+	}
+
+	if baseURL, ok := paramsMap["ssg.site.base_url"]; ok && baseURL != "" {
+		if err := g.generateSitemap(htmlPath, baseURL, basePath, site, contents, sections); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("sitemap: %v", err))
+		}
+		if err := g.generateCNAME(htmlPath, baseURL); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("CNAME: %v", err))
+		}
 	}
 
 	return result, nil
@@ -767,6 +779,104 @@ func (g *HTMLGenerator) getContentsByAuthor(contents []*Content, handle string) 
 		}
 	}
 	return result
+}
+
+// sitemapURLSet is the root element of a sitemap XML file.
+type sitemapURLSet struct {
+	XMLName xml.Name     `xml:"urlset"`
+	XMLNS   string       `xml:"xmlns,attr"`
+	URLs    []sitemapURL `xml:"url"`
+}
+
+// sitemapURL represents a single URL entry in the sitemap.
+type sitemapURL struct {
+	Loc     string `xml:"loc"`
+	LastMod string `xml:"lastmod"`
+}
+
+// generateSitemap creates a sitemap.xml file in the output directory.
+func (g *HTMLGenerator) generateSitemap(htmlPath, baseURL, basePath string, site *Site, contents []*Content, sections []*Section) error {
+	fullBase := strings.TrimRight(baseURL, "/") + basePath
+
+	now := time.Now()
+	urlSet := sitemapURLSet{
+		XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9",
+	}
+
+	// Homepage
+	urlSet.URLs = append(urlSet.URLs, sitemapURL{
+		Loc:     strings.TrimRight(fullBase, "/") + "/",
+		LastMod: now.UTC().Format("2006-01-02"),
+	})
+
+	// Section pages: only sections with publishable content
+	sectionMaxUpdated := make(map[uuid.UUID]time.Time)
+	for _, c := range contents {
+		if !isPublishable(c) {
+			continue
+		}
+		if t, ok := sectionMaxUpdated[c.SectionID]; !ok || c.UpdatedAt.After(t) {
+			sectionMaxUpdated[c.SectionID] = c.UpdatedAt
+		}
+	}
+
+	for _, section := range sections {
+		if section.Path == "" || section.Path == "/" {
+			continue
+		}
+		lastMod, ok := sectionMaxUpdated[section.ID]
+		if !ok {
+			continue
+		}
+		urlSet.URLs = append(urlSet.URLs, sitemapURL{
+			Loc:     strings.TrimRight(fullBase, "/") + "/" + section.Path + "/",
+			LastMod: lastMod.UTC().Format("2006-01-02"),
+		})
+	}
+
+	// Individual content pages
+	for _, c := range contents {
+		if !isPublishable(c) {
+			continue
+		}
+		if c.Meta != nil && (c.Meta.Sitemap == "exclude" || c.Meta.Sitemap == "noindex") {
+			continue
+		}
+		contentURL := g.getContentURL(c, basePath)
+		urlSet.URLs = append(urlSet.URLs, sitemapURL{
+			Loc:     strings.TrimRight(baseURL, "/") + contentURL,
+			LastMod: c.UpdatedAt.UTC().Format("2006-01-02"),
+		})
+	}
+
+	f, err := os.Create(filepath.Join(htmlPath, "sitemap.xml"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(xml.Header); err != nil {
+		return err
+	}
+
+	enc := xml.NewEncoder(f)
+	enc.Indent("", "  ")
+	return enc.Encode(urlSet)
+}
+
+// generateCNAME creates a CNAME file in the output directory for GitHub Pages custom domains.
+func (g *HTMLGenerator) generateCNAME(htmlPath, baseURL string) error {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return fmt.Errorf("invalid base URL: %w", err)
+	}
+
+	hostname := u.Hostname()
+	if hostname == "" || hostname == "localhost" {
+		return nil
+	}
+
+	return os.WriteFile(filepath.Join(htmlPath, "CNAME"), []byte(hostname), 0644)
 }
 
 // HTMLGeneratorService provides HTML generation functionality for the service layer.
