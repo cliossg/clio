@@ -127,7 +127,7 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 	}
 
 	basePath := g.getAssetPath(paramsMap)
-	allRendered := g.preRenderAllContent(contents, basePath)
+	allRendered := g.preRenderAllContent(contents, basePath, paramsMap)
 
 	blocksCfg := BlocksConfig{
 		Enabled:      paramsMap["ssg.blocks.enabled"] != "false",
@@ -407,13 +407,13 @@ func (g *HTMLGenerator) parseCustomLayout(code string) (*template.Template, erro
 	return tmpl, nil
 }
 
-func (g *HTMLGenerator) preRenderAllContent(contents []*Content, basePath string) []*RenderedContent {
+func (g *HTMLGenerator) preRenderAllContent(contents []*Content, basePath string, params map[string]string) []*RenderedContent {
 	var rendered []*RenderedContent
 	for _, c := range contents {
 		if !isPublishable(c) {
 			continue
 		}
-		htmlBody, _ := g.processor.ProcessContent(c)
+		htmlBody, _ := g.processor.ProcessContent(c, params)
 		rendered = append(rendered, &RenderedContent{
 			Content:  c,
 			HTMLBody: template.HTML(htmlBody),
@@ -435,7 +435,7 @@ func (g *HTMLGenerator) renderContentPage(embeddedTmpl *template.Template, layou
 		}
 	}
 	if rendered == nil {
-		htmlBody, err := g.processor.ProcessContent(content)
+		htmlBody, err := g.processor.ProcessContent(content, params)
 		if err != nil {
 			return err
 		}
@@ -570,7 +570,7 @@ func (g *HTMLGenerator) renderIndex(tmpl *template.Template, layout *Layout, htm
 
 		var renderedContents []*RenderedContent
 		for _, c := range pageContents {
-			htmlBody, _ := g.processor.ProcessContent(c)
+			htmlBody, _ := g.processor.ProcessContent(c, params)
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),
@@ -679,7 +679,7 @@ func (g *HTMLGenerator) renderAuthorPages(embeddedTmpl *template.Template, siteD
 
 		var renderedContents []*RenderedContent
 		for _, c := range authorContents {
-			htmlBody, _ := g.processor.ProcessContent(c)
+			htmlBody, _ := g.processor.ProcessContent(c, params)
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),
@@ -725,7 +725,7 @@ func (g *HTMLGenerator) renderAuthorPages(embeddedTmpl *template.Template, siteD
 
 		var renderedContents []*RenderedContent
 		for _, c := range authorContents {
-			htmlBody, _ := g.processor.ProcessContent(c)
+			htmlBody, _ := g.processor.ProcessContent(c, params)
 			renderedContents = append(renderedContents, &RenderedContent{
 				Content:  c,
 				HTMLBody: template.HTML(htmlBody),

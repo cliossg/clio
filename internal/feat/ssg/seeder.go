@@ -196,6 +196,11 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		{"Scheduled publish interval", "How often to check for scheduled content (e.g. 1h, 30m)", "15m", "ssg.scheduled.publish.interval", "scheduling", 2, true, SettingTypeString, ""},
 		// API
 		{"API enabled", "Enable the REST API for external clients", "false", "ssg.api.enabled", "api", 1, true, SettingTypeBoolean, ""},
+		// Forms
+		{"Forms enabled", "Enable contact form submissions", "false", "ssg.forms.enabled", "forms", 1, true, SettingTypeBoolean, ""},
+		{"Forms endpoint URL", "Public URL where the forms server is reachable (e.g. https://forms.example.com)", "", "ssg.forms.endpoint_url", "forms", 2, true, SettingTypeString, ""},
+		{"Forms allowed origins", "Comma-separated list of allowed origins for CORS", "", "ssg.forms.allowed_origins", "forms", 3, true, SettingTypeString, ""},
+		{"Forms rate limit", "Maximum form submissions per IP per hour", "5", "ssg.forms.rate_limit", "forms", 4, true, SettingTypeInteger, `{"min":1,"max":100}`},
 	}
 
 	for _, d := range defaults {

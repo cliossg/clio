@@ -9,6 +9,7 @@ import (
 
 	"github.com/cliossg/clio/internal/feat/api"
 	"github.com/cliossg/clio/internal/feat/auth"
+	"github.com/cliossg/clio/internal/feat/forms"
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/internal/feat/ssg"
 	"github.com/cliossg/clio/internal/web"
@@ -68,12 +69,16 @@ func main() {
 	apiTokenMw := api.TokenAuth(apiService)
 	apiHandler := api.NewHandler(apiService, ssgService, ssgWorkspace, ssgHTMLGen, ssgPublisher, apiTokenMw, requiredSessionMw, assetsFS, cfg, log)
 
+	formsService := forms.NewService(db, cfg, log)
+	formsHandler := forms.NewHandler(formsService, ssgService, requiredSessionMw, assetsFS, cfg, log)
+	previewServer.SetFormsHandler(formsHandler.SubmitHandler())
+
 	router := chi.NewRouter()
 	middleware.DefaultStack(router)
 
 	fileServer := web.NewFileServer(assetsFS, log)
 
-	deps := []any{db, authService, profileService, ssgService, apiService, authSeeder, ssgSeeder, ssgScheduler, authHandler, profileHandler, ssgHandler, apiHandler, previewServer, fileServer}
+	deps := []any{db, authService, profileService, ssgService, apiService, formsService, authSeeder, ssgSeeder, ssgScheduler, authHandler, profileHandler, ssgHandler, apiHandler, formsHandler, previewServer, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {

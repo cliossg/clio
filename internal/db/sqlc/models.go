@@ -79,6 +79,19 @@ type Contributor struct {
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
+type FormSubmission struct {
+	ID        string         `json:"id"`
+	SiteID    string         `json:"site_id"`
+	FormType  string         `json:"form_type"`
+	Name      sql.NullString `json:"name"`
+	Email     sql.NullString `json:"email"`
+	Message   string         `json:"message"`
+	IpAddress sql.NullString `json:"ip_address"`
+	UserAgent sql.NullString `json:"user_agent"`
+	ReadAt    sql.NullTime   `json:"read_at"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
 type Image struct {
 	ID             string         `json:"id"`
 	SiteID         string         `json:"site_id"`

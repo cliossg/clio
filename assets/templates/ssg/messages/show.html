@@ -1,0 +1,50 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/list-messages?site_id={{ .Site.ID }}">← Messages</a></p>
+    <div class="card-header">
+        <h1>{{ if .Message.Name }}{{ .Message.Name }}{{ else }}Anonymous{{ end }}</h1>
+    </div>
+
+    <table>
+        <tr>
+            <th style="width: 120px;">From</th>
+            <td>{{ if .Message.Name }}{{ .Message.Name }}{{ else }}<em>Anonymous</em>{{ end }}</td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ if .Message.Email }}<a href="mailto:{{ .Message.Email }}">{{ .Message.Email }}</a>{{ else }}<em>Not provided</em>{{ end }}</td>
+        </tr>
+        <tr>
+            <th>Date</th>
+            <td>{{ .Message.CreatedAt.Format "January 2, 2006 at 15:04" }}</td>
+        </tr>
+        <tr>
+            <th>Status</th>
+            <td>
+                {{ if .Message.IsRead }}
+                    <span class="badge badge-muted">Read</span>
+                {{ else }}
+                    <span class="badge badge-success">New</span>
+                {{ end }}
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-secondary, #f5f5f5); border-radius: 4px; white-space: pre-wrap;">{{ .Message.Message }}</div>
+
+    <div style="display: flex; gap: 0.5rem;">
+        {{ if not .Message.IsRead }}
+        <form action="/ssg/mark-message-read" method="POST">
+            <input type="hidden" name="id" value="{{ .Message.ID }}">
+            <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+            <button type="submit" class="btn">Mark as Read</button>
+        </form>
+        {{ end }}
+        <form action="/ssg/delete-message" method="POST" onsubmit="return confirm('Delete this message?')">
+            <input type="hidden" name="id" value="{{ .Message.ID }}">
+            <input type="hidden" name="site_id" value="{{ .Site.ID }}">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+{{ end }}

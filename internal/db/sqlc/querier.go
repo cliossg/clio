@@ -13,10 +13,12 @@ type Querier interface {
 	AddTagToContent(ctx context.Context, arg AddTagToContentParams) error
 	CountContent(ctx context.Context, siteID string) (int64, error)
 	CountSearchContent(ctx context.Context, arg CountSearchContentParams) (int64, error)
+	CountUnreadFormSubmissions(ctx context.Context, siteID string) (int64, error)
 	CreateAPIToken(ctx context.Context, arg CreateAPITokenParams) (ApiToken, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateContentImage(ctx context.Context, arg CreateContentImageParams) error
 	CreateContributor(ctx context.Context, arg CreateContributorParams) (Contributor, error)
+	CreateFormSubmission(ctx context.Context, arg CreateFormSubmissionParams) (FormSubmission, error)
 	CreateImage(ctx context.Context, arg CreateImageParams) (Image, error)
 	CreateImageVariant(ctx context.Context, arg CreateImageVariantParams) (ImageVariant, error)
 	CreateImport(ctx context.Context, arg CreateImportParams) (Import, error)
@@ -36,6 +38,7 @@ type Querier interface {
 	DeleteContentImageByContentAndImage(ctx context.Context, arg DeleteContentImageByContentAndImageParams) error
 	DeleteContributor(ctx context.Context, id string) error
 	DeleteExpiredSessions(ctx context.Context) error
+	DeleteFormSubmission(ctx context.Context, id string) error
 	DeleteImage(ctx context.Context, id string) error
 	DeleteImageVariant(ctx context.Context, id string) error
 	DeleteImport(ctx context.Context, id string) error
@@ -66,6 +69,7 @@ type Querier interface {
 	GetContentWithPagination(ctx context.Context, arg GetContentWithPaginationParams) ([]Content, error)
 	GetContributor(ctx context.Context, id string) (Contributor, error)
 	GetContributorByHandle(ctx context.Context, arg GetContributorByHandleParams) (Contributor, error)
+	GetFormSubmission(ctx context.Context, id string) (FormSubmission, error)
 	GetImage(ctx context.Context, id string) (Image, error)
 	GetImageByPath(ctx context.Context, arg GetImageByPathParams) (Image, error)
 	GetImageByShortID(ctx context.Context, shortID sql.NullString) (Image, error)
@@ -111,10 +115,12 @@ type Querier interface {
 	ListAllSites(ctx context.Context) ([]Site, error)
 	ListContributorsBySiteID(ctx context.Context, siteID string) ([]Contributor, error)
 	ListContributorsWithProfile(ctx context.Context, siteID string) ([]ListContributorsWithProfileRow, error)
+	ListFormSubmissionsBySite(ctx context.Context, siteID string) ([]FormSubmission, error)
 	ListImportsBySiteID(ctx context.Context, siteID string) ([]ListImportsBySiteIDRow, error)
 	ListProfiles(ctx context.Context, siteID string) ([]Profile, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	MarkFormSubmissionRead(ctx context.Context, arg MarkFormSubmissionReadParams) error
 	RemoveAllTagsFromContent(ctx context.Context, contentID string) error
 	RemoveTagFromContent(ctx context.Context, arg RemoveTagFromContentParams) error
 	SearchContent(ctx context.Context, arg SearchContentParams) ([]Content, error)

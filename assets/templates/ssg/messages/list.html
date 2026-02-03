@@ -1,0 +1,41 @@
+{{ define "content" }}
+<div class="card">
+    <p class="breadcrumb"><a href="/ssg/get-site?id={{ .Site.ID }}">← {{ .Site.Name }}</a></p>
+    <div class="card-header">
+        <h1>Messages{{ if .UnreadCount }} <span class="badge badge-info">{{ .UnreadCount }} unread</span>{{ end }}</h1>
+    </div>
+
+    {{ if .Messages }}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th style="text-align: center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Messages }}
+            <tr class="clickable-row" onclick="window.location='/ssg/get-message?id={{ .ID }}&site_id={{ $.Site.ID }}'">
+                <td>{{ if .Name }}{{ .Name }}{{ else }}<em>Anonymous</em>{{ end }}</td>
+                <td>{{ .Email }}</td>
+                <td>{{ .MessagePreview }}</td>
+                <td>{{ .CreatedAt.Format "Jan 2, 2006 15:04" }}</td>
+                <td style="text-align: center;">
+                    {{ if .IsRead }}
+                        <span class="badge badge-muted">read</span>
+                    {{ else }}
+                        <span class="badge badge-success">new</span>
+                    {{ end }}
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <p class="empty-state">No messages yet. Form submissions from your site will appear here.</p>
+    {{ end }}
+</div>
+{{ end }}

@@ -64,7 +64,8 @@ func (p *Processor) ToHTMLString(markdown string) (string, error) {
 }
 
 // ProcessContent processes a Content's body and returns HTML.
-func (p *Processor) ProcessContent(content *Content) (string, error) {
+// Optional params map is used for form generation (ssg.forms.endpoint_url).
+func (p *Processor) ProcessContent(content *Content, params ...map[string]string) (string, error) {
 	html, err := p.ToHTML([]byte(content.Body))
 	if err != nil {
 		return "", err
@@ -84,6 +85,15 @@ func (p *Processor) ProcessContent(content *Content) (string, error) {
 
 	// Process embed code blocks
 	html = processEmbeds(html)
+
+	// Process form code blocks
+	var paramsMap map[string]string
+	if len(params) > 0 {
+		paramsMap = params[0]
+	}
+	if paramsMap != nil && paramsMap["ssg.forms.enabled"] == "true" {
+		html = processForms(html, content.SiteID.String(), paramsMap["ssg.forms.endpoint_url"], true)
+	}
 
 	return html, nil
 }

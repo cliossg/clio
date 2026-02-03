@@ -12,11 +12,12 @@ import (
 )
 
 type PreviewServer struct {
-	service   Service
-	workspace *Workspace
-	server    *http.Server
-	cfg       *config.Config
-	log       logger.Logger
+	service      Service
+	workspace    *Workspace
+	server       *http.Server
+	formsHandler http.Handler
+	cfg          *config.Config
+	log          logger.Logger
 }
 
 func NewPreviewServer(service Service, cfg *config.Config, log logger.Logger) *PreviewServer {
@@ -26,6 +27,11 @@ func NewPreviewServer(service Service, cfg *config.Config, log logger.Logger) *P
 		cfg:       cfg,
 		log:       log,
 	}
+}
+
+// SetFormsHandler sets the handler for form submission API requests.
+func (s *PreviewServer) SetFormsHandler(h http.Handler) {
+	s.formsHandler = h
 }
 
 func (s *PreviewServer) Start(ctx context.Context) error {
@@ -53,6 +59,12 @@ func (s *PreviewServer) Stop(ctx context.Context) error {
 }
 
 func (s *PreviewServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Handle forms API before site routing (no subdomain required)
+	if s.formsHandler != nil && strings.HasPrefix(r.URL.Path, "/api/v1/forms/") {
+		http.StripPrefix("/api/v1/forms", s.formsHandler).ServeHTTP(w, r)
+		return
+	}
+
 	siteSlug := s.extractSiteSlug(r.Host)
 	if siteSlug == "" {
 		http.Error(w, "Invalid host. Use <site>.localhost:3000", http.StatusBadRequest)

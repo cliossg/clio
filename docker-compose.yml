@@ -52,7 +52,7 @@ services:
     depends_on:
       app:
         condition: service_healthy
-    command: tunnel --url http://app:8080
+    command: tunnel --url http://app:3000
     networks:
       - clio-network
     profiles:
