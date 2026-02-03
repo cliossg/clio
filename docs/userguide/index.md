@@ -17,6 +17,7 @@ Clio is a static site generator with a web-based content management interface. W
 - [**Google Analytics**](analytics/index.md): Track visitor traffic with Google Analytics
 - [**Cookie Banner**](cookie-banner/index.md): Cookie consent banner for your site
 - [**Google Search**](search/index.md): Add site search using Google Programmable Search Engine
+- [**Robots.txt**](robots-txt/index.md): Control how search engines and crawlers access your site
 
 ### Coming Soon
 

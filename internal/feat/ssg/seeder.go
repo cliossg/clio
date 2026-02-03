@@ -178,6 +178,7 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		// Cookie banner
 		{"Cookie banner enabled", "Show cookie consent banner", "true", "ssg.cookie.banner.enabled", "site", 5, true, SettingTypeBoolean, ""},
 		{"Cookie banner text", "Cookie banner consent message", "This site uses cookies to improve your experience. By continuing to use this site, you accept our use of cookies.", "ssg.cookie.banner.text", "site", 6, true, SettingTypeText, ""},
+		{"Robots.txt", "Custom robots.txt content (Sitemap URL is appended automatically)", "User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: ClaudeBot\nDisallow: /\n\nUser-agent: Google-Extended\nDisallow: /", "ssg.robots.txt", "site", 7, true, SettingTypeText, ""},
 		// Search
 		{"Google Search enabled", "Enable Google site search", "true", "ssg.search.google.enabled", "search", 1, true, SettingTypeBoolean, ""},
 		{"Google Search ID", "Google Custom Search Engine ID", "", "ssg.search.google.id", "search", 2, true, SettingTypeString, ""},

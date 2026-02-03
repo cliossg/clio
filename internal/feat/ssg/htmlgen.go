@@ -183,6 +183,16 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 		}
 	}
 
+	if robotsTxt, ok := paramsMap["ssg.robots.txt"]; ok && robotsTxt != "" {
+		sitemapURL := ""
+		if baseURL, ok := paramsMap["ssg.site.base_url"]; ok && baseURL != "" {
+			sitemapURL = strings.TrimRight(baseURL, "/") + basePath + "sitemap.xml"
+		}
+		if err := g.generateRobotsTxt(htmlPath, robotsTxt, sitemapURL); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("robots.txt: %v", err))
+		}
+	}
+
 	return result, nil
 }
 
@@ -920,6 +930,15 @@ func (g *HTMLGenerator) generateCNAME(htmlPath, baseURL string) error {
 	}
 
 	return os.WriteFile(filepath.Join(htmlPath, "CNAME"), []byte(hostname), 0644)
+}
+
+func (g *HTMLGenerator) generateRobotsTxt(htmlPath, content, sitemapURL string) error {
+	body := strings.TrimRight(content, "\n")
+	if sitemapURL != "" {
+		body += "\n\nSitemap: " + sitemapURL
+	}
+	body += "\n"
+	return os.WriteFile(filepath.Join(htmlPath, "robots.txt"), []byte(body), 0644)
 }
 
 // HTMLGeneratorService provides HTML generation functionality for the service layer.
