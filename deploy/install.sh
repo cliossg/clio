@@ -21,7 +21,7 @@ if ! docker info &> /dev/null 2>&1; then
     exit 1
 fi
 
-mkdir -p "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}/data/db" "${INSTALL_DIR}/data/sites"
 cd "${INSTALL_DIR}"
 
 echo "Downloading docker-compose.yml..."

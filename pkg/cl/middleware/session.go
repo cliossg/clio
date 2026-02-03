@@ -204,7 +204,7 @@ func isLocalhost(r *http.Request) bool {
 		return false
 	}
 
-	return ip.IsLoopback()
+	return ip.IsLoopback() || ip.IsPrivate()
 }
 
 // DefaultStack applies the default middleware stack to a router.
