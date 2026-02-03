@@ -14,6 +14,7 @@ type EmbedConfig struct {
 	ID       string `yaml:"id"`
 	Ratio    string `yaml:"ratio"`
 	Title    string `yaml:"title"`
+	Code     string
 }
 
 type EmbedProvider struct {
@@ -56,6 +57,14 @@ func (e *EmbedConfig) ToHTML() (string, error) {
 	if e.Provider == "" {
 		return "", fmt.Errorf("provider is required")
 	}
+
+	if strings.ToLower(e.Provider) == "html" {
+		if strings.TrimSpace(e.Code) == "" {
+			return "", fmt.Errorf("html embed requires code")
+		}
+		return fmt.Sprintf(`<div class="embed-html">%s</div>`, e.Code), nil
+	}
+
 	if e.ID == "" {
 		return "", fmt.Errorf("id is required")
 	}
@@ -110,12 +119,26 @@ func processEmbeds(html string) string {
 			return match
 		}
 
-		yamlContent := strings.TrimSpace(submatches[1])
-		yamlContent = unescapeHTML(yamlContent)
+		content := strings.TrimSpace(submatches[1])
+		content = unescapeHTML(content)
+
+		var yamlContent string
+		var code string
+
+		if idx := strings.Index(content, "\n---\n"); idx >= 0 {
+			yamlContent = strings.TrimSpace(content[:idx])
+			code = strings.TrimSpace(content[idx+5:])
+		} else {
+			yamlContent = content
+		}
 
 		var config EmbedConfig
 		if err := yaml.Unmarshal([]byte(yamlContent), &config); err != nil {
 			return match
+		}
+
+		if code != "" {
+			config.Code = code
 		}
 
 		embedHTML, err := config.ToHTML()

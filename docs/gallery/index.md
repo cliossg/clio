@@ -29,6 +29,17 @@ AI-powered writing assistant that checks grammar, style, repetitions, and overus
 | ![Suggested changes](proofread-changes.png) | ![Changes applied](proofread-done.png) |
 | Suggested changes | Changes applied |
 
+## Embedding
+
+Include videos and audio from YouTube, Vimeo, TikTok, and SoundCloud directly in your content using simple Markdown syntax. You can also embed arbitrary HTML (tweets, maps, widgets) using the generic HTML provider.
+
+| | |
+|:---:|:---:|
+| ![Embed Modal](embedding-modal.png) | ![Video & Audio Embeds](embedding-video-audio.png) |
+| Embed Modal | Video & Audio Embeds |
+| ![Embedded Content in Post](embedding-post.png) | |
+| Embedded Content in Post | |
+
 ## Sections & Layouts
 
 | | |

@@ -119,6 +119,39 @@ func TestEmbedConfigToHTML(t *testing.T) {
 			want:    `youtube.com/embed/abc123`,
 			wantErr: false,
 		},
+		{
+			name: "html provider with code",
+			config: EmbedConfig{
+				Provider: "html",
+				Code:     `<blockquote class="twitter-tweet"><p>Hello</p></blockquote>`,
+			},
+			want:    `<div class="embed-html"><blockquote class="twitter-tweet"><p>Hello</p></blockquote></div>`,
+			wantErr: false,
+		},
+		{
+			name: "html provider without code",
+			config: EmbedConfig{
+				Provider: "html",
+			},
+			wantErr: true,
+		},
+		{
+			name: "html provider with empty code",
+			config: EmbedConfig{
+				Provider: "html",
+				Code:     "   ",
+			},
+			wantErr: true,
+		},
+		{
+			name: "html provider does not require id",
+			config: EmbedConfig{
+				Provider: "html",
+				Code:     "<div>test</div>",
+			},
+			want:    `<div class="embed-html"><div>test</div></div>`,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -189,6 +222,26 @@ id: abc&amp;def</code></pre>`,
 id: vid1</code></pre><pre><code class="language-embed">provider: vimeo
 id: vid2</code></pre>`,
 			want: `youtube.com/embed/vid1`,
+		},
+		{
+			name: "html embed with separator",
+			html: `<pre><code class="language-embed">provider: html
+---
+&lt;blockquote class=&quot;twitter-tweet&quot;&gt;&lt;p&gt;Hello&lt;/p&gt;&lt;/blockquote&gt;</code></pre>`,
+			want: `<div class="embed-html"><blockquote class="twitter-tweet"><p>Hello</p></blockquote></div>`,
+		},
+		{
+			name: "html embed with script",
+			html: `<pre><code class="language-embed">provider: html
+---
+&lt;blockquote&gt;tweet&lt;/blockquote&gt;
+&lt;script async src=&quot;https://platform.twitter.com/widgets.js&quot;&gt;&lt;/script&gt;</code></pre>`,
+			want: `<div class="embed-html"><blockquote>tweet</blockquote>`,
+		},
+		{
+			name: "html embed without code unchanged",
+			html: `<pre><code class="language-embed">provider: html</code></pre>`,
+			want: `<pre><code class="language-embed">`,
 		},
 	}
 

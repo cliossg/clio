@@ -321,14 +321,15 @@
                     <option value="vimeo">Vimeo</option>
                     <option value="tiktok">TikTok</option>
                     <option value="soundcloud">SoundCloud</option>
+                    <option value="html">HTML</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="embed-id-group">
                 <label for="embed-id">Video/Track ID</label>
                 <input type="text" id="embed-id" name="id" placeholder="dQw4w9WgXcQ" required>
                 <small id="embed-help" class="form-help">The ID from the URL (e.g., youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>)</small>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="embed-ratio-group">
                 <label for="embed-ratio">Aspect Ratio</label>
                 <select id="embed-ratio" name="ratio">
                     <option value="16:9">16:9 (standard video)</option>
@@ -336,6 +337,11 @@
                     <option value="1:1">1:1 (square)</option>
                     <option value="9:16">9:16 (vertical/TikTok)</option>
                 </select>
+            </div>
+            <div class="form-group" id="embed-code-group" style="display: none;">
+                <label for="embed-code">HTML Code</label>
+                <textarea id="embed-code" name="code" rows="6" placeholder="<blockquote class=&quot;twitter-tweet&quot;>...</blockquote>&#10;<script async src=&quot;https://platform.twitter.com/widgets.js&quot;></script>"></textarea>
+                <small class="form-help">Paste embed HTML (tweets, maps, widgets, etc.)</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeEmbedModal()">Cancel</button>
@@ -367,6 +373,12 @@ const embedRenderer = {
     code(code, language) {
         if (language === 'embed') {
             const config = parseEmbedYAML(code);
+            if (config.provider === 'html' && config.code) {
+                return `<div class="embed-placeholder">
+                    <span class="embed-icon">&lt;/&gt;</span>
+                    <span class="embed-label">HTML embed</span>
+                </div>`;
+            }
             if (config.provider && config.id) {
                 return `<div class="embed-placeholder">
                     <span class="embed-icon">▶</span>
@@ -380,7 +392,13 @@ const embedRenderer = {
 
 function parseEmbedYAML(code) {
     const config = {};
-    code.split('\n').forEach(line => {
+    const separatorIndex = code.indexOf('\n---\n');
+    let yamlPart = code;
+    if (separatorIndex >= 0) {
+        yamlPart = code.substring(0, separatorIndex);
+        config.code = code.substring(separatorIndex + 5).trim();
+    }
+    yamlPart.split('\n').forEach(line => {
         const colonIndex = line.indexOf(':');
         if (colonIndex > 0) {
             const key = line.substring(0, colonIndex).trim();
@@ -619,17 +637,27 @@ function openEmbedModal() {
 function closeEmbedModal() {
     document.getElementById('embed-modal').classList.add('hidden');
     document.getElementById('embed-form').reset();
+    document.getElementById('embed-id-group').style.display = '';
+    document.getElementById('embed-ratio-group').style.display = '';
+    document.getElementById('embed-code-group').style.display = 'none';
+    document.getElementById('embed-id').setAttribute('required', '');
 }
 
 function insertEmbed(e) {
     e.preventDefault();
     const provider = document.getElementById('embed-provider').value;
-    const id = document.getElementById('embed-id').value.trim();
-    const ratio = document.getElementById('embed-ratio').value;
 
-    if (!id) return;
-
-    const embedBlock = '```embed\nprovider: ' + provider + '\nid: ' + id + '\nratio: ' + ratio + '\n```';
+    let embedBlock;
+    if (provider === 'html') {
+        const code = document.getElementById('embed-code').value.trim();
+        if (!code) return;
+        embedBlock = '```embed\nprovider: html\n---\n' + code + '\n```';
+    } else {
+        const id = document.getElementById('embed-id').value.trim();
+        const ratio = document.getElementById('embed-ratio').value;
+        if (!id) return;
+        embedBlock = '```embed\nprovider: ' + provider + '\nid: ' + id + '\nratio: ' + ratio + '\n```';
+    }
 
     const start = bodyTextarea.selectionStart;
     const text = bodyTextarea.value;
@@ -651,8 +679,25 @@ function insertEmbed(e) {
 
 // Update embed help text based on provider
 document.getElementById('embed-provider').addEventListener('change', function() {
-    const help = document.getElementById('embed-help');
+    const idGroup = document.getElementById('embed-id-group');
+    const ratioGroup = document.getElementById('embed-ratio-group');
+    const codeGroup = document.getElementById('embed-code-group');
     const idInput = document.getElementById('embed-id');
+    const help = document.getElementById('embed-help');
+
+    if (this.value === 'html') {
+        idGroup.style.display = 'none';
+        ratioGroup.style.display = 'none';
+        codeGroup.style.display = '';
+        idInput.removeAttribute('required');
+        return;
+    }
+
+    idGroup.style.display = '';
+    ratioGroup.style.display = '';
+    codeGroup.style.display = 'none';
+    idInput.setAttribute('required', '');
+
     const examples = {
         youtube: { text: 'youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>', placeholder: 'dQw4w9WgXcQ' },
         vimeo: { text: 'vimeo.com/<strong>123456789</strong>', placeholder: '123456789' },
