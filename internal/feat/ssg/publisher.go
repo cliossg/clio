@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cliossg/clio/pkg/cl/git"
@@ -40,6 +41,7 @@ type PlanResult struct {
 type Publisher struct {
 	workspace *Workspace
 	gitClient git.Client
+	mu        sync.Mutex
 }
 
 func NewPublisher(workspace *Workspace, gitClient git.Client) *Publisher {
@@ -66,6 +68,9 @@ func (p *Publisher) Validate(cfg PublishConfig) error {
 }
 
 func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug string) (*PublishResult, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if err := p.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
@@ -158,6 +163,9 @@ func (p *Publisher) Publish(ctx context.Context, cfg PublishConfig, siteSlug str
 }
 
 func (p *Publisher) Backup(ctx context.Context, cfg PublishConfig, siteSlug string) (*PublishResult, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if err := p.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}

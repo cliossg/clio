@@ -14,22 +14,15 @@ import (
 	"github.com/cliossg/clio/pkg/cl/app"
 	"github.com/cliossg/clio/pkg/cl/config"
 	"github.com/cliossg/clio/pkg/cl/database"
+	"github.com/cliossg/clio/pkg/cl/git"
+	"github.com/cliossg/clio/pkg/cl/llm"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
-//go:embed assets/migrations/sqlite/*.sql
-var migrationsFS embed.FS
-
-//go:embed assets/templates/*.html assets/templates/*/*.html assets/templates/*/*/*.html
-var templatesFS embed.FS
-
-//go:embed assets/static
-var staticFS embed.FS
-
-//go:embed assets/ssg
-var ssgAssetsFS embed.FS
+//go:embed assets
+var assetsFS embed.FS
 
 func main() {
 	ctx := context.Background()
@@ -41,37 +34,41 @@ func main() {
 	log.Infof("Database: %s", cfg.Database.Path)
 	log.Infof("Sites: %s", cfg.SSG.SitesBasePath)
 
-	db := database.New(migrationsFS, cfg, log)
+	db := database.New(assetsFS, cfg, log)
 	db.SetMigrationPath("assets/migrations/sqlite")
 
 	authService := auth.NewService(db, cfg, log)
 	profileService := profile.NewService(db, cfg, log)
 	ssgWorkspace := ssg.NewWorkspace(cfg.SSG.SitesBasePath)
-	ssgHTMLGen := ssg.NewHTMLGenerator(ssgWorkspace, ssgAssetsFS)
+	ssgHTMLGen := ssg.NewHTMLGenerator(ssgWorkspace, assetsFS)
 	ssgService := ssg.NewService(db, ssgHTMLGen, cfg, log)
+	gitClient := git.NewClient(log)
+	ssgPublisher := ssg.NewPublisher(ssgWorkspace, gitClient)
+	llmClient := llm.NewClient(cfg.LLM.APIKey, cfg.LLM.Model, cfg.LLM.Temperature)
 
 	optionalSessionMw := middleware.OptionalSession(authService)
 	requiredSessionMw := middleware.Session(authService)
 	siteCtxMw := ssg.SiteContextMiddleware(ssgService, log)
 
-	authHandler := auth.NewHandler(authService, profileService, optionalSessionMw, templatesFS, cfg, log)
-	profileHandler := profile.NewHandler(profileService, authService, requiredSessionMw, templatesFS, cfg, log)
-	ssgHandler := ssg.NewHandler(ssgService, profileService, siteCtxMw, requiredSessionMw, templatesFS, ssgAssetsFS, cfg, log)
+	authHandler := auth.NewHandler(authService, profileService, optionalSessionMw, assetsFS, cfg, log)
+	profileHandler := profile.NewHandler(profileService, authService, requiredSessionMw, assetsFS, cfg, log)
+	ssgHandler := ssg.NewHandler(ssgService, profileService, ssgWorkspace, ssgHTMLGen, ssgPublisher, llmClient, siteCtxMw, requiredSessionMw, assetsFS, cfg, log)
 	previewServer := ssg.NewPreviewServer(ssgService, cfg, log)
 
-	authSeeder := auth.NewSeeder(authService, profileService, templatesFS, log)
+	authSeeder := auth.NewSeeder(authService, profileService, assetsFS, log)
 	if cfg.Credentials.Path != "" {
 		authSeeder.SetCredentialsPath(cfg.Credentials.Path)
 	}
 
 	ssgSeeder := ssg.NewSeeder(ssgService, profileService, log)
+	ssgScheduler := ssg.NewScheduler(ssgService, ssgHTMLGen, ssgPublisher, log)
 
 	router := chi.NewRouter()
 	middleware.DefaultStack(router)
 
-	fileServer := web.NewFileServer(staticFS, log)
+	fileServer := web.NewFileServer(assetsFS, log)
 
-	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, authHandler, profileHandler, ssgHandler, previewServer, fileServer}
+	deps := []any{db, authService, profileService, ssgService, authSeeder, ssgSeeder, ssgScheduler, authHandler, profileHandler, ssgHandler, previewServer, fileServer}
 
 	starts, stops, registrars := app.Setup(ctx, router, deps...)
 	if err := app.Start(ctx, log, starts, stops, registrars, router); err != nil {

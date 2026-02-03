@@ -17,11 +17,12 @@ type Site struct {
 	Slug              string    `json:"slug"`
 	Active            bool      `json:"active"`
 	DefaultLayoutID   uuid.UUID `json:"default_layout_id"`
-	DefaultLayoutName string    `json:"default_layout_name"`
-	CreatedBy         uuid.UUID `json:"-"`
-	UpdatedBy         uuid.UUID `json:"-"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	DefaultLayoutName string     `json:"default_layout_name"`
+	LastPublishedAt   *time.Time `json:"last_published_at,omitempty"`
+	CreatedBy         uuid.UUID  `json:"-"`
+	UpdatedBy         uuid.UUID  `json:"-"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 // NewSite creates a new Site instance.

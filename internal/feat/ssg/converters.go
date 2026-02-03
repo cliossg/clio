@@ -26,6 +26,9 @@ func siteFromSQLC(s sqlc.Site) *Site {
 	if s.DefaultLayoutName.Valid {
 		site.DefaultLayoutName = s.DefaultLayoutName.String
 	}
+	if s.LastPublishedAt.Valid {
+		site.LastPublishedAt = &s.LastPublishedAt.Time
+	}
 	return site
 }
 

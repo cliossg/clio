@@ -253,6 +253,7 @@ func (s *service) UpdateSite(ctx context.Context, site *Site) error {
 		Active:            boolToInt(site.Active),
 		DefaultLayoutID:   nullString(site.DefaultLayoutID.String()),
 		DefaultLayoutName: nullString(site.DefaultLayoutName),
+		LastPublishedAt:   nullTime(site.LastPublishedAt),
 		UpdatedBy:         site.UpdatedBy.String(),
 		UpdatedAt:         site.UpdatedAt,
 		ID:                site.ID.String(),

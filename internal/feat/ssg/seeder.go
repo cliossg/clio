@@ -181,6 +181,9 @@ func (s *Seeder) seedDefaultParams(ctx context.Context, siteID uuid.UUID) error 
 		{"Backup auth token", "Authentication token for backup", "", "ssg.backup.auth.token", "git", 6, true},
 		{"Commit user name", "Git user name for commits", "Clio Bot", "ssg.git.commit.user.name", "git", 7, true},
 		{"Commit user email", "Git user email for commits", "clio@localhost", "ssg.git.commit.user.email", "git", 8, true},
+		// Scheduling
+		{"Scheduled publish enabled", "Enable automatic publishing of scheduled content", "true", "ssg.scheduled.publish.enabled", "scheduling", 1, true},
+		{"Scheduled publish interval", "How often to check for scheduled content (e.g. 1h, 30m)", "15m", "ssg.scheduled.publish.interval", "scheduling", 2, true},
 	}
 
 	for _, d := range defaults {

@@ -749,10 +749,16 @@ func TestServiceSetUserProfile(t *testing.T) {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
 
-	// Create a real profile in the database
+	// Create a site and profile in the database
+	siteID := uuid.New()
+	_, err = db.Exec(`INSERT INTO site (id, short_id, name, slug, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?)`,
+		siteID.String(), "site1234", "Test Site", "test-site", user.ID.String(), user.ID.String())
+	if err != nil {
+		t.Fatalf("Failed to create test site: %v", err)
+	}
 	profileID := uuid.New()
-	_, err = db.Exec(`INSERT INTO profile (id, short_id, slug, name, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "abc12345", "test-profile", "Test Profile", user.ID.String(), user.ID.String())
+	_, err = db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), siteID.String(), "abc12345", "test-profile", "Test Profile", user.ID.String(), user.ID.String())
 	if err != nil {
 		t.Fatalf("Failed to create test profile: %v", err)
 	}
@@ -911,11 +917,17 @@ func TestServiceGetUserWithProfile(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create a profile first
+	// Create a site and profile first
+	siteID := uuid.New()
+	_, err := db.Exec(`INSERT INTO site (id, short_id, name, slug, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?)`,
+		siteID.String(), "site2345", "Test Site", "test-site-gwp", uuid.New().String(), uuid.New().String())
+	if err != nil {
+		t.Fatalf("Failed to create test site: %v", err)
+	}
 	profileID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "prof1234", "profile-user", "Profile User", uuid.New().String(), uuid.New().String())
+	_, err = db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), siteID.String(), "prof1234", "profile-user", "Profile User", uuid.New().String(), uuid.New().String())
 	if err != nil {
 		t.Fatalf("Failed to create profile: %v", err)
 	}
@@ -1057,11 +1069,17 @@ func TestServiceListUsersWithProfile(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create a profile
+	// Create a site and profile
+	siteID := uuid.New()
+	_, err := db.Exec(`INSERT INTO site (id, short_id, name, slug, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?)`,
+		siteID.String(), "site3456", "Test Site", "test-site-lwp", uuid.New().String(), uuid.New().String())
+	if err != nil {
+		t.Fatalf("Failed to create test site: %v", err)
+	}
 	profileID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "list1234", "list-profile", "List Profile", uuid.New().String(), uuid.New().String())
+	_, err = db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), siteID.String(), "list1234", "list-profile", "List Profile", uuid.New().String(), uuid.New().String())
 	if err != nil {
 		t.Fatalf("Failed to create profile: %v", err)
 	}

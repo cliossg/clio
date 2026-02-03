@@ -14,6 +14,18 @@ import (
 	"github.com/google/uuid"
 )
 
+// isPublishable returns true if the content should be included in the generated site.
+// Content is excluded if it is a draft or if its PublishedAt date is in the future.
+func isPublishable(c *Content) bool {
+	if c.Draft {
+		return false
+	}
+	if c.PublishedAt != nil && c.PublishedAt.After(time.Now()) {
+		return false
+	}
+	return true
+}
+
 // HTMLGenerator handles static site generation.
 type HTMLGenerator struct {
 	workspace *Workspace
@@ -125,7 +137,7 @@ func (g *HTMLGenerator) GenerateHTML(ctx context.Context, site *Site, contents [
 	}
 
 	for _, content := range contents {
-		if content.Draft {
+		if !isPublishable(content) {
 			continue
 		}
 
@@ -369,7 +381,7 @@ func (g *HTMLGenerator) parseCustomLayout(code string) (*template.Template, erro
 func (g *HTMLGenerator) preRenderAllContent(contents []*Content, basePath string) []*RenderedContent {
 	var rendered []*RenderedContent
 	for _, c := range contents {
-		if c.Draft {
+		if !isPublishable(c) {
 			continue
 		}
 		htmlBody, _ := g.processor.ProcessContent(c)
@@ -460,7 +472,7 @@ func (g *HTMLGenerator) renderIndexPages(embeddedTmpl *template.Template, layout
 	// Filter non-draft articles (exclude pages from index listings)
 	var publishedContents []*Content
 	for _, c := range contents {
-		if !c.Draft && c.Kind != "page" {
+		if isPublishable(c) && c.Kind != "page" {
 			publishedContents = append(publishedContents, c)
 		}
 	}

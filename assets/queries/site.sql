@@ -22,6 +22,7 @@ UPDATE site SET
     active = ?,
     default_layout_id = ?,
     default_layout_name = ?,
+    last_published_at = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?

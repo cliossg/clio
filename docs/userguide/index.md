@@ -13,6 +13,7 @@ Clio is a static site generator with a web-based content management interface. W
 ### Site Management
 
 - [**Backup and Restore**](backup/index.md): Export your site and restore it on another instance
+- [**Scheduled Publishing**](scheduling/index.md): Publish content automatically at a future date and time
 
 ### Coming Soon
 

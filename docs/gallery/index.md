@@ -40,6 +40,15 @@ Include videos and audio from YouTube, Vimeo, TikTok, and SoundCloud directly in
 | ![Embedded Content in Post](embedding-post.png) | |
 | Embedded Content in Post | |
 
+## Scheduled Publishing
+
+Write now, publish later. Schedule content for automatic publication at a specific date and time.
+
+| | |
+|:---:|:---:|
+| ![Scheduled Post](scheduled-post.png) | |
+| Scheduled Post | |
+
 ## Sections & Layouts
 
 | | |

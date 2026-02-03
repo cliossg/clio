@@ -1557,8 +1557,8 @@ func TestServiceSetContributorProfile(t *testing.T) {
 
 	// Create a real profile in the database
 	profileID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "abc12345", "test-profile", "Test Profile", contributor.CreatedBy.String(), contributor.CreatedBy.String())
+	_, err := db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), site.ID.String(), "abc12345", "test-profile", "Test Profile", contributor.CreatedBy.String(), contributor.CreatedBy.String())
 	if err != nil {
 		t.Fatalf("Failed to create test profile: %v", err)
 	}
@@ -1872,12 +1872,14 @@ func TestServiceBuildUserAuthorsMap(t *testing.T) {
 
 	ctx := context.Background()
 
+	site := createTestSite(t, svc, "Authors Site", "authors-site")
+
 	// Create a profile first
 	userID := uuid.New()
 	profileID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, surname, bio, photo_path, created_by, updated_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "p123", "author-user", "Author", "User", "Bio text", "/photos/author.jpg", userID.String(), userID.String())
+	_, err := db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, surname, bio, photo_path, created_by, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), site.ID.String(), "p123", "author-user", "Author", "User", "Bio text", "/photos/author.jpg", userID.String(), userID.String())
 	if err != nil {
 		t.Fatalf("Failed to create profile: %v", err)
 	}
@@ -1889,8 +1891,6 @@ func TestServiceBuildUserAuthorsMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
-
-	site := createTestSite(t, svc, "Authors Site", "authors-site")
 
 	section := NewSection(site.ID, "Blog", "", "/blog")
 	section.CreatedBy = uuid.New()
@@ -2293,9 +2293,9 @@ func TestServiceContributorWithProfile(t *testing.T) {
 	// Create a profile first
 	profileID := uuid.New()
 	creatorID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, surname, bio, photo_path, social_links, created_by, updated_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "prof1234", "contrib-profile", "Profile", "Name", "Profile bio", "/photos/profile.jpg",
+	_, err := db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, surname, bio, photo_path, social_links, created_by, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), site.ID.String(), "prof1234", "contrib-profile", "Profile", "Name", "Profile bio", "/photos/profile.jpg",
 		`[{"platform":"twitter","handle":"@profile"}]`,
 		creatorID.String(), creatorID.String())
 	if err != nil {
@@ -2497,9 +2497,9 @@ func TestServiceCreateContributorWithProfileID(t *testing.T) {
 	// Create a profile first
 	profileID := uuid.New()
 	creatorID := uuid.New()
-	_, err := db.Exec(`INSERT INTO profile (id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-		profileID.String(), "pid12345", "pid-profile", "PID Profile", creatorID.String(), creatorID.String())
+	_, err := db.Exec(`INSERT INTO profile (id, site_id, short_id, slug, name, created_by, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		profileID.String(), site.ID.String(), "pid12345", "pid-profile", "PID Profile", creatorID.String(), creatorID.String())
 	if err != nil {
 		t.Fatalf("Failed to create profile: %v", err)
 	}

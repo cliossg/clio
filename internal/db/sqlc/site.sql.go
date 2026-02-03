@@ -14,7 +14,7 @@ import (
 const createSite = `-- name: CreateSite :one
 INSERT INTO site (id, short_id, name, slug, active, created_by, updated_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at
+RETURNING id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at
 `
 
 type CreateSiteParams struct {
@@ -54,6 +54,7 @@ func (q *Queries) CreateSite(ctx context.Context, arg CreateSiteParams) (Site, e
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastPublishedAt,
 	)
 	return i, err
 }
@@ -68,7 +69,7 @@ func (q *Queries) DeleteSite(ctx context.Context, id string) error {
 }
 
 const getSite = `-- name: GetSite :one
-SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at FROM site WHERE id = ?
+SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at FROM site WHERE id = ?
 `
 
 func (q *Queries) GetSite(ctx context.Context, id string) (Site, error) {
@@ -86,12 +87,13 @@ func (q *Queries) GetSite(ctx context.Context, id string) (Site, error) {
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastPublishedAt,
 	)
 	return i, err
 }
 
 const getSiteBySlug = `-- name: GetSiteBySlug :one
-SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at FROM site WHERE slug = ?
+SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at FROM site WHERE slug = ?
 `
 
 func (q *Queries) GetSiteBySlug(ctx context.Context, slug string) (Site, error) {
@@ -109,12 +111,13 @@ func (q *Queries) GetSiteBySlug(ctx context.Context, slug string) (Site, error) 
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastPublishedAt,
 	)
 	return i, err
 }
 
 const listAllSites = `-- name: ListAllSites :many
-SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at FROM site ORDER BY name
+SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at FROM site ORDER BY name
 `
 
 func (q *Queries) ListAllSites(ctx context.Context) ([]Site, error) {
@@ -138,6 +141,7 @@ func (q *Queries) ListAllSites(ctx context.Context) ([]Site, error) {
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastPublishedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -153,7 +157,7 @@ func (q *Queries) ListAllSites(ctx context.Context) ([]Site, error) {
 }
 
 const listSites = `-- name: ListSites :many
-SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at FROM site WHERE active = 1 ORDER BY name
+SELECT id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at FROM site WHERE active = 1 ORDER BY name
 `
 
 func (q *Queries) ListSites(ctx context.Context) ([]Site, error) {
@@ -177,6 +181,7 @@ func (q *Queries) ListSites(ctx context.Context) ([]Site, error) {
 			&i.UpdatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastPublishedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -198,10 +203,11 @@ UPDATE site SET
     active = ?,
     default_layout_id = ?,
     default_layout_name = ?,
+    last_published_at = ?,
     updated_by = ?,
     updated_at = ?
 WHERE id = ?
-RETURNING id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at
+RETURNING id, short_id, name, slug, active, default_layout_id, default_layout_name, created_by, updated_by, created_at, updated_at, last_published_at
 `
 
 type UpdateSiteParams struct {
@@ -210,6 +216,7 @@ type UpdateSiteParams struct {
 	Active            int64          `json:"active"`
 	DefaultLayoutID   sql.NullString `json:"default_layout_id"`
 	DefaultLayoutName sql.NullString `json:"default_layout_name"`
+	LastPublishedAt   sql.NullTime   `json:"last_published_at"`
 	UpdatedBy         string         `json:"updated_by"`
 	UpdatedAt         time.Time      `json:"updated_at"`
 	ID                string         `json:"id"`
@@ -222,6 +229,7 @@ func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (Site, e
 		arg.Active,
 		arg.DefaultLayoutID,
 		arg.DefaultLayoutName,
+		arg.LastPublishedAt,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
 		arg.ID,
@@ -239,6 +247,7 @@ func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (Site, e
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastPublishedAt,
 	)
 	return i, err
 }

@@ -16,7 +16,6 @@ import (
 
 	"github.com/cliossg/clio/internal/feat/profile"
 	"github.com/cliossg/clio/pkg/cl/config"
-	"github.com/cliossg/clio/pkg/cl/git"
 	"github.com/cliossg/clio/pkg/cl/llm"
 	"github.com/cliossg/clio/pkg/cl/logger"
 	"github.com/cliossg/clio/pkg/cl/middleware"
@@ -45,15 +44,11 @@ type Handler struct {
 	siteCtxMw      func(http.Handler) http.Handler
 	sessionMw      func(http.Handler) http.Handler
 	templatesFS    embed.FS
-	ssgAssetsFS    embed.FS
 	cfg            *config.Config
 	log            logger.Logger
 }
 
-func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessionMw func(http.Handler) http.Handler, templatesFS, ssgAssetsFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
-	workspace := NewWorkspace(cfg.SSG.SitesBasePath)
-	gitClient := git.NewClient(log)
-	llmClient := llm.NewClient(cfg.LLM.APIKey, cfg.LLM.Model, cfg.LLM.Temperature)
+func NewHandler(service Service, profileService ProfileService, workspace *Workspace, htmlGen *HTMLGenerator, publisher *Publisher, llmClient *llm.Client, siteCtxMw, sessionMw func(http.Handler) http.Handler, templatesFS embed.FS, cfg *config.Config, log logger.Logger) *Handler {
 	return &Handler{
 		service:        service,
 		profileService: profileService,
@@ -61,13 +56,12 @@ func NewHandler(service Service, profileService ProfileService, siteCtxMw, sessi
 		generator:      NewGenerator(workspace),
 		metaGenerator:  NewMetaGenerator(workspace),
 		metaLoader:     NewMetaLoader(service, profileService, workspace),
-		htmlGen:        NewHTMLGenerator(workspace, ssgAssetsFS),
-		publisher:      NewPublisher(workspace, gitClient),
+		htmlGen:        htmlGen,
+		publisher:      publisher,
 		llmClient:      llmClient,
 		siteCtxMw:      siteCtxMw,
 		sessionMw:      sessionMw,
 		templatesFS:    templatesFS,
-		ssgAssetsFS:    ssgAssetsFS,
 		cfg:            cfg,
 		log:            log,
 	}
@@ -1210,6 +1204,14 @@ func (h *Handler) HandleUpdateContent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if pat := r.FormValue("published_at"); pat != "" {
+		if t, err := time.ParseInLocation("2006-01-02T15:04", pat, time.Local); err == nil {
+			content.PublishedAt = &t
+		}
+	} else {
+		content.PublishedAt = nil
+	}
+
 	userIDStr := middleware.GetUserID(r.Context())
 	if userIDStr != "" {
 		if userID, err := uuid.Parse(userIDStr); err == nil {
@@ -1312,6 +1314,14 @@ func (h *Handler) HandleAutosaveContent(w http.ResponseWriter, r *http.Request) 
 		if order, err := strconv.Atoi(seriesOrder); err == nil {
 			content.SeriesOrder = order
 		}
+	}
+
+	if pat := r.FormValue("published_at"); pat != "" {
+		if t, err := time.ParseInLocation("2006-01-02T15:04", pat, time.Local); err == nil {
+			content.PublishedAt = &t
+		}
+	} else {
+		content.PublishedAt = nil
 	}
 
 	userIDStr := middleware.GetUserID(r.Context())
@@ -3533,6 +3543,9 @@ func (h *Handler) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=publish_no_changes", http.StatusSeeOther)
 		return
 	}
+
+	site.LastPublishedAt = timePtr(time.Now())
+	_ = h.service.UpdateSite(r.Context(), site)
 
 	h.log.Infof("Publish complete: %s", publishResult.CommitURL)
 	http.Redirect(w, r, "/ssg/get-site?id="+site.ID.String()+"&success=publish", http.StatusSeeOther)
