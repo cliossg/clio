@@ -145,7 +145,7 @@ The content editor toolbar includes an **Embed** button that simplifies insertin
 5. Choose the aspect ratio
 6. Click **Insert**
 
-The button generates the same Markdown block described in the Syntax section above — it's a shortcut, not a different format. You can also type the block manually and the result is identical. For TikTok, the ratio auto-switches to 9:16. For raw HTML embeds (tweets, maps, widgets), select the HTML provider and paste the embed code directly.
+The button generates the same Markdown block described in the Syntax section above, it's a shortcut, not a different format. You can also type the block manually and the result is identical. For TikTok, the ratio auto-switches to 9:16. For raw HTML embeds (tweets, maps, widgets), select the HTML provider and paste the embed code directly.
 
 ## Common Workflows
 

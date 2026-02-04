@@ -42,7 +42,7 @@ end
 vim.keymap.set("n", "<leader>cp", publish_to_clio, { desc = "Clio: publish buffer" })
 ```
 
-A full `clio.nvim` plugin could offer Telescope integration to browse and pick sites and sections, `:ClioPublish` and `:ClioDraft` commands, status line indicators, and even live preview. The REST API provides everything you need — all the endpoints are there.
+A full `clio.nvim` plugin could offer Telescope integration to browse and pick sites and sections, `:ClioPublish` and `:ClioDraft` commands, status line indicators, and even live preview. The REST API provides everything you need, all the endpoints are there.
 
 ### VSCode
 
@@ -108,36 +108,36 @@ Invalid or expired tokens return `401 Unauthorized`.
 
 ### Tokens
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/tokens` | Create a new token |
-| GET | `/api/v1/tokens` | List your tokens |
-| DELETE | `/api/v1/tokens/:id` | Revoke a token |
+| Method | Path                 | Description        |
+| ------ | -------------------- | ------------------ |
+| POST   | `/api/v1/tokens`     | Create a new token |
+| GET    | `/api/v1/tokens`     | List your tokens   |
+| DELETE | `/api/v1/tokens/:id` | Revoke a token     |
 
 ### Sites
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/sites` | List all sites |
-| GET | `/api/v1/sites/:id` | Get site details |
+| Method | Path                | Description      |
+| ------ | ------------------- | ---------------- |
+| GET    | `/api/v1/sites`     | List all sites   |
+| GET    | `/api/v1/sites/:id` | Get site details |
 
 ### Posts
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/sites/:id/posts` | List all posts |
-| GET | `/api/v1/sites/:id/posts/:post_id` | Get a post |
-| POST | `/api/v1/sites/:id/posts` | Create a post |
-| PUT | `/api/v1/sites/:id/posts/:post_id` | Update a post |
-| DELETE | `/api/v1/sites/:id/posts/:post_id` | Delete a post |
+| Method | Path                               | Description    |
+| ------ | ---------------------------------- | -------------- |
+| GET    | `/api/v1/sites/:id/posts`          | List all posts |
+| GET    | `/api/v1/sites/:id/posts/:post_id` | Get a post     |
+| POST   | `/api/v1/sites/:id/posts`          | Create a post  |
+| PUT    | `/api/v1/sites/:id/posts/:post_id` | Update a post  |
+| DELETE | `/api/v1/sites/:id/posts/:post_id` | Delete a post  |
 
 ### Publishing
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/sites/:id/generate` | Generate HTML |
-| POST | `/api/v1/sites/:id/publish` | Generate + publish to git |
-| POST | `/api/v1/sites/:id/backup` | Backup markdown to git |
+| Method | Path                         | Description               |
+| ------ | ---------------------------- | ------------------------- |
+| POST   | `/api/v1/sites/:id/generate` | Generate HTML             |
+| POST   | `/api/v1/sites/:id/publish`  | Generate + publish to git |
+| POST   | `/api/v1/sites/:id/backup`   | Backup markdown to git    |
 
 ## Examples
 
